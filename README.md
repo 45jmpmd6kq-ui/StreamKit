@@ -76,13 +76,27 @@ Le manifeste décrit les réglages ; **le dashboard fabrique le formulaire**. On
 n'écrit jamais d'écran de réglages à la main — c'est ce qui rend le 7ᵉ module
 aussi bon marché que le 2ᵉ.
 
-## Mises à jour
+## Publier une mise à jour
 
-1. Renseigner le dépôt GitHub (`utilisateur/projet`) dans ⚙️ du dashboard.
-2. Publier une release dont le tag est la version (`v0.2.0`), avec un `.zip`
-   joint contenant `node_modules` — les streamers ne lancent pas `npm install`.
-3. Chez le streamer : un bouton « Mettre à jour » apparaît. Un clic, StreamKit
-   télécharge, se ferme, se remplace et redémarre.
+```bash
+npm version patch          # ou minor / major
+npm run release            # -> livraison\StreamKit-v<version>.zip
+git push && git push --tags
+```
+
+Puis créer la release GitHub sur le tag `v<version>` et y **joindre le zip**.
+Il embarque `node_modules` : les streamers ne lancent jamais `npm install`, et
+l'updater remplace le dossier tel quel.
+
+Chez le streamer : un bouton « Mettre à jour » apparaît dans le dashboard. Un
+clic, StreamKit télécharge, se ferme, se remplace et redémarre.
+
+Le remplacement passe par un `.bat` externe : Windows ne permet pas à un
+programme de réécrire ses propres fichiers pendant qu'il tourne.
+
+Prérequis côté streamer : le dépôt (`utilisateur/projet`) renseigné dans ⚙️ du
+dashboard. **Les releases doivent être lisibles sans authentification** — donc
+dépôt public, sinon il faudrait distribuer un jeton GitHub à chaque streamer.
 
 Le remplacement passe par un `.bat` externe : Windows ne permet pas à un
 programme de réécrire ses propres fichiers pendant qu'il tourne.
@@ -101,8 +115,11 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       journal en tiroir (filtres, direct, pause, téléchargement)
 - [x] Assistant de connexion Twitch
 - [x] Module de référence `exemple` (sert aussi de banc d'essai)
-- [ ] **Migrer le bot musique V2** ← prochaine étape, et le vrai test
-- [ ] Publier une release et vérifier la mise à jour de bout en bout
+- [x] **Bot musique migré** depuis Bot-Musique-Twitch-V2, sans perte de fonction
+- [x] Script de packaging (`npm run release`)
+- [ ] Créer le dépôt GitHub distant
+- [ ] Publier une release et vérifier la mise à jour de bout en bout ← **le test qui valide le projet**
+- [ ] Recette du bot musique avec de vrais identifiants Twitch + Spotify
 - [ ] Migrer Roue RL, RL-Tracker, Valorant, RL-Challenge
 
 ## Pièges rencontrés (à ne pas refaire)
