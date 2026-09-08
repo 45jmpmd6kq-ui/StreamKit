@@ -13,8 +13,25 @@
 // Les abonnes (le flux SSE du dashboard) recoivent chaque ligne en direct.
 
 import { appendFileSync, readdirSync, unlinkSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { JOURNAUX_DIR } from './paths.js';
+
+// La console Windows demarre en page de code 850/1252 et decode donc nos octets
+// UTF-8 de travers : « — demarrage » s'affiche « ÔÇö demarrage ». Le fichier de
+// journal et le dashboard, eux, sont corrects — c'est purement l'affichage du
+// terminal. On bascule la console en UTF-8 une bonne fois.
+//
+// Uniquement quand on ecrit vraiment dans un terminal : sous l'application
+// Electron il n'y a pas de console, et lancer un processus pour rien serait
+// absurde.
+if (process.platform === 'win32' && process.stdout.isTTY) {
+  try {
+    execFileSync('chcp.com', ['65001'], { stdio: 'ignore', windowsHide: true });
+  } catch {
+    // Pas de chcp accessible : on continue, l'affichage sera juste moins joli.
+  }
+}
 
 const TAILLE_TAMPON = 3000; // lignes gardees en memoire
 const RETENTION_JOURS = 14; // au-dela, les fichiers de journal sont effaces

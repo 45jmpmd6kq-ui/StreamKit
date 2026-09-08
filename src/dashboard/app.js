@@ -178,6 +178,7 @@ function dessinerDetail() {
 
   if (!m) {
     cible.innerHTML = '<div class="vide">Aucun module installé.</div>';
+    $('#pied-detail').hidden = true;
     return;
   }
 
@@ -251,7 +252,9 @@ function dessinerDetail() {
       <div class="etat-sauvegarde" id="retour-action" style="margin-top:.6rem"></div>
     </div>`;
 
+  // Un module sans réglage n'a rien à enregistrer : pas de pied inutile.
   if (m.champs.length) dessinerFormulaire(m);
+  else $('#pied-detail').hidden = true;
 
   $('#bascule-module').addEventListener('click', () => basculerModule(m));
   $('#btn-redemarrer').addEventListener('click', async () => {
@@ -358,12 +361,16 @@ function dessinerChamp(c, valeur) {
 }
 
 function dessinerFormulaire(m) {
-  $('#formulaire').innerHTML =
-    m.champs.map((c) => dessinerChamp(c, m.reglages[c.cle])).join('') +
-    `<div class="barre-actions">
-       <button class="btn primaire" id="btn-sauver">Enregistrer</button>
-       <span class="etat-sauvegarde" id="etat-sauvegarde"></span>
-     </div>`;
+  $('#formulaire').innerHTML = m.champs.map((c) => dessinerChamp(c, m.reglages[c.cle])).join('');
+
+  // Le bouton d'enregistrement vit dans le pied fixe du panneau, hors du
+  // contenu défilant. On remplace son gestionnaire à chaque module affiché —
+  // `onclick` et pas addEventListener, sinon ils s'empileraient à chaque clic
+  // dans le rail et une sauvegarde en déclencherait plusieurs.
+  $('#pied-detail').hidden = false;
+  $('#etat-sauvegarde').textContent = '';
+  $('#etat-sauvegarde').className = 'etat-sauvegarde';
+  $('#btn-sauver').onclick = () => sauverReglages(m);
 
   // Les interrupteurs du formulaire.
   $$('#formulaire .bascule').forEach((b) =>
@@ -379,7 +386,6 @@ function dessinerFormulaire(m) {
     });
   });
 
-  $('#btn-sauver').addEventListener('click', () => sauverReglages(m));
 }
 
 function lireFormulaire(m) {

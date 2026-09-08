@@ -33,8 +33,18 @@
         <div id="liste-modules"></div>
       </nav>
 
-      <section class="detail">
-        <div class="detail-inner" id="detail"></div>
+      <section class="zone-detail">
+        <div class="detail">
+          <div class="detail-inner" id="detail"></div>
+        </div>
+
+        <!-- Pied fixe du panneau : le bouton d'enregistrement ne doit jamais
+             flotter au milieu des réglages, sinon on croit que le formulaire
+             s'arrête là. -->
+        <div class="pied-detail" id="pied-detail" hidden>
+          <button class="btn primaire" id="btn-sauver">Enregistrer</button>
+          <span class="etat-sauvegarde" id="etat-sauvegarde"></span>
+        </div>
       </section>
     </main>
 
