@@ -19,6 +19,7 @@ import { MODULES_DIR } from './paths.js';
 import * as journal from './journal.js';
 import * as store from './store.js';
 import * as schema from './schema.js';
+import * as categories from './categories.js';
 
 const log = journal.pour('noyau');
 
@@ -52,6 +53,11 @@ function validerManifeste(m, dossier) {
   if (!m.nom) erreurs.push('"nom" manquant');
   if (typeof m.demarrer !== 'function') erreurs.push('"demarrer" doit etre une fonction');
   if (m.scopes && !Array.isArray(m.scopes)) erreurs.push('"scopes" doit etre un tableau');
+  if (m.categorie && !categories.existe(m.categorie)) {
+    // Pas une erreur bloquante : le module tombera dans « Outils ». Mais sans
+    // ce mot, on chercherait longtemps pourquoi il n'est pas ou on l'attend.
+    log.warn('Module « ' + dossier + ' » : categorie inconnue (' + m.categorie + '), il ira dans Outils.');
+  }
   erreurs.push(...schema.validerSchema(m.config?.champs ?? []));
   return erreurs;
 }
@@ -238,7 +244,7 @@ export function vue(id) {
     id: m.id,
     nom: m.manifeste.nom,
     description: m.manifeste.description ?? '',
-    jeu: m.manifeste.jeu ?? null,
+    categorie: categories.resoudre(m.manifeste.categorie),
     icone: m.manifeste.icone ?? '🧩',
     actif: m.actif,
     etat: m.etat,

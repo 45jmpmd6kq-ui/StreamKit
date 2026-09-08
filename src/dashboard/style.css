@@ -18,7 +18,7 @@
   --info: #60a5fa;
   --rayon: 10px;
   --hauteur-barre: 52px;
-  --largeur-rail: 260px;
+  --largeur-rail: 278px;
 }
 
 * {
@@ -180,6 +180,61 @@ a.btn {
   color: var(--texte-faible);
   margin: 0.5rem 0.5rem 0.5rem;
   font-weight: 600;
+}
+
+/* ---------- Groupes de modules (catégories) ---------- */
+
+.groupe {
+  margin-bottom: 0.35rem;
+}
+
+.entete-groupe {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  cursor: pointer;
+  color: var(--texte-doux);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: left;
+}
+.entete-groupe:hover {
+  background: var(--panneau-clair);
+  color: var(--texte);
+}
+.entete-groupe .fleche {
+  width: 0.7rem;
+  flex: none;
+  color: var(--texte-faible);
+}
+.entete-groupe .nom {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.entete-groupe .compte {
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--texte-faible);
+}
+
+/* Les modules d'un groupe sont décalés et reliés par un filet : on voit d'un
+   coup d'œil ce qui appartient à quelle catégorie. */
+.modules-groupe {
+  margin: 0.15rem 0 0 0.5rem;
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--bordure);
+}
+.groupe.replie .modules-groupe {
+  display: none;
 }
 
 .entree {

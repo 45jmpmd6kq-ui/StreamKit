@@ -25,7 +25,7 @@ export default {
   description:
     'Les viewers demandent une musique avec leurs points de chaîne, elle part dans ta file Spotify. Avec refus, passage et clips.',
   icone: '🎵',
-  jeu: null,
+  categorie: 'twitch',
 
   scopes: [
     'channel:read:redemptions',

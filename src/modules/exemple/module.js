@@ -13,7 +13,9 @@ export default {
   nom: 'Module de démonstration',
   description: "Modèle de référence. Compte les secondes et l'affiche dans un overlay OBS.",
   icone: '🧪',
-  jeu: null, // 'rocket-league' | 'valorant' | 'lol' | null si tous jeux
+  // Regroupement dans le rail du dashboard. Voir core/categories.js.
+  // 'twitch' | 'rocket-league' | 'lol' | 'valorant' | 'outils'
+  categorie: 'outils',
 
   // --- Droits Twitch demandes ------------------------------------------------
   // StreamKit demande l'union des droits de TOUS les modules a l'autorisation :

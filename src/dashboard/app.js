@@ -100,7 +100,11 @@ function majPastilleTwitch(t, g) {
     texte.textContent = t.raison || 'Twitch non connecté';
   }
 
-  if (g?.droitsManquants?.length) {
+  // « Autorisation à renouveler » n'a de sens que si une autorisation existe
+  // déjà. Twitch pas encore configuré, tous les droits manquent forcément :
+  // afficher « à renouveler » enverrait le streamer chercher un bouton de
+  // reconnexion au lieu de lui dire de faire la configuration initiale.
+  if (t.pret && g?.droitsManquants?.length) {
     point.className = 'point attente';
     texte.textContent = 'Autorisation à renouveler';
   }
@@ -151,16 +155,74 @@ function pointDeModule(m) {
   return '<span class="point ko"></span>';
 }
 
+// Catégories repliées, mémorisées d'une session à l'autre. C'est une commodité
+// d'affichage propre à ce poste : localStorage suffit, et son absence (fenêtre
+// privée, données effacées) ne doit rien casser — d'où les try/catch.
+function lireReplis() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem('streamkit.replis') || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function ecrireReplis(replis) {
+  try {
+    localStorage.setItem('streamkit.replis', JSON.stringify([...replis]));
+  } catch {
+    /* pas de stockage disponible : on garde juste l'état en mémoire */
+  }
+}
+
+let replis = lireReplis();
+
+// Regroupe les modules par catégorie, en respectant l'ordre du catalogue et en
+// n'affichant que les catégories qui ont au moins un module.
+function grouperParCategorie() {
+  const groupes = new Map();
+  for (const m of etat.modules) {
+    const c = m.categorie ?? { id: 'outils', label: 'Outils', icone: '🧰', ordre: 90 };
+    if (!groupes.has(c.id)) groupes.set(c.id, { categorie: c, modules: [] });
+    groupes.get(c.id).modules.push(m);
+  }
+  return [...groupes.values()].sort((a, b) => a.categorie.ordre - b.categorie.ordre);
+}
+
 function dessinerRail() {
-  $('#liste-modules').innerHTML = etat.modules
-    .map(
-      (m) => `
-      <button class="entree ${m.id === etat.selection ? 'actif' : ''}" data-module="${m.id}">
-        ${pointDeModule(m)}
-        <span class="icone">${m.icone}</span>
-        <span class="nom">${echapper(m.nom)}</span>
-      </button>`
-    )
+  const groupes = grouperParCategorie();
+
+  $('#liste-modules').innerHTML = groupes
+    .map(({ categorie, modules }) => {
+      const replie = replis.has(categorie.id);
+      const demarres = modules.filter((m) => m.etat === 'demarre').length;
+      // La pastille de la catégorie reprend le pire état de ses modules : replié
+      // ou non, un module en erreur doit rester visible.
+      const enErreur = modules.some((m) => m.actif && (m.etat === 'erreur' || m.etat === 'incomplet'));
+      const point = enErreur ? 'ko' : demarres ? 'ok' : '';
+
+      return `
+        <div class="groupe ${replie ? 'replie' : ''}">
+          <button class="entete-groupe" data-categorie="${categorie.id}">
+            <span class="fleche">${replie ? '▸' : '▾'}</span>
+            <span class="icone">${categorie.icone}</span>
+            <span class="nom">${echapper(categorie.label)}</span>
+            <span class="point ${point}"></span>
+            <span class="compte">${demarres}/${modules.length}</span>
+          </button>
+          <div class="modules-groupe">
+            ${modules
+              .map(
+                (m) => `
+              <button class="entree ${m.id === etat.selection ? 'actif' : ''}" data-module="${m.id}">
+                ${pointDeModule(m)}
+                <span class="icone">${m.icone}</span>
+                <span class="nom">${echapper(m.nom)}</span>
+              </button>`
+              )
+              .join('')}
+          </div>
+        </div>`;
+    })
     .join('');
 
   $$('[data-module]').forEach((b) =>
@@ -168,6 +230,16 @@ function dessinerRail() {
       etat.selection = b.dataset.module;
       dessinerRail();
       dessinerDetail();
+    })
+  );
+
+  $$('[data-categorie]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const id = b.dataset.categorie;
+      if (replis.has(id)) replis.delete(id);
+      else replis.add(id);
+      ecrireReplis(replis);
+      dessinerRail();
     })
   );
 }

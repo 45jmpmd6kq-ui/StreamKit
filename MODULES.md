@@ -23,7 +23,7 @@ export default {
   nom: 'Mon module',       // affiché dans le dashboard
   description: '...',
   icone: '🎮',
-  jeu: 'rocket-league',    // ou null
+  categorie: 'rocket-league',   // regroupement dans le rail — voir plus bas
 
   scopes: ['chat:read'],   // droits Twitch nécessaires
 
@@ -38,6 +38,41 @@ export default {
   },
 };
 ```
+
+## Les catégories
+
+Le dashboard groupe les modules par catégorie, en sections repliables. Les
+catégories connues sont dans `core/categories.js` :
+
+| `categorie` | rail |
+|---|---|
+| `twitch` | 🟣 Twitch |
+| `rocket-league` | 🚀 Rocket League |
+| `lol` | ⚔️ League of Legends |
+| `valorant` | 🔫 Valorant |
+| `outils` | 🧰 Outils *(fourre-tout, toujours en dernier)* |
+
+**Une catégorie est un regroupement d'affichage, pas une hiérarchie de code.**
+Un module reste un dossier plat avec un identifiant unique, et c'est délibéré :
+
+- les adresses d'overlay restent courtes — `/overlay/roue-rl/roue` plutôt que
+  `/overlay/rocket-league/roue-rl/roue`. C'est ce que le streamer colle dans
+  OBS ;
+- un module peut changer de catégorie sans casser ses réglages ni les adresses
+  déjà placées dans OBS ;
+- le contrat ne gagne pas un cran d'imbrication.
+
+Catégorie absente ou inconnue : le module atterrit dans **Outils** avec un
+avertissement dans le journal. Une faute de frappe ne doit jamais le rendre
+invisible.
+
+Pour ajouter une catégorie, une ligne dans `CATEGORIES` (`id`, `label`, `icone`,
+`ordre`). Rien d'autre à toucher.
+
+> À venir quand ce sera nécessaire : des **réglages partagés au niveau de la
+> catégorie**. Le tracker RL et le compteur 1v1 liront tous les deux
+> `Launch.log` — leur demander deux fois le même chemin serait absurde. La
+> structure de `categories.js` est prête à l'accueillir.
 
 ## Les réglages : jamais de formulaire à la main
 
