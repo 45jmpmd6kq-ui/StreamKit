@@ -114,7 +114,12 @@ const updater = {
       setTimeout(async () => {
         onQuitteVraiment = true;
         await noyau?.fermer();
-        autoUpdater.quitAndInstall(false, true);
+        // isSilent = true : la mise a jour s'applique sans reafficher l'assistant
+        // d'installation. Le streamer a clique sur « Mettre a jour », il n'a pas
+        // demande a rechoisir un dossier d'installation — et encore moins a
+        // repondre a un assistant au milieu d'un live.
+        // isForceRunAfter = true : StreamKit se relance tout seul derriere.
+        autoUpdater.quitAndInstall(true, true);
       }, 800);
       return { ok: true, actuelle, derniere: derniereConnue };
     } catch (e) {
