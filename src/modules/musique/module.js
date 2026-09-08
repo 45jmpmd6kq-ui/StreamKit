@@ -13,7 +13,6 @@
 
 import { SpotifyClient, looseMatch } from './spotify.js';
 import { creerFile } from './file.js';
-import * as spotifyAuth from './spotify-auth.js';
 
 const TITRE_ANNULATION = '🚫 On écoute pas ta musique de merde';
 const VUES = ['annonces', 'liste'];
@@ -26,6 +25,12 @@ export default {
   icone: '🎵',
   categorie: 'twitch',
 
+  // Spotify est configure UNE fois dans l'ecran Connecteurs, pas ici : deux
+  // modules Spotify auraient sinon demande deux fois le meme ID et le meme
+  // secret, et le streamer devait chercher « ou on configure Spotify » au fond
+  // d'un module.
+  connecteurs: ['spotify'],
+
   scopes: [
     'channel:read:redemptions',
     'channel:manage:redemptions',
@@ -34,24 +39,8 @@ export default {
   ],
 
   config: {
-    version: 2,
+    version: 3,
     champs: [
-      // --- Spotify ---
-      {
-        cle: 'spotifyClientId',
-        type: 'texte',
-        label: 'ID client Spotify',
-        aide: "Depuis ton tableau de bord développeur Spotify. Le bouton « Connecter Spotify » plus bas t'explique la marche à suivre.",
-        requis: true,
-      },
-      {
-        cle: 'spotifyClientSecret',
-        type: 'secret',
-        label: 'Secret client Spotify',
-        aide: 'Reste sur ce PC, dans un fichier que tu ne partages jamais.',
-        requis: true,
-      },
-
       // --- Recompense principale ---
       {
         cle: 'rewardTitle',
@@ -155,6 +144,13 @@ export default {
   },
 
   migrations: {
+    // v3 : l'ID et le secret Spotify sont partis dans l'ecran Connecteurs.
+    3: (r) => {
+      delete r.spotifyClientId;
+      delete r.spotifyClientSecret;
+      return r;
+    },
+
     // v2 : la commande de clip est partie dans son propre module « Clips ».
     // On retire ses réglages d'ici — ils n'ont plus d'effet, et les laisser
     // traîner ferait croire que la commande marche encore depuis ce module.
@@ -183,47 +179,18 @@ export default {
 
   // --- Autorisation Spotify -------------------------------------------------
 
-  libellesActions: {
-    connecterSpotify: 'Connecter Spotify',
-    adresseDeRetour: 'Voir l’adresse de retour Spotify',
-  },
-
-  actions: {
-    // Bouton « Connecter Spotify » dans le dashboard.
-    async connecterSpotify(ctx) {
-      const { spotifyClientId, spotifyClientSecret } = ctx.config;
-      if (!spotifyClientId || !spotifyClientSecret) {
-        return { ok: false, erreur: 'Renseigne d’abord l’ID et le secret client Spotify, puis enregistre.' };
-      }
-
-      const url = spotifyAuth.construireUrl({
-        clientId: spotifyClientId,
-        clientSecret: spotifyClientSecret,
-        urlDeRetour: ctx.oauth.urlDeRetour(),
-      });
-
-      ctx.oauth.ouvrir(url);
-      ctx.log.info('Page d’autorisation Spotify ouverte.');
-      return { message: 'Autorise StreamKit dans la page Spotify qui vient de s’ouvrir.', url };
-    },
-
-    // Affiche l'adresse a coller dans l'application Spotify du streamer.
-    async adresseDeRetour(ctx) {
-      return { message: ctx.oauth.urlDeRetour(), url: ctx.oauth.urlDeRetour() };
-    },
-  },
-
-  // Ce que ce module apporte a la vue d'ensemble. Twitch est deja couvert par
-  // le socle : ici on ne parle que de Spotify.
+  // Ce que ce module apporte a la vue d'ensemble. L'existence de la connexion
+  // Spotify est deja rapportee par le socle (ecran Connecteurs) : ici on parle
+  // de ce que lui seul sait, l'appareil de lecture actif.
   async sante(ctx) {
-    if (!ctx.secrets.lire('spotifyRefreshToken')) {
+    if (!ctx.connecteur('spotify').connecte) {
       return [
         {
           id: 'spotify',
           nom: 'Spotify',
           etat: 'inactif',
           detail: 'non connecté',
-          aide: 'Bouton « Connecter Spotify » dans les réglages du module.',
+          aide: 'Branche Spotify depuis l’écran Connecteurs.',
         },
       ];
     }
@@ -254,42 +221,34 @@ export default {
     }
   },
 
-  async callbackOAuth(ctx, url) {
-    const r = await spotifyAuth.traiterRetour(url);
-    if (r.ok) {
-      ctx.secrets.ecrire('spotifyRefreshToken', r.refreshToken);
-      ctx.log.ok('Spotify connecté.');
-    } else {
-      ctx.log.err('Spotify : ' + r.message);
-    }
-    return r;
-  },
-
   // --- Cycle de vie ---------------------------------------------------------
 
   async demarrer(ctx) {
     const c = ctx.config;
 
-    const refreshToken = ctx.secrets.lire('spotifyRefreshToken');
-    if (!refreshToken) {
-      throw new Error(
-        'Spotify n’est pas encore connecté. Renseigne l’ID et le secret client, puis clique sur « Connecter Spotify ».'
-      );
+    // Le socle garantit que le connecteur est branché avant de démarrer le
+    // module (voir registre.demarrer), mais on ne s'appuie pas là-dessus en
+    // aveugle : une erreur claire vaut mieux qu'un plantage plus loin.
+    const spotifyConn = ctx.connecteur('spotify');
+    if (!spotifyConn.connecte) {
+      throw new Error('Spotify n’est pas branché. Va dans l’écran Connecteurs.');
     }
 
     const spotify = new SpotifyClient({
-      clientId: c.spotifyClientId,
-      clientSecret: c.spotifyClientSecret,
-      refreshToken,
+      clientId: spotifyConn.clientId,
+      clientSecret: spotifyConn.clientSecret,
+      refreshToken: spotifyConn.refreshToken,
     });
 
     ctx._spotify = spotify; // lu par sante() pour la vue d ensemble
 
     const file = creerFile();
-    // Spotify peut faire tourner le refresh token : on le repersiste s'il change.
+
+    // Spotify peut faire tourner le jeton de rafraîchissement. Il appartient au
+    // connecteur, pas au module : on le repersiste là où le socle le lira.
     const persisterSpotify = () => {
-      if (spotify.refreshToken && spotify.refreshToken !== refreshToken) {
-        ctx.secrets.ecrire('spotifyRefreshToken', spotify.refreshToken);
+      if (spotify.refreshToken && spotify.refreshToken !== spotifyConn.refreshToken) {
+        ctx.connecteur('spotify').majJeton?.(spotify.refreshToken);
       }
     };
 

@@ -10,10 +10,12 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 // La vue d'ensemble est un ecran a part entiere, pas un module : on lui donne
 // un identifiant reserve plutot qu'un faux module dans le registre.
 const ACCUEIL = '__accueil__';
+const CONNECTEURS = '__connecteurs__';
 
 const etat = {
   modules: [],
   sante: null,
+  connecteurs: null,
   selection: ACCUEIL,
   general: null,
   pause: false,
@@ -274,6 +276,7 @@ function grouperParCategorie() {
 
 function dessinerRail() {
   $('#entree-accueil').classList.toggle('actif', etat.selection === ACCUEIL);
+  $('#entree-connecteurs').classList.toggle('actif', etat.selection === CONNECTEURS);
   const groupes = grouperParCategorie();
 
   $('#liste-modules').innerHTML = groupes
@@ -453,10 +456,196 @@ async function chargerSante() {
   if (etat.selection === ACCUEIL) dessinerAccueil();
 }
 
+// --- Connecteurs ------------------------------------------------------------
+// Un service se configure UNE fois ici : identifiants d'application et
+// autorisation de compte au même endroit, pour Twitch comme pour Spotify.
+
+const deplies = new Set();
+
+function dessinerConnecteurs() {
+  const cible = $('#detail');
+  $('#pied-detail').hidden = true;
+
+  const liste = etat.connecteurs;
+  if (!liste) {
+    cible.innerHTML = '<div class="vide">Lecture des connecteurs…</div>';
+    return;
+  }
+
+  cible.innerHTML =
+    '<div class="titre-module"><span style="font-size:1.6rem">🔌</span><h1>Connecteurs</h1></div>' +
+    '<p class="resume-accueil">Chaque service se configure ici, une seule fois. ' +
+    'Les modules qui en ont besoin y puisent tout seuls.</p>' +
+    liste.map(carteConnecteur).join('');
+
+  brancherConnecteurs();
+}
+
+function carteConnecteur(c) {
+  const ouvert = deplies.has(c.id);
+  const pastille = c.etat === 'ok' ? 'ok' : c.etat === 'ko' ? 'ko' : c.etat === 'attention' ? 'attente' : '';
+
+  const corps = ouvert
+    ? `
+      <div class="conn-corps">
+        <p class="conn-desc">${echapper(c.description || '')}</p>
+        ${
+          c.demandePar?.length
+            ? `<p class="conn-desc">Utilisé par : <b>${echapper(c.demandePar.join(', '))}</b></p>`
+            : c.demandePar
+              ? '<p class="conn-desc">Aucun module actif n’en a besoin pour l’instant.</p>'
+              : ''
+        }
+
+        <ol class="etapes">
+          ${(c.etapes || []).map((e) => `<li>${echapper(e)}</li>`).join('')}
+        </ol>
+
+        <div class="champ large">
+          <label>Adresse de retour à coller dans l’application</label>
+          <div class="aide">Au caractère près : c’est la cause n°1 des refus d’autorisation.</div>
+          <div class="saisie" style="display:flex;gap:.5rem;align-items:center">
+            <code style="flex:1;font-size:.85rem;color:var(--texte-doux);overflow:hidden;text-overflow:ellipsis">${echapper(c.urlDeRetour)}</code>
+            <button class="btn petit" data-copier-conn="${c.id}">Copier</button>
+          </div>
+        </div>
+
+        ${
+          c.id === 'twitch'
+            ? `<div class="champ large">
+                 <label for="cid-chaine">Nom de ta chaîne</label>
+                 <div class="aide">Tel qu’il apparaît dans l’adresse : twitch.tv/<b>ton-pseudo</b></div>
+                 <div class="saisie"><input type="text" id="cid-chaine" value="${echapper(c.champChaine || '')}" autocomplete="off" /></div>
+               </div>`
+            : ''
+        }
+
+        <div class="champ large">
+          <label for="cid-${c.id}">ID client</label>
+          <div class="saisie"><input type="text" id="cid-${c.id}" autocomplete="off" spellcheck="false"
+            placeholder="${c.configure ? '••••••••  (déjà enregistré)' : ''}" /></div>
+        </div>
+        <div class="champ large">
+          <label for="csec-${c.id}">Secret client</label>
+          <div class="aide">Reste sur ce PC, dans un fichier que tu ne partages jamais.</div>
+          <div class="saisie"><input type="password" id="csec-${c.id}" autocomplete="off" spellcheck="false"
+            placeholder="${c.configure ? '••••••••  (déjà enregistré)' : ''}" /></div>
+        </div>
+
+        <div class="conn-actions">
+          <a class="btn petit" href="${c.consoleUrl}" target="_blank" rel="noreferrer">Ouvrir la console développeur</a>
+          <button class="btn petit" data-enregistrer-conn="${c.id}">Enregistrer les identifiants</button>
+          <button class="btn petit primaire" data-autoriser-conn="${c.id}">
+            ${c.connecte ? 'Reconnecter' : 'Connecter'}
+          </button>
+          ${c.id !== 'twitch' && c.connecte ? `<button class="btn petit" data-deconnecter-conn="${c.id}">Déconnecter</button>` : ''}
+          <span class="etat-sauvegarde" id="retour-${c.id}"></span>
+        </div>
+      </div>`
+    : '';
+
+  return `
+    <div class="conn ${c.etat}">
+      <button class="conn-entete" data-conn="${c.id}">
+        <span class="point ${pastille}"></span>
+        <span class="conn-icone">${c.icone}</span>
+        <span class="conn-nom">${echapper(c.nom)}</span>
+        <span class="conn-detail">${echapper(c.compte || c.detail)}</span>
+        <span class="fleche">${ouvert ? '▾' : '▸'}</span>
+      </button>
+      ${corps}
+    </div>`;
+}
+
+function brancherConnecteurs() {
+  $$('[data-conn]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const id = b.dataset.conn;
+      if (deplies.has(id)) deplies.delete(id);
+      else deplies.add(id);
+      dessinerConnecteurs();
+    })
+  );
+
+  $$('[data-copier-conn]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const c = etat.connecteurs.find((x) => x.id === b.dataset.copierConn);
+      copier(c.urlDeRetour);
+    })
+  );
+
+  const retour = (id, texte, ko = false) => {
+    const el = $('#retour-' + id);
+    if (!el) return;
+    el.className = 'etat-sauvegarde ' + (ko ? 'ko' : 'ok');
+    el.textContent = texte;
+  };
+
+  $$('[data-enregistrer-conn]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const id = b.dataset.enregistrerConn;
+      const clientId = $('#cid-' + id).value.trim();
+      const clientSecret = $('#csec-' + id).value.trim();
+      if (!clientId || !clientSecret) return retour(id, 'ID et secret sont nécessaires', true);
+      try {
+        if (id === 'twitch') {
+          const chaine = $('#cid-chaine')?.value.trim();
+          if (chaine) await api('/api/connecteurs/twitch/chaine', { method: 'POST', corps: { channel: chaine } });
+        }
+        const r = await api('/api/connecteurs/' + id + '/app', { method: 'POST', corps: { clientId, clientSecret } });
+        if (r.ok === false) return retour(id, r.erreur || 'refusé', true);
+        retour(id, 'Enregistré — clique sur « Connecter »');
+        await chargerConnecteurs();
+      } catch (e) {
+        retour(id, e.message, true);
+      }
+    })
+  );
+
+  $$('[data-autoriser-conn]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const id = b.dataset.autoriserConn;
+      try {
+        const r = await api('/api/connecteurs/' + id + '/autoriser', { method: 'POST' });
+        if (r.ok === false) return retour(id, r.erreur || r.conseil || 'autorisation impossible', true);
+        retour(id, 'Autorise StreamKit dans la page qui vient de s’ouvrir…');
+        if (r.url) window.open(r.url, '_blank');
+      } catch (e) {
+        retour(id, e.message, true);
+      }
+    })
+  );
+
+  $$('[data-deconnecter-conn]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const id = b.dataset.deconnecterConn;
+      await api('/api/connecteurs/' + id + '/deconnecter', { method: 'POST' });
+      await chargerConnecteurs();
+      await chargerModules();
+    })
+  );
+}
+
+async function chargerConnecteurs() {
+  try {
+    etat.connecteurs = await api('/api/connecteurs');
+  } catch {
+    etat.connecteurs = null;
+  }
+  const pire = etat.connecteurs?.some((c) => c.etat === 'ko')
+    ? 'ko'
+    : etat.connecteurs?.some((c) => c.etat === 'attention' || c.etat === 'inactif')
+      ? 'attente'
+      : 'ok';
+  $('#point-connecteurs').className = 'point ' + (etat.connecteurs ? pire : '');
+  if (etat.selection === CONNECTEURS) dessinerConnecteurs();
+}
+
 // --- Détail d'un module -----------------------------------------------------
 
 function dessinerDetail() {
   if (etat.selection === ACCUEIL) return dessinerAccueil();
+  if (etat.selection === CONNECTEURS) return dessinerConnecteurs();
 
   const m = etat.modules.find((x) => x.id === etat.selection);
   const cible = $('#detail');
@@ -954,6 +1143,12 @@ function brancherModales() {
 
 // ------------------------------------------------------------------- démarrage
 
+$('#entree-connecteurs').addEventListener('click', () => {
+  etat.selection = CONNECTEURS;
+  dessinerRail();
+  dessinerConnecteurs();
+});
+
 $('#entree-accueil').addEventListener('click', () => {
   etat.selection = ACCUEIL;
   dessinerRail();
@@ -967,6 +1162,7 @@ await rafraichirEtat();
 await chargerModules();
 await chargerJournal();
 await chargerSante();
+await chargerConnecteurs();
 brancherFluxJournal();
 verifierMaj();
 
@@ -981,6 +1177,7 @@ setInterval(async () => {
     dessinerDetail();
   }
   await chargerSante();
+  await chargerConnecteurs();
 }, 5000);
 
 // StreamKit reste ouvert des jours d'affilée chez un streamer. Sans cette

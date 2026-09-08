@@ -251,6 +251,40 @@ fermé entre deux sessions de jeu est normal ; le marquer en rouge apprendrait
 seulement au streamer à ignorer les alertes. `ko` est réservé à ce qui devrait
 marcher et ne marche pas.
 
+## Les connecteurs : ne demande jamais un ID ou un secret
+
+Un module ne porte **jamais** d'identifiants d'application dans ses réglages.
+Il déclare le service dont il a besoin :
+
+```js
+connecteurs: ['spotify'],
+```
+
+Le streamer configure Spotify **une fois**, dans l'écran Connecteurs, et le
+module reçoit tout prêt :
+
+```js
+const s = ctx.connecteur('spotify');
+// { clientId, clientSecret, refreshToken, compte, configure, connecte, majJeton }
+```
+
+Le socle **empêche le module de démarrer** tant que le connecteur n'est pas
+branché : il passe en *incomplet* avec le nom du service, exactement comme pour
+un réglage obligatoire vide. Et brancher ou débrancher un connecteur relance
+automatiquement les modules concernés.
+
+Pourquoi c'est au socle et pas au module : deux modules Spotify auraient sinon
+demandé deux fois le même ID et le même secret, et le streamer devait chercher
+« où on configure Spotify » au fond d'un module. Corollaire, si un service fait
+tourner son jeton de rafraîchissement, repersiste-le au bon endroit :
+
+```js
+ctx.connecteur('spotify').majJeton(nouveauJeton);
+```
+
+Ajouter un connecteur = une entrée dans `CATALOGUE` (`core/connecteurs.js`), avec
+les étapes que le streamer verra affichées telles quelles.
+
 ## Les compteurs d'usage
 
 Déclare des libellés dans le manifeste, incrémente dans le code, et les chiffres

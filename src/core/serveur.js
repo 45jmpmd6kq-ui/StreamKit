@@ -172,6 +172,22 @@ export function creerServeur(app) {
           return json(res, 200, await app.sante());
         }
 
+        // --- Connecteurs : identifiants d'application et autorisation ---
+        if (chemin === '/api/connecteurs' && methode === 'GET') {
+          return json(res, 200, app.etatConnecteurs());
+        }
+
+        const mConn = chemin.match(/^\/api\/connecteurs\/([\w-]+)\/(\w+)$/);
+        if (mConn && methode === 'POST') {
+          const [, id, quoi] = mConn;
+          const body = await corpsJson(req);
+          if (quoi === 'app') return json(res, 200, await app.definirAppConnecteur(id, body));
+          if (quoi === 'autoriser') return json(res, 200, await app.autoriserConnecteur(id));
+          if (quoi === 'deconnecter') return json(res, 200, await app.deconnecterConnecteur(id));
+          if (quoi === 'chaine') return json(res, 200, await app.definirChaine(body.channel));
+          return json(res, 404, { erreur: 'action inconnue' });
+        }
+
         // --- Modules ---
         if (chemin === '/api/modules' && methode === 'GET') {
           return json(res, 200, app.registre.vues());
@@ -323,6 +339,12 @@ export function creerServeur(app) {
       const mCallback = chemin.match(/^\/callback\/module\/([\w-]+)$/);
       if (mCallback) {
         return app.callbackModule(mCallback[1], url, res);
+      }
+
+      // --- Retour d'autorisation d'un connecteur (Spotify...) ---------------
+      const mConnCb = chemin.match(/^\/callback\/connecteur\/([\w-]+)$/);
+      if (mConnCb) {
+        return app.callbackConnecteur(mConnCb[1], url, res);
       }
 
       // --- Dashboard --------------------------------------------------------

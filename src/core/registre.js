@@ -20,6 +20,7 @@ import * as journal from './journal.js';
 import * as store from './store.js';
 import * as schema from './schema.js';
 import * as categories from './categories.js';
+import * as connecteurs from './connecteurs.js';
 
 const log = journal.pour('noyau');
 
@@ -153,6 +154,17 @@ export async function demarrer(id, contexteFactory) {
   if (!m) throw new Error('module inconnu : ' + id);
   if (m.instance) return m;
 
+  // Un connecteur non branché bloque le module aussi sûrement qu'un réglage
+  // obligatoire vide : autant le dire de la même façon, avec le nom du service.
+  const connecteursManquants = (m.manifeste.connecteurs ?? []).filter((c) => !connecteurs.estConnecte(c));
+  if (connecteursManquants.length) {
+    m.manque = connecteursManquants.map((c) => connecteurs.trouver(c)?.nom ?? c);
+    m.etat = 'incomplet';
+    m.erreur = 'Connecteur à brancher : ' + m.manque.join(', ');
+    log.warn('« ' + m.manifeste.nom + ' » non demarre — ' + m.erreur);
+    return m;
+  }
+
   m.manque = manquants(m);
   if (m.manque.length) {
     m.etat = 'incomplet';
@@ -252,6 +264,11 @@ export function vue(id) {
     manque: m.manque,
     demarreA: m.demarreA,
     scopes: m.manifeste.scopes ?? [],
+    connecteurs: (m.manifeste.connecteurs ?? []).map((c) => ({
+      id: c,
+      nom: connecteurs.trouver(c)?.nom ?? c,
+      connecte: connecteurs.estConnecte(c),
+    })),
     // Seules les actions DECLAREES dans `libellesActions` deviennent des boutons.
     // Les autres restent appelables par les pages du module, sans apparaitre.
     //

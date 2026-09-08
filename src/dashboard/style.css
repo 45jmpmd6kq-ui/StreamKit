@@ -246,6 +246,65 @@ a.btn {
   color: var(--texte-faible);
 }
 
+/* ---------- Connecteurs ---------- */
+
+.conn {
+  border: 1px solid var(--bordure);
+  border-left: 3px solid var(--texte-faible);
+  border-radius: var(--rayon);
+  background: var(--panneau);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+.conn.ok { border-left-color: var(--succes); }
+.conn.attention { border-left-color: var(--avert); }
+.conn.ko { border-left-color: var(--erreur); }
+.conn.inactif { border-left-color: var(--bordure-vive); }
+
+.conn-entete {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.85rem 1.05rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--texte);
+}
+.conn-entete:hover {
+  background: var(--panneau-clair);
+}
+.conn-icone { font-size: 1.1rem; }
+.conn-nom { font-weight: 600; }
+.conn-detail {
+  flex: 1;
+  color: var(--texte-doux);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conn-entete .fleche { color: var(--texte-faible); }
+
+.conn-corps {
+  padding: 0.25rem 1.05rem 1.05rem;
+  border-top: 1px solid var(--bordure);
+}
+.conn-desc {
+  color: var(--texte-doux);
+  font-size: 0.92rem;
+  margin: 0.85rem 0 0;
+}
+.conn-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
 /* ---------- Compteurs d'usage ---------- */
 
 .kpi-module {

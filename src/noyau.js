@@ -26,6 +26,7 @@ import * as auth from './core/auth.js';
 import * as maj from './core/maj.js';
 import * as diffusion from './core/diffusion.js';
 import * as compteurs from './core/compteurs.js';
+import * as connecteurs from './core/connecteurs.js';
 import { creerServeur, ecouter } from './core/serveur.js';
 
 const log = journal.pour('noyau');
@@ -113,6 +114,10 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
             t.modules[id][cle] = valeur;
           }),
       },
+
+      // Identifiants d'un connecteur configure au niveau du socle (Spotify...).
+      // Le module ne demande plus d'ID ni de secret dans ses reglages.
+      connecteur: (idConnecteur) => connecteurs.pour(idConnecteur),
 
       // Compteurs d'usage : le module incremente, le socle persiste et agrege.
       // Rien a declarer ailleurs qu'un libelle dans le manifeste.
@@ -221,6 +226,112 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         droitsManquants: twitch.droitsManquants(registre.scopesRequis()),
         demarrageAuto: { disponible: !!demarrageAuto.disponible, actif: !!demarrageAuto.lire() },
       };
+    },
+
+    // --- Connecteurs ----------------------------------------------------
+    // Écran dédié : identifiants d'application ET autorisation de compte, au
+    // même endroit pour tous les services. Twitch y figure aussi, même si son
+    // flux reste dans core/auth.js.
+
+    etatConnecteurs() {
+      const t = twitch.getEtat();
+      const appTwitch = store.lireTokens().twitchApp ?? {};
+      const manquants = twitch.droitsManquants(registre.scopesRequis({ tousLesModules: true }));
+
+      const liste = [
+        {
+          id: 'twitch',
+          nom: 'Twitch',
+          icone: '🟣',
+          description: 'Chat, points de chaîne, clips. Nécessaire à la plupart des modules.',
+          consoleUrl: 'https://dev.twitch.tv/console/apps/create',
+          urlDeRetour: auth.urlDeRetour(PORT),
+          configure: !!(appTwitch.clientId && appTwitch.clientSecret),
+          connecte: t.pret,
+          compte: t.channel || '',
+          detail: t.pret
+            ? (t.chatConnecte ? 'chat et EventSub connectés' : 'connexion du chat…') +
+              (manquants.length ? ' — ' + manquants.length + ' droit(s) à renouveler' : '')
+            : t.raison || 'non connecté',
+          etat: !t.pret ? (appTwitch.clientId ? 'ko' : 'inactif') : manquants.length ? 'attention' : 'ok',
+          etapes: [
+            'Ouvre la console développeur Twitch et connecte-toi.',
+            'Nom : StreamKit — Catégorie : Chat Bot.',
+            'URL de redirection OAuth : colle l’adresse ci-dessous, exactement.',
+            'Valide, puis récupère l’ID client et génère un secret client.',
+          ],
+          // Le nom de chaîne fait partie de la configuration Twitch, pas d'une
+          // application : c'est le seul connecteur qui en demande un.
+          champChaine: store.getConfig().twitch.channel || '',
+        },
+      ];
+
+      for (const c of connecteurs.catalogue()) {
+        const e = connecteurs.pour(c.id);
+        // Un connecteur n'est réclamé que si un module le demande : inutile de
+        // faire configurer Spotify à quelqu'un qui ne veut que la roue.
+        const demandePar = registre
+          .liste()
+          .filter((m) => (m.manifeste.connecteurs ?? []).includes(c.id))
+          .map((m) => m.manifeste.nom);
+
+        liste.push({
+          id: c.id,
+          nom: c.nom,
+          icone: c.icone,
+          description: c.description,
+          consoleUrl: c.consoleUrl,
+          urlDeRetour: connecteurs.urlDeRetour(c.id, PORT),
+          configure: e.configure,
+          connecte: e.connecte,
+          compte: e.compte,
+          detail: e.connecte
+            ? e.compte || 'connecté'
+            : e.configure
+              ? 'application enregistrée, compte non autorisé'
+              : 'non configuré',
+          etat: e.connecte ? 'ok' : e.configure ? 'attention' : 'inactif',
+          etapes: c.etapes,
+          demandePar,
+        });
+      }
+
+      return liste;
+    },
+
+    async definirAppConnecteur(id, corps) {
+      if (id === 'twitch') return app.definirAppTwitch(corps);
+      const r = connecteurs.definirApp(id, corps);
+      if (r.ok) await app.rechargerModulesDeConnecteur(id);
+      return r;
+    },
+
+    async autoriserConnecteur(id) {
+      if (id === 'twitch') return app.demarrerAutorisation();
+      return connecteurs.demarrerAutorisation(id, PORT);
+    },
+
+    async deconnecterConnecteur(id) {
+      if (id === 'twitch') return { ok: false, erreur: 'utilise la reconnexion de chaîne' };
+      const r = connecteurs.deconnecter(id);
+      await app.rechargerModulesDeConnecteur(id);
+      return r;
+    },
+
+    async callbackConnecteur(id, url, res) {
+      const r = await connecteurs.traiterRetour(id, url, PORT);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(auth.pageRetour(r));
+      if (r.ok) await app.rechargerModulesDeConnecteur(id);
+    },
+
+    // Un connecteur qui change (branché, débranché) peut débloquer ou casser
+    // des modules : on les relance plutôt que d'attendre un redémarrage.
+    async rechargerModulesDeConnecteur(id) {
+      for (const m of registre.liste()) {
+        if (!(m.manifeste.connecteurs ?? []).includes(id)) continue;
+        if (m.actif) await app.recharger(m.id);
+      }
     },
 
     // --- Vue d'ensemble des connexions ---------------------------------
