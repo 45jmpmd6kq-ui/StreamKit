@@ -24,9 +24,24 @@ let depuis = new Date().toISOString();
 let minuteur = null;
 let sale = false;
 
-export function charger() {
+// Ce que « session » veut dire : le live en cours si Twitch en signale un,
+// sinon le lancement de StreamKit. C'est la seule échelle qui ait du sens pour
+// un streamer — et avec le démarrage automatique avec Windows, « depuis le
+// lancement » pourrait couvrir plusieurs jours et plusieurs lives.
+let origine = 'lancement'; // 'lancement' | 'live'
+
+export function nouvelleSession(cause = 'lancement') {
   session_vider();
   depuis = new Date().toISOString();
+  origine = cause;
+}
+
+export function causeSession() {
+  return origine;
+}
+
+export function charger() {
+  nouvelleSession('lancement');
   if (!existsSync(FICHIER)) {
     totaux = {};
     return;

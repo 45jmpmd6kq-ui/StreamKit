@@ -157,6 +157,38 @@ export async function arreter() {
   etat = { ...etat, pret: false, chatConnecte: false, eventsubConnecte: false, raison: 'arrete' };
 }
 
+// Debut et fin de live. Utilise par le socle pour rattacher les compteurs au
+// live plutot qu'a la duree de vie de StreamKit : avec le demarrage automatique
+// avec Windows, l'application peut tourner des jours -- « depuis le lancement »
+// agregerait alors trois lives et deux journees sans stream.
+//
+// stream.online et stream.offline ne demandent AUCUN droit supplementaire :
+// ils sont publics, meme sur sa propre chaine.
+export function surDirect({ debut, fin }) {
+  if (!listener || !etat.broadcasterId) return () => {};
+  const abonnements = [];
+  try {
+    if (debut) abonnements.push(listener.onStreamOnline(etat.broadcasterId, debut));
+    if (fin) abonnements.push(listener.onStreamOffline(etat.broadcasterId, fin));
+  } catch (e) {
+    log.warn('Détection du live indisponible : ' + (e?.message || e));
+  }
+  return () => abonnements.forEach((a) => a.stop?.());
+}
+
+// Le live est-il en cours a cet instant ? Interroge Twitch, contrairement aux
+// evenements qui ne disent que les transitions -- indispensable au demarrage,
+// quand StreamKit se lance alors que le stream tourne deja.
+export async function enDirect() {
+  if (!etat.pret || !etat.broadcasterId) return null;
+  try {
+    const s = await api.streams.getStreamByUserId(etat.broadcasterId);
+    return s ? { depuis: s.startDate?.getTime?.() ?? Date.now(), titre: s.title } : null;
+  } catch {
+    return null;
+  }
+}
+
 export function getEtat() {
   return { ...etat };
 }

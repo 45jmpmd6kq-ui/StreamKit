@@ -390,12 +390,24 @@ function dessinerKpis(s) {
   const blocs = (s.kpis || []).filter((k) => k.valeurs.length);
   if (!blocs.length) return '';
 
+  // Dire d'où partent les compteurs, sinon un « 12 » ne veut rien dire. Deux
+  // origines possibles : le début du live si Twitch en signale un, sinon le
+  // lancement de StreamKit.
   const depuis = s.depuis ? new Date(s.depuis) : null;
   const p = (n) => String(n).padStart(2, '0');
   const heure = depuis ? p(depuis.getHours()) + ':' + p(depuis.getMinutes()) : '—';
 
+  let titre;
+  if (s.causeSession === 'live') {
+    titre = s.enDirect
+      ? 'Ce live — en direct depuis ' + heure
+      : 'Dernier live — commencé à ' + heure;
+  } else {
+    titre = 'Depuis le lancement de StreamKit, ' + heure;
+  }
+
   return (
-    '<div class="section"><h3>Utilisation — depuis ' + heure + '</h3>' +
+    '<div class="section"><h3>Utilisation · ' + echapper(titre) + '</h3>' +
     blocs
       .map(
         (k) => `

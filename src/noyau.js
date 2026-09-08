@@ -160,6 +160,41 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
     contextes.delete(id);
   }
 
+  // --- Suivi du live --------------------------------------------------------
+  // Les compteurs se rattachent au LIVE, pas a la duree de vie de StreamKit.
+  // Avec le demarrage automatique avec Windows, l'application peut tourner des
+  // jours : « depuis le lancement » agregerait alors plusieurs lives et des
+  // journees entieres sans stream.
+  const etatDirect = { enCours: false, depuis: null };
+
+  function brancherSuiviDuDirect() {
+    twitch.surDirect({
+      debut: () => {
+        etatDirect.enCours = true;
+        etatDirect.depuis = Date.now();
+        compteurs.nouvelleSession('live');
+        log.ok('Live démarré — compteurs de session remis à zéro.');
+      },
+      fin: () => {
+        etatDirect.enCours = false;
+        log.info('Live terminé. Les compteurs de la session restent affichés.');
+      },
+    });
+
+    // StreamKit peut demarrer alors que le live tourne deja : les evenements ne
+    // disent que les transitions, il faut donc demander l'etat courant.
+    twitch
+      .enDirect()
+      .then((s) => {
+        if (!s) return;
+        etatDirect.enCours = true;
+        etatDirect.depuis = s.depuis;
+        compteurs.nouvelleSession('live');
+        log.info('Live déjà en cours : les compteurs comptent depuis son début.');
+      })
+      .catch(() => {});
+  }
+
   // --- Objet applicatif expose au serveur ----------------------------------
 
   const app = {
@@ -291,6 +326,9 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         connexions,
         kpis,
         depuis: compteurs.debutSession(),
+        causeSession: compteurs.causeSession(),
+        enDirect: etatDirect.enCours,
+        directDepuis: etatDirect.depuis,
         version: maj.versionActuelle(),
         modules: {
           total: registre.liste().length,
@@ -388,6 +426,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         log.err('Connexion Twitch impossible : ' + (e?.message || e));
         return { ok: false, erreur: e?.message || String(e) };
       }
+      brancherSuiviDuDirect();
       await registre.demarrerActifs(fabriquerContexte);
       return { ok: true, etat: twitch.getEtat() };
     },
@@ -457,6 +496,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
 
   try {
     await twitch.demarrer();
+    if (twitch.estPret()) brancherSuiviDuDirect();
   } catch (e) {
     // Twitch mal configure ne doit pas empecher le dashboard de s'ouvrir : c'est
     // justement la que le streamer va aller pour corriger.

@@ -272,8 +272,17 @@ Deux échelles, parce qu'elles ne répondent pas à la même question :
 
 | | |
 |---|---|
-| **session** | depuis le lancement de StreamKit — en pratique, ce live |
+| **session** | **ce live** — remis à zéro quand Twitch signale le début d'un stream, ou à défaut au lancement de StreamKit |
 | **total** | depuis toujours ; c'est lui qui donne son sens au chiffre de session |
+
+La session est rattachée au **live**, pas à la durée de vie de StreamKit. Ça
+compte : avec l'option « démarrer avec Windows », l'application tourne en
+continu — « depuis le lancement » agrégerait alors plusieurs lives et des
+journées entières sans stream, et le chiffre ne voudrait plus rien dire.
+
+StreamKit lancé pendant un live déjà en cours interroge Twitch pour caler la
+session sur le début réel du stream : les événements ne disent que les
+transitions.
 
 Le socle persiste dans `%APPDATA%\StreamKit\compteurs.json`, avec une écriture
 différée de 5 secondes : une commande très sollicitée écrirait sinon des
