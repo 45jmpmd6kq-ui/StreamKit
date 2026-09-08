@@ -167,6 +167,11 @@ export function creerServeur(app) {
           return json(res, 200, app.etatGeneral());
         }
 
+        // Vue d'ensemble des connexions (Twitch, OBS, Spotify, Riot...)
+        if (chemin === '/api/sante' && methode === 'GET') {
+          return json(res, 200, await app.sante());
+        }
+
         // --- Modules ---
         if (chemin === '/api/modules' && methode === 'GET') {
           return json(res, 200, app.registre.vues());

@@ -194,6 +194,8 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       et le partage d assets entre page et overlay
 - [x] **Bandeau Valorant migré** : 1re réécriture Python -> Node, validée sur
       des données Riot réelles (rang, RR, 16 matchs classés)
+- [x] **Vue d ensemble** : etat de toutes les connexions (Twitch, OBS, Spotify,
+      Riot) sur un ecran d accueil, alimente par un hook sante() des modules
 - [ ] Migrer RL-Tracker et RL-Challenge
 
 ## Pièges rencontrés (à ne pas refaire)

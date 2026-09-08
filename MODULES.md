@@ -223,6 +223,34 @@ Une page et un overlay partagent souvent les mêmes images — les 137 icônes d
 voitures pèsent 1,5 Mo, on ne va pas les dupliquer pour une question de dossier.
 Là aussi, construis l'adresse depuis `location.pathname` et non en relatif.
 
+## La vue d'ensemble : déclarer ses connexions
+
+L'écran d'accueil rassemble l'état de tout ce à quoi StreamKit se raccorde. Le
+socle y met déjà **Twitch**, **OBS** (combien de sources Navigateur écoutent tes
+overlays) et les **mises à jour**. Un module ajoute les siennes :
+
+```js
+async sante(ctx) {
+  return [{
+    id: 'spotify',
+    nom: 'Spotify',
+    etat: 'ok',              // 'ok' | 'attention' | 'ko' | 'inactif'
+    detail: 'PC de Sylvain', // une ligne, lisible d'un coup d'œil
+    aide: '',                // quoi faire si ça ne va pas
+  }];
+}
+```
+
+`sante()` n'est appelée que sur un module **démarré**, toutes les 5 secondes.
+Elle doit donc être rapide et ne jamais lever : une exception est rattrapée et
+affichée comme une connexion en erreur, mais autant écrire le bon message
+soi-même.
+
+**Choisis `inactif` plutôt que `ko` quand rien n'est cassé.** Le Riot Client
+fermé entre deux sessions de jeu est normal ; le marquer en rouge apprendrait
+seulement au streamer à ignorer les alertes. `ko` est réservé à ce qui devrait
+marcher et ne marche pas.
+
 ## Le journal
 
 `ctx.log` écrit d'un coup vers la console, le dashboard (en direct) et le

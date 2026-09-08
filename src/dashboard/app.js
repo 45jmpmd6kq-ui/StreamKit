@@ -7,9 +7,14 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
+// La vue d'ensemble est un ecran a part entiere, pas un module : on lui donne
+// un identifiant reserve plutot qu'un faux module dans le registre.
+const ACCUEIL = '__accueil__';
+
 const etat = {
   modules: [],
-  selection: null,
+  sante: null,
+  selection: ACCUEIL,
   general: null,
   pause: false,
   lignes: [],
@@ -222,7 +227,7 @@ async function verifierMaj() {
 
 async function chargerModules() {
   etat.modules = await api('/api/modules');
-  if (!etat.selection && etat.modules.length) etat.selection = etat.modules[0].id;
+  // On reste sur la vue d ensemble : c est l ecran d accueil.
   dessinerRail();
   dessinerDetail();
   remplirFiltreSources();
@@ -269,6 +274,7 @@ function grouperParCategorie() {
 }
 
 function dessinerRail() {
+  $('#entree-accueil').classList.toggle('actif', etat.selection === ACCUEIL);
   const groupes = grouperParCategorie();
 
   $('#liste-modules').innerHTML = groupes
@@ -324,7 +330,81 @@ function dessinerRail() {
   );
 }
 
+// --- Vue d'ensemble ---------------------------------------------------------
+
+const ICONE_ETAT = { ok: '●', attention: '▲', ko: '✕', inactif: '○' };
+
+function dessinerAccueil() {
+  const s = etat.sante;
+  const cible = $('#detail');
+  $('#pied-detail').hidden = true;
+
+  if (!s) {
+    cible.innerHTML = '<div class="vide">Lecture de l’état des connexions…</div>';
+    return;
+  }
+
+  // « Tout est en ordre » ne doit pas s'afficher alors qu'une connexion n'est
+  // même pas configurée. Une connexion inactive n'est pas une panne pour autant :
+  // un streamer qui n'utilise que Valorant n'a aucun besoin de Twitch.
+  const soucis = s.connexions.filter((c) => c.etat === 'ko' || c.etat === 'attention').length;
+  const inactifs = s.connexions.filter((c) => c.etat === 'inactif').length;
+  const resume = soucis
+    ? soucis + ' point' + (soucis > 1 ? 's' : '') + ' à regarder avant de lancer ton live.'
+    : inactifs
+      ? 'Rien de cassé — ' + inactifs + ' connexion' + (inactifs > 1 ? 's' : '') +
+        ' pas encore configurée' + (inactifs > 1 ? 's' : '') + '.'
+      : 'Tout est en ordre. Bon stream.';
+
+  cible.innerHTML =
+    '<div class="titre-module"><span style="font-size:1.6rem">📡</span>' +
+    '<h1>Vue d’ensemble</h1></div>' +
+    '<p class="resume-accueil">' + echapper(resume) + '</p>' +
+    '<div class="cartes">' +
+    s.connexions
+      .map(
+        (c) => `
+        <div class="carte ${c.etat}">
+          <div class="entete">
+            <span class="point ${c.etat === 'ok' ? 'ok' : c.etat === 'ko' ? 'ko' : c.etat === 'attention' ? 'attente' : ''}"></span>
+            <span class="nom">${echapper(c.nom)}</span>
+            ${c.module ? `<span class="provenance">${echapper(c.module)}</span>` : ''}
+          </div>
+          <div class="detail">${echapper(c.detail || '')}</div>
+          ${c.aide ? `<div class="aide">${echapper(c.aide)}</div>` : ''}
+        </div>`
+      )
+      .join('') +
+    '</div>' +
+    '<div class="section"><h3>Modules</h3>' +
+    '<p style="color:var(--texte-doux);margin:0">' +
+    s.modules.demarres + ' démarré(s) sur ' + s.modules.total +
+    (s.modules.enErreur ? ' — ' + s.modules.enErreur + ' à compléter ou en erreur' : '') +
+    '</p></div>';
+}
+
+async function chargerSante() {
+  try {
+    etat.sante = await api('/api/sante');
+  } catch {
+    etat.sante = null;
+  }
+  // La pastille du rail reprend le pire état : un souci reste visible même
+  // quand on est sur l'écran d'un module.
+  const pire = etat.sante?.connexions?.some((c) => c.etat === 'ko')
+    ? 'ko'
+    : etat.sante?.connexions?.some((c) => c.etat === 'attention')
+      ? 'attente'
+      : 'ok';
+  $('#point-accueil').className = 'point ' + (etat.sante ? pire : '');
+  if (etat.selection === ACCUEIL) dessinerAccueil();
+}
+
+// --- Détail d'un module -----------------------------------------------------
+
 function dessinerDetail() {
+  if (etat.selection === ACCUEIL) return dessinerAccueil();
+
   const m = etat.modules.find((x) => x.id === etat.selection);
   const cible = $('#detail');
 
@@ -818,12 +898,19 @@ function brancherModales() {
 
 // ------------------------------------------------------------------- démarrage
 
+$('#entree-accueil').addEventListener('click', () => {
+  etat.selection = ACCUEIL;
+  dessinerRail();
+  dessinerAccueil();
+});
+
 brancherTiroir();
 brancherModales();
 
 await rafraichirEtat();
 await chargerModules();
 await chargerJournal();
+await chargerSante();
 brancherFluxJournal();
 verifierMaj();
 
@@ -837,6 +924,7 @@ setInterval(async () => {
     dessinerRail();
     dessinerDetail();
   }
+  await chargerSante();
 }, 5000);
 
 // StreamKit reste ouvert des jours d'affilée chez un streamer. Sans cette

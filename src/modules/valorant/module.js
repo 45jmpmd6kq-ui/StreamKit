@@ -139,6 +139,40 @@ export default {
     },
   },
 
+  // Ce que ce module apporte a la vue d'ensemble : l'etat du Riot Client.
+  // Client ferme est l'etat NORMAL entre deux sessions de jeu -- « inactif »,
+  // pas « en erreur » : un bandeau qui clignote en rouge quand on ne joue pas
+  // n'apprend rien a personne.
+  async sante(ctx) {
+    const e = ctx._construireEtat?.();
+    if (!e) return [{ id: 'riot', nom: 'Riot Client', etat: 'inactif', detail: 'module au repos' }];
+
+    const p = e.player || {};
+    const qui = p.name ? p.name + '#' + p.tag : '';
+    const ou = p.region ? p.region.toUpperCase() : '';
+
+    if (e.status === 'pret') {
+      return [
+        {
+          id: 'riot',
+          nom: 'Riot Client',
+          etat: 'ok',
+          detail: [qui, ou, e.rank?.name].filter(Boolean).join(' · '),
+          aide: e.game?.state ? 'En jeu : ' + e.game.state : '',
+        },
+      ];
+    }
+    return [
+      {
+        id: 'riot',
+        nom: 'Riot Client',
+        etat: e.status === 'erreur' ? 'ko' : 'inactif',
+        detail: e.message || 'fermé',
+        aide: e.status === 'client_ferme' ? 'Lance Valorant : le bandeau se remplit tout seul.' : '',
+      },
+    ];
+  },
+
   async demarrer(ctx) {
     const c = ctx.config;
     const stocke = ctx.etat.lire({ meta: null, matchs: [] });

@@ -179,6 +179,93 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
       };
     },
 
+    // --- Vue d'ensemble des connexions ---------------------------------
+    // Ce qu'on regarde avant de partir en live. Le socle sait deja beaucoup :
+    // Twitch, les sources OBS branchees sur nos overlays, les mises a jour.
+    // Chaque module ajoute les siennes via sante() dans son manifeste --
+    // Spotify pour le bot musique, le Riot Client pour Valorant.
+    async sante() {
+      const connexions = [];
+
+      // --- Twitch ---
+      const t = twitch.getEtat();
+      const manquants = twitch.droitsManquants(registre.scopesRequis());
+      if (!t.pret) {
+        connexions.push({
+          id: 'twitch',
+          nom: 'Twitch',
+          etat: store.lireTokens().twitchApp?.clientId ? 'ko' : 'inactif',
+          detail: t.raison || 'non connecté',
+          aide: 'Clique sur l’indicateur Twitch en haut de la fenêtre.',
+        });
+      } else if (manquants.length) {
+        connexions.push({
+          id: 'twitch',
+          nom: 'Twitch',
+          etat: 'attention',
+          detail: t.channel + ' — ' + manquants.length + ' droit(s) manquant(s)',
+          aide: 'Reconnecte ta chaîne : ' + manquants.join(', '),
+        });
+      } else {
+        connexions.push({
+          id: 'twitch',
+          nom: 'Twitch',
+          etat: t.chatConnecte ? 'ok' : 'attention',
+          detail: t.channel + (t.chatConnecte ? ' — chat et EventSub' : ' — chat en reconnexion'),
+        });
+      }
+
+      // --- OBS : combien de sources ecoutent nos overlays ---
+      // On ne parle pas a OBS, mais un overlay branche PROUVE qu'il tourne.
+      // C'est la vraie question du streamer : « ma source est-elle en place ? »
+      const vues = [];
+      let total = 0;
+      for (const m of registre.liste()) {
+        for (const o of m.manifeste.overlays ?? []) {
+          const n = diffusion.nbClients('overlay:' + m.id + ':' + o.chemin);
+          total += n;
+          if (n) vues.push(m.manifeste.nom + ' › ' + o.nom + ' (' + n + ')');
+        }
+      }
+      connexions.push({
+        id: 'obs',
+        nom: 'OBS',
+        etat: total ? 'ok' : 'inactif',
+        detail: total ? total + ' source(s) connectée(s)' : 'aucune source connectée',
+        aide: total ? vues.join(' · ') : 'Ajoute les overlays de tes modules en source Navigateur.',
+      });
+
+      // --- Modules : chacun declare ses propres connexions ---
+      for (const m of registre.liste()) {
+        if (typeof m.manifeste.sante !== 'function') continue;
+        // Un module arrete n'a pas de contexte : inutile de l'interroger.
+        if (m.etat !== 'demarre') continue;
+        try {
+          const r = (await m.manifeste.sante(contextes.get(m.id))) ?? [];
+          for (const c of r) connexions.push({ ...c, module: m.manifeste.nom });
+        } catch (e) {
+          connexions.push({
+            id: m.id + ':sante',
+            nom: m.manifeste.nom,
+            module: m.manifeste.nom,
+            etat: 'ko',
+            detail: 'état illisible',
+            aide: e?.message || String(e),
+          });
+        }
+      }
+
+      return {
+        connexions,
+        version: maj.versionActuelle(),
+        modules: {
+          total: registre.liste().length,
+          demarres: registre.liste().filter((m) => m.etat === 'demarre').length,
+          enErreur: registre.liste().filter((m) => m.etat === 'erreur' || m.etat === 'incomplet').length,
+        },
+      };
+    },
+
     async definirActif(id, actif) {
       if (actif) {
         store.sauverModule(id, { actif: true });

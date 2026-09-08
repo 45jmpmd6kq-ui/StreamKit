@@ -224,6 +224,47 @@ export default {
     },
   },
 
+  // Ce que ce module apporte a la vue d'ensemble. Twitch est deja couvert par
+  // le socle : ici on ne parle que de Spotify.
+  async sante(ctx) {
+    if (!ctx.secrets.lire('spotifyRefreshToken')) {
+      return [
+        {
+          id: 'spotify',
+          nom: 'Spotify',
+          etat: 'inactif',
+          detail: 'non connecté',
+          aide: 'Bouton « Connecter Spotify » dans les réglages du module.',
+        },
+      ];
+    }
+
+    try {
+      // Un appareil actif est la condition pour qu'une musique parte en file :
+      // sans lui, chaque demande serait remboursée.
+      const appareil = await ctx._spotify?.getActiveDevice();
+      return [
+        {
+          id: 'spotify',
+          nom: 'Spotify',
+          etat: appareil ? 'ok' : 'attention',
+          detail: appareil ? appareil.name : 'aucun appareil actif',
+          aide: appareil ? '' : 'Ouvre Spotify et lance une musique, sinon les demandes seront remboursées.',
+        },
+      ];
+    } catch (e) {
+      return [
+        {
+          id: 'spotify',
+          nom: 'Spotify',
+          etat: 'ko',
+          detail: 'injoignable',
+          aide: e?.message || String(e),
+        },
+      ];
+    }
+  },
+
   async callbackOAuth(ctx, url) {
     const r = await spotifyAuth.traiterRetour(url);
     if (r.ok) {
@@ -252,6 +293,8 @@ export default {
       clientSecret: c.spotifyClientSecret,
       refreshToken,
     });
+
+    ctx._spotify = spotify; // lu par sante() pour la vue d ensemble
 
     const file = creerFile();
     const clipper = creerClipper({
