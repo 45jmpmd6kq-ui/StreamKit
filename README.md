@@ -29,6 +29,13 @@ npm start          # application Electron
 npm run dev        # noyau seul, sans Electron (http://127.0.0.1:4455)
 ```
 
+Ou double-clic sur `lancer-dev.bat`.
+
+> Sous PowerShell, `npm` peut echouer avec « l'execution de scripts est
+> desactivee sur ce systeme » : c'est le wrapper `npm.ps1` que bloque la
+> strategie d'execution. Utiliser `npm.cmd` a la place — inutile de modifier la
+> strategie du poste. Et `&&` n'existe pas en PowerShell 5.1 : enchainer avec `;`.
+
 Le streamer, lui, reçoit un installeur `.exe` : ni Node.js, ni ligne de commande,
 ni fenêtre noire — une icône près de l’horloge.
 
