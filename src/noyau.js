@@ -25,6 +25,7 @@ import * as twitch from './core/twitch.js';
 import * as auth from './core/auth.js';
 import * as maj from './core/maj.js';
 import * as diffusion from './core/diffusion.js';
+import * as compteurs from './core/compteurs.js';
 import { creerServeur, ecouter } from './core/serveur.js';
 
 const log = journal.pour('noyau');
@@ -46,6 +47,7 @@ const DEMARRAGE_AUTO_ABSENT = { disponible: false, lire: () => false, ecrire: ()
 export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAuto = DEMARRAGE_AUTO_ABSENT } = {}) {
   preparerDossiers();
   journal.purger();
+  compteurs.charger();
 
   const config = store.chargerConfig();
   const PORT = config.reseau?.port ?? 4455;
@@ -110,6 +112,13 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
             t.modules[id] ??= {};
             t.modules[id][cle] = valeur;
           }),
+      },
+
+      // Compteurs d'usage : le module incremente, le socle persiste et agrege.
+      // Rien a declarer ailleurs qu'un libelle dans le manifeste.
+      compteur: {
+        incr: (cle, combien = 1) => compteurs.incr(id, cle, combien),
+        lire: () => compteurs.pour(id),
       },
 
       // Minuteurs suivis : coupes automatiquement quand le module s'arrete.
@@ -255,8 +264,33 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         }
       }
 
+      // --- Compteurs d'usage ---
+      // Un module qui declare `compteurs: { cle: 'Libelle' }` voit ses chiffres
+      // remonter ici. On les expose meme module arrete : « 0 clip ce live »
+      // reste une information, et l'historique ne disparait pas parce qu'on a
+      // decoche une case.
+      const kpis = [];
+      for (const m of registre.liste()) {
+        const libelles = m.manifeste.compteurs;
+        if (!libelles) continue;
+        const { total, session } = compteurs.pour(m.id);
+        kpis.push({
+          module: m.manifeste.nom,
+          icone: m.manifeste.icone ?? '🧩',
+          actif: m.etat === 'demarre',
+          valeurs: Object.entries(libelles).map(([cle, label]) => ({
+            cle,
+            label,
+            session: session[cle] || 0,
+            total: total[cle] || 0,
+          })),
+        });
+      }
+
       return {
         connexions,
+        kpis,
+        depuis: compteurs.debutSession(),
         version: maj.versionActuelle(),
         modules: {
           total: registre.liste().length,
@@ -463,6 +497,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
     enFermeture = true;
     log.info('Arret de StreamKit...');
     for (const id of [...contextes.keys()]) await arreterModule(id);
+    compteurs.vider();
     await twitch.arreter();
     serveur.close();
     serveur.jumeauIPv6?.close();

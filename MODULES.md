@@ -251,6 +251,39 @@ fermé entre deux sessions de jeu est normal ; le marquer en rouge apprendrait
 seulement au streamer à ignorer les alertes. `ko` est réservé à ce qui devrait
 marcher et ne marche pas.
 
+## Les compteurs d'usage
+
+Déclare des libellés dans le manifeste, incrémente dans le code, et les chiffres
+apparaissent sur la vue d'ensemble :
+
+```js
+compteurs: {
+  crees:   'Clips créés',
+  refuses: 'Refusés (délai, hors live)',
+},
+
+// puis, dans demarrer() :
+ctx.compteur.incr('crees');
+ctx.compteur.incr('crees', 3);   // par lot
+ctx.compteur.lire();             // { total: {...}, session: {...} }
+```
+
+Deux échelles, parce qu'elles ne répondent pas à la même question :
+
+| | |
+|---|---|
+| **session** | depuis le lancement de StreamKit — en pratique, ce live |
+| **total** | depuis toujours ; c'est lui qui donne son sens au chiffre de session |
+
+Le socle persiste dans `%APPDATA%\StreamKit\compteurs.json`, avec une écriture
+différée de 5 secondes : une commande très sollicitée écrirait sinon des
+centaines de fois par minute pour une donnée qui n'a rien d'urgent. Le fichier
+est vidé proprement à l'arrêt.
+
+Compte ce qui **raconte le live**, pas ce qui te sert à déboguer : les échecs et
+les rejets valent souvent autant que les succès (« 27 musiques refusées par un
+viewer » dit quelque chose). Le reste appartient au journal.
+
 ## Le journal
 
 `ctx.log` écrit d'un coup vers la console, le dashboard (en direct) et le

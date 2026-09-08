@@ -125,6 +125,11 @@ export default {
     ],
   },
 
+  compteurs: {
+    tirages: 'Tirages',
+    rembourses: 'Remboursés (aucune voiture)',
+  },
+
   migrations: {},
 
   overlays: [
@@ -252,6 +257,7 @@ export default {
 
       if (!dispo.length) {
         ctx.log.err(par + ' : aucune voiture configurée, points remboursés.');
+        ctx.compteur.incr('rembourses');
         annoncer('@' + par + " aucune voiture n'est configurée pour l'instant, tes points t'ont été rendus.");
         if (redemption) await ctx.twitch.statutRedemption(redemption, 'CANCELED');
         return null;
@@ -259,6 +265,7 @@ export default {
 
       const gagnante = roue.spin(dispo);
       ctx.log.ok(par + ' → ' + gagnante.name);
+      ctx.compteur.incr('tirages');
 
       ctx.overlay.diffuser('roue', 'spin', { by: par, winner: gagnante, pool: dispo, spinMs, holdMs });
 

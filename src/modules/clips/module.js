@@ -106,6 +106,12 @@ export default {
     ],
   },
 
+  // Compteurs remontes dans la vue d'ensemble.
+  compteurs: {
+    crees: 'Clips créés',
+    refuses: 'Refusés (délai, hors live)',
+  },
+
   migrations: {},
 
   overlays: [
@@ -192,6 +198,7 @@ export default {
         const restant = delaiMs - (Date.now() - dernierClip);
         if (restant > 0) {
           ctx.twitch.dire('@' + user + ' encore ' + Math.ceil(restant / 1000) + ' s avant le prochain clip ⏳');
+          ctx.compteur.incr('refuses');
           return;
         }
 
@@ -200,6 +207,7 @@ export default {
           const nommer = c.nommage && peutNommer;
           const clip = await clipper.creer({ nom: nommer ? argument : '' });
           dernierClip = Date.now();
+          ctx.compteur.incr('crees');
 
           if (c.overlayActif) {
             ctx.overlay.diffuser('annonce', 'clip', {
@@ -219,6 +227,7 @@ export default {
           }
           ctx.log.ok('Clip créé par ' + user + nom + ' : ' + clip.url);
         } catch (err) {
+          ctx.compteur.incr('refuses');
           if (err.reason === 'OFFLINE') {
             ctx.twitch.dire('@' + user + ' impossible de clipper : la chaîne n’est pas en live ❌');
           } else if (err.reason === 'RATE_LIMIT') {

@@ -147,6 +147,13 @@ export default {
     ],
   },
 
+  compteurs: {
+    demandes: 'Musiques demandées',
+    introuvables: 'Introuvables sur Spotify',
+    refusees: 'Refusées par un viewer',
+    passees: 'Morceaux passés',
+  },
+
   migrations: {
     // v2 : la commande de clip est partie dans son propre module « Clips ».
     // On retire ses réglages d'ici — ils n'ont plus d'effet, et les laisser
@@ -338,6 +345,7 @@ export default {
         const morceau = await spotify.searchTrack(saisie);
         if (!morceau) {
           await ctx.twitch.statutRedemption(e, 'CANCELED');
+          ctx.compteur.incr('introuvables');
           annoncer('@' + e.userDisplayName + ' morceau introuvable sur Spotify ❌ (points remboursés)');
           return;
         }
@@ -351,6 +359,7 @@ export default {
         diffuser('added', { requester: item.requester, name: item.name, artists: item.artists });
         pousserEtat();
 
+        ctx.compteur.incr('demandes');
         ctx.log.ok('Ajouté à la file : ' + morceau.name + ' — ' + morceau.artists);
         annoncer(
           '@' + e.userDisplayName + ' 🎶 « ' + morceau.name + ' — ' + morceau.artists + ' » ajouté à la file !'
@@ -391,6 +400,7 @@ export default {
         await ctx.twitch.statutRedemption(e, 'FULFILLED');
         diffuser('cancelled', { requester: e.userDisplayName, name: cible.name, artists: cible.artists });
         pousserEtat();
+        ctx.compteur.incr('refusees');
         ctx.log.ok('Annulé : ' + cible.name + ' — ' + cible.artists + ' (sera sauté à son passage)');
         annoncer('@' + e.userDisplayName + ' 🚫 « ' + cible.name + ' — ' + cible.artists + ' » ne passera pas.');
 
@@ -440,6 +450,7 @@ export default {
             await spotify.next();
             persisterSpotify();
             annoncer('⏭️ Morceau suivant !');
+            ctx.compteur.incr('passees');
             ctx.log.info(user + ' a passé le morceau');
           } catch (err) {
             ctx.log.err('Impossible de passer le morceau : ' + err.message);

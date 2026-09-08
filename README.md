@@ -57,6 +57,7 @@ src/
     diffusion.js        SSE (overlays + flux du journal)
     serveur.js          serveur HTTP unique : dashboard, API, overlays
     maj.js              mise à jour depuis les releases GitHub
+    compteurs.js        compteurs d usage (session + total)
   dashboard/            l'interface (aucune dépendance, aucun build)
   modules/
     exemple/            module de référence — voir MODULES.md

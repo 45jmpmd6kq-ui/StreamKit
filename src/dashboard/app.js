@@ -76,7 +76,6 @@ async function rafraichirEtat() {
 
   if (g.dossierDonnees) $('#chemin-donnees').textContent = g.dossierDonnees;
   $('#url-retour').textContent = 'http://localhost:' + g.port + '/callback/twitch';
-  $('#in-depot').value = g.depotMaj || '';
   if (g.chaine) $('#in-channel').value = g.chaine;
 
   // Le démarrage avec Windows n'existe que dans l'application Electron : lancé
@@ -376,11 +375,53 @@ function dessinerAccueil() {
       )
       .join('') +
     '</div>' +
+    dessinerKpis(s) +
     '<div class="section"><h3>Modules</h3>' +
     '<p style="color:var(--texte-doux);margin:0">' +
     s.modules.demarres + ' démarré(s) sur ' + s.modules.total +
     (s.modules.enErreur ? ' — ' + s.modules.enErreur + ' à compléter ou en erreur' : '') +
     '</p></div>';
+}
+
+// Le gros chiffre est celui de la SESSION — ce qui s'est passé depuis que
+// StreamKit tourne, donc en pratique ce live. Le total en dessous lui donne son
+// échelle : « 12 » ne veut rien dire sans savoir si on en est à 15 ou à 900.
+function dessinerKpis(s) {
+  const blocs = (s.kpis || []).filter((k) => k.valeurs.length);
+  if (!blocs.length) return '';
+
+  const depuis = s.depuis ? new Date(s.depuis) : null;
+  const p = (n) => String(n).padStart(2, '0');
+  const heure = depuis ? p(depuis.getHours()) + ':' + p(depuis.getMinutes()) : '—';
+
+  return (
+    '<div class="section"><h3>Utilisation — depuis ' + heure + '</h3>' +
+    blocs
+      .map(
+        (k) => `
+        <div class="kpi-module">
+          <div class="kpi-titre">
+            <span>${k.icone}</span>
+            <span>${echapper(k.module)}</span>
+            ${k.actif ? '' : '<span class="kpi-repos">au repos</span>'}
+          </div>
+          <div class="kpi-valeurs">
+            ${k.valeurs
+              .map(
+                (v) => `
+              <div class="kpi">
+                <div class="kpi-chiffre">${v.session}</div>
+                <div class="kpi-label">${echapper(v.label)}</div>
+                <div class="kpi-total">${v.total} au total</div>
+              </div>`
+              )
+              .join('')}
+          </div>
+        </div>`
+      )
+      .join('') +
+    '</div>'
+  );
 }
 
 async function chargerSante() {
@@ -882,7 +923,10 @@ function brancherModales() {
   $('#btn-sauver-reglages').addEventListener('click', async () => {
     // Le dépôt de mise à jour passe par la même route que la config générale.
     try {
-      const corps = { depotMaj: $('#in-depot').value.trim() };
+      // Le depot des mises a jour n'est plus un reglage : sous Electron il est
+      // embarque a la compilation (build.publish), et le champ n'avait aucun
+      // effet. Il ne restait qu'a le faire croire au streamer.
+      const corps = {};
       if (!$('#bloc-demarrage-auto').hidden) {
         corps.demarrageAuto = $('#in-demarrage-auto').getAttribute('aria-checked') === 'true';
       }
