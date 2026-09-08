@@ -46,12 +46,40 @@ let onQuitteVraiment = false;
 
 autoUpdater.autoDownload = false; // c'est le streamer qui declenche, jamais nous
 autoUpdater.autoInstallOnAppQuit = false;
+
+// electron-updater deverse l'erreur brute : message, tous les en-tetes HTTP et
+// la pile d'appels, soit une quarantaine de lignes pour un simple 404. Le
+// journal est l'outil de support de StreamKit -- s'il devient illisible, il ne
+// sert plus a rien. On condense en une phrase, et on garde le detail en debug
+// pour quand j'en ai vraiment besoin.
+function resumerErreurMaj(e) {
+  const brut = String(e?.message || e || '');
+  const premiere = brut.split('\n')[0];
+
+  if (/latest\.yml/i.test(brut)) {
+    return "la derniere release publiee ne contient pas latest.yml (il faut le joindre a la release)";
+  }
+  if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(brut)) {
+    return 'GitHub injoignable — connexion, VPN ou pare-feu';
+  }
+  if (/\b404\b/.test(brut)) return 'aucune release publiee sur le depot';
+  if (/sha512|checksum/i.test(brut)) return 'le fichier telecharge ne correspond pas a la release (empreinte invalide)';
+  return premiere.slice(0, 200);
+}
+
 autoUpdater.logger = {
   info: (m) => log.debug('maj: ' + m),
   warn: (m) => log.warn('maj: ' + m),
-  error: (m) => log.err('maj: ' + m),
+  // Ne pas verifier une mise a jour n'empeche pas de streamer : c'est un
+  // avertissement, pas une erreur qui merite d'alarmer le streamer en plein live.
+  error: (m) => {
+    log.warn('Mise a jour indisponible : ' + resumerErreurMaj(m));
+    log.debug('maj (detail) : ' + String(m?.message || m).split('\n')[0]);
+  },
   debug: () => {},
 };
+
+autoUpdater.on('error', (e) => log.debug('maj (evenement) : ' + resumerErreurMaj(e)));
 
 let derniereConnue = null;
 
@@ -72,7 +100,7 @@ const updater = {
         publieeLe: r.updateInfo.releaseDate,
       };
     } catch (e) {
-      return { ok: false, raison: 'verification impossible (' + (e?.message || e) + ')', actuelle };
+      return { ok: false, raison: resumerErreurMaj(e), actuelle };
     }
   },
 
@@ -90,8 +118,8 @@ const updater = {
       }, 800);
       return { ok: true, actuelle, derniere: derniereConnue };
     } catch (e) {
-      log.err('Mise a jour impossible : ' + (e?.message || e));
-      return { ok: false, raison: e?.message || String(e) };
+      log.err('Mise a jour impossible : ' + resumerErreurMaj(e));
+      return { ok: false, raison: resumerErreurMaj(e) };
     }
   },
 
