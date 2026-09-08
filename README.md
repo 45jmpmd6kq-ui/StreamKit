@@ -62,6 +62,7 @@ src/
     exemple/            module de référence — voir MODULES.md
     musique/            bot musique Spotify + clips (portage de la V2)
     roue-rl/            roue des voitures Rocket League (portage)
+    valorant/           bandeau de session Valorant (réécriture Python -> Node)
 ```
 
 ### La règle qui structure tout
@@ -180,7 +181,9 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - [ ] Recette du bot musique avec de vrais identifiants Twitch + Spotify
 - [x] **Roue RL migrée** : 2e module porté — a fait émerger les pages sur mesure
       et le partage d assets entre page et overlay
-- [ ] Migrer RL-Tracker, Valorant, RL-Challenge
+- [x] **Bandeau Valorant migré** : 1re réécriture Python -> Node, validée sur
+      des données Riot réelles (rang, RR, 16 matchs classés)
+- [ ] Migrer RL-Tracker et RL-Challenge
 
 ## Pièges rencontrés (à ne pas refaire)
 

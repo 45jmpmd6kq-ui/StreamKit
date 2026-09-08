@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valorant — bandeau de session</title>
+<style>
+/* ==========================================================================
+   Valorant Overlay — bandeau de session (source navigateur OBS)
+   Cible : 900 × 70 px, fond de page transparent.
+   Charte Valorant : rouge #FF4655 sur bleu nuit #0F1923, typo condensée
+   en capitales. Le vert de gain est décalé vers #7BC96F pour rester
+   distinguable du rouge en deutéranopie.
+   ========================================================================== */
+
+:root {
+  --bg:        rgba(15, 25, 35, .85);
+  --bg-solid:  #0F1923;
+  --red:       #FF4655;
+  --green:     #7BC96F;
+  --text:      #ECE8E1;
+  --muted:     rgba(236, 232, 225, .52);
+  --line:      rgba(236, 232, 225, .14);
+  --bar-h:     70px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: transparent;      /* OBS : la page reste transparente */
+  overflow: hidden;
+}
+
+body {
+  font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  display: flex;
+  align-items: flex-start;
+  transform-origin: top left;   /* pour le paramètre ?scale= */
+}
+
+/* -- barre ---------------------------------------------------------------- */
+
+.bar {
+  position: relative;
+  /* Le bandeau se cale sur son contenu : le reste de la source OBS reste
+     transparent. Les segments ont une largeur plancher pour que le bord droit
+     ne bouge pas quand un libellé change. */
+  width: max-content;
+  max-width: 100%;
+  height: var(--bar-h);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 22px 0 26px;
+  background: var(--bg);
+  border-left: 4px solid var(--red);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .45);
+  /* Coin inférieur droit biseauté : l'angle coupé de l'UI du jeu. */
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+  opacity: 1;
+  transition: opacity .25s ease;
+}
+
+.bar[data-status="loading"],
+.bar[data-status="offline"],
+.bar[data-status="client_closed"] { opacity: .55; }
+
+/* display:flex l'emporterait sur l'attribut hidden (?hide-idle=1). */
+.bar[hidden] { display: none; }
+
+/* Liseré clair sur l'arête haute, comme les panneaux du jeu. */
+.bar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(236, 232, 225, .28), rgba(236, 232, 225, 0) 70%);
+}
+
+/* -- segments ------------------------------------------------------------- */
+
+.seg {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.sep {
+  width: 1px;
+  height: 34px;
+  margin: 0 20px;
+  background: var(--line);
+  flex: none;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.unit {
+  font-size: .62em;
+  font-weight: 600;
+  letter-spacing: .1em;
+  color: var(--muted);
+  margin-left: 3px;
+}
+
+/* -- rang ----------------------------------------------------------------- */
+
+.seg-rank { gap: 12px; flex: none; }
+
+.rank-icon {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6));
+  flex: none;
+}
+
+.rank-name {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+
+.rank-rr {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  line-height: 1;
+  color: var(--text);
+}
+
+/* -- colonnes label + valeur ---------------------------------------------- */
+
+.seg-rank   { min-width: 210px; }
+.seg-delta  { min-width: 92px; }
+.seg-record { min-width: 96px; }
+
+.seg-delta, .seg-record { flex-direction: column; align-items: flex-start; justify-content: center; }
+
+#session-rr.up   { color: var(--green); }
+#session-rr.down { color: var(--red); }
+#session-rr.flat { color: var(--muted); }
+
+.win  { color: var(--green); }
+.loss { color: var(--red); }
+.dash { color: var(--muted); margin: 0 4px; font-weight: 500; }
+
+/* -- série + pastilles ---------------------------------------------------- */
+
+.seg-streak {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  min-width: 118px;
+}
+
+.streak {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 5px 9px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.streak[data-type="W"] { color: var(--green); border-color: rgba(123, 201, 111, .45); }
+.streak[data-type="L"] { color: var(--red);   border-color: rgba(255, 70, 85, .45); }
+
+.pips { display: flex; gap: 4px; height: 6px; }
+
+.pip {
+  width: 6px;
+  height: 6px;
+  background: var(--muted);
+  transform: rotate(45deg);     /* losanges, pas des ronds */
+}
+
+.pip.W { background: var(--green); }
+.pip.L { background: var(--red); }
+.pip.D { background: var(--muted); }
+
+/* -- progression vers le rang suivant ------------------------------------- */
+
+.progress {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  background: rgba(236, 232, 225, .10);
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--red);
+  transition: width .5s ease;
+}
+
+/* -- pastille d'état ------------------------------------------------------ */
+
+.state-dot {
+  position: absolute;
+  top: 9px; right: 9px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background .3s ease;
+}
+
+.bar[data-status="ready"]         .state-dot { background: var(--green); }
+.bar[data-status="ingame"]        .state-dot { background: var(--red); animation: pulse 1.6s ease-in-out infinite; }
+.bar[data-status="client_closed"] .state-dot,
+.bar[data-status="offline"]       .state-dot { background: #C9A227; }
+.bar[data-status="error"]         .state-dot { background: var(--red); }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+/* -- animation de gain / perte de RR -------------------------------------- */
+
+@keyframes flash-up   { 0% { text-shadow: 0 0 14px var(--green); } 100% { text-shadow: none; } }
+@keyframes flash-down { 0% { text-shadow: 0 0 14px var(--red); }   100% { text-shadow: none; } }
+
+.flash-up   { animation: flash-up 1.1s ease-out; }
+.flash-down { animation: flash-down 1.1s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-up, .flash-down, .state-dot { animation: none; }
+  .progress-fill { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar" data-status="loading">
+
+  <div class="seg seg-rank">
+    <img class="rank-icon" id="rank-icon" alt="" hidden>
+    <div class="rank-text">
+      <div class="rank-name" id="rank-name">Connexion…</div>
+      <div class="rank-rr"><span id="rank-rr">—</span><span class="unit">RR</span></div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="seg seg-delta">
+    <div class="label">Session</div>
+    <div class="value" id="session-rr">+0<span class="unit">RR</span></div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="seg seg-record">
+    <div class="label">Bilan</div>
+    <div class="value">
+      <span class="win" id="wins">0</span><span class="unit">V</span>
+      <span class="dash">–</span>
+      <span class="loss" id="losses">0</span><span class="unit">D</span>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="seg seg-streak">
+    <div class="streak" id="streak" data-type="">—</div>
+    <div class="pips" id="pips"></div>
+  </div>
+
+  <div class="progress"><div class="progress-fill" id="progress"></div></div>
+  <div class="state-dot" id="dot"></div>
+
+</div>
+
+<script>
+/* ==========================================================================
+   Valorant Overlay — bandeau de session
+   Alimenté par le flux temps réel du module (SSE) : plus de sondage.
+   Paramètres d'URL acceptés :
+     ?scale=1.25   agrandit tout le bandeau (OBS sait aussi redimensionner)
+     ?pips=0       masque les losanges des derniers matchs
+     ?demo=1       affiche des valeurs d'exemple, sans interroger le tracker —
+                   pour placer et dimensionner le bandeau dans OBS avant de
+                   lancer le jeu
+     ?hide-idle=1  masque complètement le bandeau tant qu'aucune donnée n'est
+                   disponible (Riot Client fermé, tracker arrêté)
+   ========================================================================== */
+
+const params = new URLSearchParams(location.search);
+const el = (id) => document.getElementById(id);
+
+const bar = el("bar");
+const nodes = {
+  icon: el("rank-icon"),
+  rankName: el("rank-name"),
+  rankRr: el("rank-rr"),
+  sessionRr: el("session-rr"),
+  wins: el("wins"),
+  losses: el("losses"),
+  streak: el("streak"),
+  pips: el("pips"),
+  progress: el("progress"),
+};
+
+const scale = parseFloat(params.get("scale") || "1");
+if (scale > 0 && scale !== 1) {
+  document.body.style.transform = `scale(${scale})`;
+}
+if (params.get("pips") === "0") nodes.pips.style.display = "none";
+const hideIdle = params.get("hide-idle") === "1";
+
+let lastRankRr = null;
+let lastIcon = "";
+
+function flash(node, direction) {
+  const cls = direction > 0 ? "flash-up" : "flash-down";
+  node.classList.remove("flash-up", "flash-down");
+  void node.offsetWidth;                 // relance l'animation CSS
+  node.classList.add(cls);
+}
+
+function signed(value) {
+  return (value > 0 ? "+" : "") + value;
+}
+
+function render(state) {
+  const rank = state.rank || {};
+  const session = state.session || {};
+  const game = state.game || {};
+
+  // -- état général -------------------------------------------------------
+  let status = state.status;
+  if (status === "pret" && game.state === "INGAME") status = "ingame";
+  bar.dataset.status = status;
+  bar.title = state.message || "";
+
+  // Rien n'a encore pu être lu : afficher « NON CLASSÉ · 0 RR » laisserait
+  // croire à une remise à zéro du rang. On annonce l'état réel à la place.
+  const blind = !rank.tier && !session.count && status !== "pret" && status !== "ingame";
+  bar.hidden = blind && hideIdle;
+
+  // -- rang ---------------------------------------------------------------
+  if (blind) {
+    nodes.rankName.textContent =
+      status === "client_ferme" ? "Riot Client fermé"
+        : status === "demarrage" ? "Démarrage…" : "Indisponible";
+    nodes.rankName.style.color = "";
+    nodes.rankRr.textContent = "—";
+  } else {
+    nodes.rankName.textContent = rank.name || "—";
+    nodes.rankName.style.color = rank.color || "";
+    nodes.rankRr.textContent = rank.rr != null ? rank.rr : "—";
+  }
+
+  if (blind) {
+    nodes.icon.hidden = true;
+  } else if (rank.icon && rank.icon !== lastIcon) {
+    lastIcon = rank.icon;
+    nodes.icon.src = rank.icon;
+    nodes.icon.hidden = false;
+    nodes.icon.onerror = () => { nodes.icon.hidden = true; };
+  } else if (rank.icon) {
+    nodes.icon.hidden = false;
+  }
+
+  if (lastRankRr !== null && rank.rr !== lastRankRr) {
+    flash(nodes.rankRr.parentElement, rank.rr - lastRankRr);
+  }
+  lastRankRr = rank.rr;
+
+  nodes.progress.style.width = Math.round((rank.progress || 0) * 100) + "%";
+
+  // -- session ------------------------------------------------------------
+  const rr = session.rr || 0;
+  nodes.sessionRr.innerHTML = `${signed(rr)}<span class="unit">RR</span>`;
+  nodes.sessionRr.className = "value " + (rr > 0 ? "up" : rr < 0 ? "down" : "flat");
+
+  nodes.wins.textContent = session.wins || 0;
+  nodes.losses.textContent = session.losses || 0;
+
+  // -- série --------------------------------------------------------------
+  if (session.streak >= 2 && session.streak_type) {
+    nodes.streak.dataset.type = session.streak_type;
+    nodes.streak.textContent =
+      (session.streak_type === "W" ? "série " : "défaites ") + session.streak;
+  } else if (session.count) {
+    nodes.streak.dataset.type = "";
+    nodes.streak.textContent = session.count + (session.count > 1 ? " matchs" : " match");
+  } else {
+    nodes.streak.dataset.type = "";
+    nodes.streak.textContent = "depuis " + (session.since || "—");
+  }
+
+  // -- losanges des derniers matchs ---------------------------------------
+  const results = session.results || [];
+  if (nodes.pips.dataset.sig !== results.join("")) {
+    nodes.pips.dataset.sig = results.join("");
+    nodes.pips.innerHTML = results
+      .map((r) => `<span class="pip ${r}"></span>`)
+      .join("");
+  }
+}
+
+function renderOffline(message) {
+  bar.dataset.status = "offline";
+  bar.hidden = hideIdle;
+  bar.title = message;
+  nodes.rankName.textContent = "StreamKit arrêté";
+  nodes.rankName.style.color = "";
+  nodes.rankRr.textContent = "—";
+  nodes.icon.hidden = true;
+}
+
+// Flux temps reel du module. Le chemin est construit depuis location.pathname :
+// un relatif remplacerait le dernier segment de l'URL.
+const BASE = location.pathname.replace(/\/$/, '');
+
+function brancher() {
+  const flux = new EventSource(BASE + '/flux');
+  flux.addEventListener('etat', (e) => render(JSON.parse(e.data)));
+  // EventSource se reconnecte seul : on ne signale la coupure que si elle dure.
+  flux.addEventListener('error', () => {
+    if (flux.readyState === EventSource.CLOSED) renderOffline('StreamKit arrete');
+  });
+}
+
+const DEMO = {
+  status: "pret",
+  message: "",
+  rank: {
+    name: "ASCENDANT 1",
+    color: "#6ae2af",
+    rr: 47,
+    progress: 0.47,
+    icon: "https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/21/largeicon.png",
+  },
+  session: {
+    rr: 18, wins: 4, losses: 2, count: 6, streak_type: "W", streak: 3,
+    since: "20:15", results: ["L", "W", "L", "W", "W", "W"],
+  },
+  game: { state: "MENUS" },
+};
+
+if (params.get("demo") === "1") {
+  render(DEMO);
+} else {
+  brancher();
+}
+</script>
+</body>
+</html>

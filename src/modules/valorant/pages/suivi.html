@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Valorant — suivi de session</title>
+    <style>
+      :root {
+        --fond: #0f1115;
+        --carte: #171a21;
+        --ligne: #262b36;
+        --texte: #e9ecf2;
+        --doux: #99a0ae;
+        --rouge: #ff4655; /* rouge Valorant */
+        --vert: #22c55e;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 28px;
+        background: var(--fond);
+        color: var(--texte);
+        font: 14px/1.55 "Segoe UI", system-ui, sans-serif;
+      }
+      h1 { margin: 0 0 4px; font-size: 1.3rem; }
+      h1 .accent { color: var(--rouge); }
+      .sous { color: var(--doux); margin: 0 0 1.5rem; }
+
+      .etat {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.35rem 0.8rem; border-radius: 999px;
+        background: var(--carte); border: 1px solid var(--ligne);
+        font-size: 0.88rem; margin-bottom: 1.5rem;
+      }
+      .point { width: 8px; height: 8px; border-radius: 50%; background: var(--doux); }
+      .point.ok { background: var(--vert); box-shadow: 0 0 8px var(--vert); }
+      .point.ko { background: var(--rouge); }
+
+      .tuiles {
+        display: grid; gap: 12px; margin-bottom: 1.75rem;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      }
+      .tuile {
+        background: var(--carte); border: 1px solid var(--ligne);
+        border-radius: 12px; padding: 0.9rem 1.1rem;
+      }
+      .tuile .lbl {
+        font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--doux); margin-bottom: 0.35rem;
+      }
+      .tuile .val { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .val.up { color: var(--vert); }
+      .val.down { color: var(--rouge); }
+
+      table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+      th {
+        text-align: left; font-size: 0.72rem; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--doux); font-weight: 600;
+        padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--ligne);
+      }
+      td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1c202a; }
+      tr:last-child td { border-bottom: none; }
+      .res { font-weight: 700; }
+      .res.W { color: var(--vert); }
+      .res.L { color: var(--rouge); }
+      .res.D { color: var(--doux); }
+      .rr { font-variant-numeric: tabular-nums; }
+      .rr.up { color: var(--vert); }
+      .rr.down { color: var(--rouge); }
+      .vide { padding: 2.5rem; text-align: center; color: var(--doux); }
+    </style>
+  </head>
+  <body>
+    <h1>Suivi de session <span class="accent">Valorant</span></h1>
+    <p class="sous" id="joueur">—</p>
+
+    <div class="etat"><span class="point" id="point"></span><span id="message">Connexion…</span></div>
+
+    <div class="tuiles" id="tuiles"></div>
+
+    <table>
+      <thead>
+        <tr><th>Heure</th><th>Carte</th><th>Résultat</th><th>Score</th><th>RR</th><th>Rang après</th></tr>
+      </thead>
+      <tbody id="matchs"></tbody>
+    </table>
+    <div class="vide" id="vide" hidden>Aucun match classé enregistré pour l'instant.</div>
+
+    <script>
+      const $ = (sel) => document.querySelector(sel);
+
+      function esc(s) {
+        return String(s ?? '').replace(/[&<>"]/g, (c) =>
+          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+      }
+      const signe = (n) => (n > 0 ? '+' : '') + n;
+
+      // Comme la page « Mes voitures » de la roue, cette page dialogue avec son
+      // module par ses actions : elle n'a aucune route à elle.
+      async function action(nom) {
+        const r = await fetch('/api/modules/valorant/action/' + nom, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.erreur || 'erreur ' + r.status);
+        return j;
+      }
+
+      const LIBELLES = {
+        pret: 'Connecté au Riot Client',
+        demarrage: 'Démarrage…',
+        client_ferme: 'Riot Client fermé',
+        erreur: 'Erreur',
+      };
+
+      function afficher(e) {
+        if (!e) {
+          $('#message').textContent = "Le module n'est pas démarré.";
+          return;
+        }
+
+        $('#point').className = 'point ' + (e.status === 'pret' ? 'ok' : e.status === 'erreur' ? 'ko' : '');
+        $('#message').textContent = e.message || LIBELLES[e.status] || e.status;
+
+        const p = e.player || {};
+        $('#joueur').textContent = p.name
+          ? p.name + '#' + p.tag + ' — ' + (p.region || '?').toUpperCase()
+          : 'Lance Valorant pour que le bandeau se remplisse.';
+
+        const r = e.rank || {};
+        const s = e.session || {};
+        const tuiles = [
+          { lbl: 'Rang', val: r.name || '—', couleur: r.color },
+          { lbl: 'RR', val: r.rr ?? '—' },
+          { lbl: 'RR sur la session', val: signe(s.rr || 0), classe: s.rr > 0 ? 'up' : s.rr < 0 ? 'down' : '' },
+          { lbl: 'Bilan', val: (s.wins || 0) + ' – ' + (s.losses || 0) },
+          { lbl: 'Matchs', val: s.count || 0 },
+          { lbl: 'Depuis', val: s.since || '—' },
+        ];
+        $('#tuiles').innerHTML = tuiles
+          .map((t) =>
+            '<div class="tuile"><div class="lbl">' + esc(t.lbl) + '</div>' +
+            '<div class="val ' + (t.classe || '') + '"' +
+            (t.couleur ? ' style="color:' + esc(t.couleur) + '"' : '') + '>' +
+            esc(t.val) + '</div></div>'
+          )
+          .join('');
+
+        const matchs = e.matches || [];
+        $('#vide').hidden = matchs.length > 0;
+        $('#matchs').innerHTML = matchs
+          .map((m) => {
+            const d = new Date(m.debutMs);
+            const p2 = (n) => String(n).padStart(2, '0');
+            const heure = p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+            const score = m.roundsGagnes != null ? m.roundsGagnes + ' – ' + m.roundsPerdus : '—';
+            const rr = Number(m.rrGagne || 0);
+            return (
+              '<tr><td>' + heure + '</td>' +
+              '<td>' + esc(m.carte || '—') + '</td>' +
+              '<td class="res ' + esc(m.resultat) + '">' + (m.resultat || '·') + '</td>' +
+              '<td>' + score + '</td>' +
+              '<td class="rr ' + (rr > 0 ? 'up' : rr < 0 ? 'down' : '') + '">' + signe(rr) + '</td>' +
+              '<td>' + (m.rrApres ?? '—') + '</td></tr>'
+            );
+          })
+          .join('');
+      }
+
+      async function rafraichir() {
+        try {
+          afficher((await action('suivi')).etat);
+        } catch (err) {
+          $('#point').className = 'point ko';
+          $('#message').textContent = 'StreamKit ne répond pas (' + err.message + ')';
+        }
+      }
+
+      rafraichir();
+      setInterval(rafraichir, 2000);
+    </script>
+  </body>
+</html>
