@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StreamKit</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎛️</text></svg>"
+    />
+  </head>
+  <body>
+    <!-- Barre du haut -->
+    <header class="barre">
+      <div class="marque">StreamKit <span id="version"></span></div>
+
+      <button class="pastille" id="etat-twitch" title="Configurer la connexion Twitch">
+        <span class="point" id="point-twitch"></span>
+        <span id="texte-twitch">Vérification…</span>
+      </button>
+
+      <div class="pousse"></div>
+
+      <button class="btn petit" id="btn-maj" hidden></button>
+      <button class="btn petit discret" id="btn-reglages" title="Réglages de StreamKit">⚙️</button>
+    </header>
+
+    <!-- Rail des modules + détail -->
+    <main class="corps">
+      <nav class="rail">
+        <h2>Modules</h2>
+        <div id="liste-modules"></div>
+      </nav>
+
+      <section class="detail">
+        <div class="detail-inner" id="detail"></div>
+      </section>
+    </main>
+
+    <!-- Tiroir du journal -->
+    <section class="tiroir" id="tiroir">
+      <div class="poignee" id="poignee" title="Glisser pour redimensionner"></div>
+
+      <div class="entete-tiroir">
+        <span class="titre" id="bascule-tiroir"><span id="fleche">▼</span> Journal</span>
+
+        <select id="filtre-source" title="Filtrer par module">
+          <option value="">Tous les modules</option>
+        </select>
+
+        <select id="filtre-niveau" title="Niveau minimum">
+          <option value="debug">Tout (avec détails)</option>
+          <option value="info" selected>Normal</option>
+          <option value="avert">Avertissements et erreurs</option>
+          <option value="erreur">Erreurs seulement</option>
+        </select>
+
+        <input type="text" id="recherche" placeholder="Rechercher…" />
+
+        <span class="compteur-erreurs" id="compteur-erreurs"></span>
+
+        <div class="pousse" style="margin-left: auto"></div>
+
+        <button class="btn petit discret" id="btn-pause" title="Suspendre le défilement">⏸</button>
+        <button class="btn petit discret" id="btn-vider" title="Vider l'affichage">🧹</button>
+        <button class="btn petit discret" id="btn-telecharger" title="Télécharger le journal du jour">⤓</button>
+      </div>
+
+      <div class="journal" id="journal"></div>
+    </section>
+
+    <!-- Assistant de connexion Twitch -->
+    <dialog id="modale-twitch">
+      <div class="modale-entete"><h2>Connecter ta chaîne Twitch</h2></div>
+      <div class="modale-corps">
+        <p style="margin-top: 0; color: var(--texte-doux)">
+          StreamKit tourne entièrement sur ton PC : rien n'est envoyé sur un serveur. Tu crées donc ta
+          propre application Twitch — c'est gratuit et ça prend 3 minutes, une seule fois.
+        </p>
+
+        <ol class="etapes">
+          <li>
+            Ouvre <a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">la console
+            développeur Twitch</a> et connecte-toi.
+          </li>
+          <li>Nom : <code>StreamKit</code> — Catégorie : <code>Chat Bot</code>.</li>
+          <li>
+            URL de redirection OAuth : colle exactement
+            <code id="url-retour">http://localhost:4455/callback/twitch</code>
+            <button class="btn petit discret" data-copier="url-retour" title="Copier">📋</button>
+          </li>
+          <li>Valide, puis récupère l'<b>ID client</b> et génère un <b>secret client</b>.</li>
+          <li>Colle les deux ici :</li>
+        </ol>
+
+        <div class="champ large">
+          <label for="in-channel">Nom de ta chaîne Twitch</label>
+          <div class="aide">Tel qu'il apparaît dans l'adresse : twitch.tv/<b>ton-pseudo</b></div>
+          <div class="saisie"><input type="text" id="in-channel" placeholder="ton-pseudo" autocomplete="off" /></div>
+        </div>
+
+        <div class="champ large">
+          <label for="in-client-id">ID client</label>
+          <div class="saisie"><input type="text" id="in-client-id" autocomplete="off" spellcheck="false" /></div>
+        </div>
+
+        <div class="champ large">
+          <label for="in-client-secret">Secret client</label>
+          <div class="aide">Il reste sur ce PC, dans un fichier que tu ne partages jamais.</div>
+          <div class="saisie"><input type="password" id="in-client-secret" autocomplete="off" spellcheck="false" /></div>
+        </div>
+
+        <div class="bandeau info" id="info-autorisation" hidden>
+          <div>
+            <b>Autorisation en cours</b>
+            <p>Une page Twitch s'est ouverte dans ton navigateur. Clique sur « Autoriser », puis reviens ici.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modale-pied">
+        <button class="btn" id="btn-fermer-twitch">Fermer</button>
+        <button class="btn primaire" id="btn-autoriser">Enregistrer et autoriser</button>
+      </div>
+    </dialog>
+
+    <!-- Réglages de StreamKit -->
+    <dialog id="modale-reglages">
+      <div class="modale-entete"><h2>Réglages de StreamKit</h2></div>
+      <div class="modale-corps">
+        <div class="champ large">
+          <label for="in-depot">Dépôt des mises à jour</label>
+          <div class="aide">
+            Dépôt GitHub au format <code>utilisateur/projet</code>. C'est de là que StreamKit
+            récupère les nouvelles versions.
+          </div>
+          <div class="saisie"><input type="text" id="in-depot" placeholder="utilisateur/streamkit" /></div>
+        </div>
+
+        <div class="section" style="margin-top: 1.5rem">
+          <h3>Emplacements</h3>
+          <p style="color: var(--texte-doux); font-size: 0.9rem; margin: 0">
+            Tes réglages et tes jetons sont dans <code id="chemin-donnees">%APPDATA%\StreamKit</code>.
+            Ils ne sont <b>jamais</b> touchés par une mise à jour.
+          </p>
+        </div>
+      </div>
+      <div class="modale-pied">
+        <button class="btn" id="btn-fermer-reglages">Fermer</button>
+        <button class="btn primaire" id="btn-sauver-reglages">Enregistrer</button>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

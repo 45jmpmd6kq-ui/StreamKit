@@ -1,0 +1,341 @@
+// Serveur HTTP unique de StreamKit.
+//
+// Un seul port pour tout, au lieu d'un port par projet comme aujourd'hui :
+//   /                        le dashboard
+//   /api/...                 l'API que consomme le dashboard
+//   /overlay/<module>/<vue>  les sources Navigateur a coller dans OBS
+//   /overlay/<module>/<vue>/flux   le flux temps reel de cet overlay
+//
+// Le serveur n'ecoute que sur 127.0.0.1 : rien n'est expose sur le reseau, ni
+// sur internet. C'est volontaire -- les jetons du streamer sont derriere.
+
+import http from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { existsSync, readdirSync, createReadStream } from 'node:fs';
+import { join, normalize, extname } from 'node:path';
+import { DASHBOARD_DIR, MODULES_DIR, JOURNAUX_DIR } from './paths.js';
+import * as journal from './journal.js';
+import * as diffusion from './diffusion.js';
+
+const log = journal.pour('serveur');
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.woff2': 'font/woff2',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.log': 'text/plain; charset=utf-8',
+};
+
+function json(res, code, data) {
+  const corps = JSON.stringify(data);
+  res.writeHead(code, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'Content-Length': Buffer.byteLength(corps),
+  });
+  res.end(corps);
+}
+
+function texte(res, code, msg) {
+  res.writeHead(code, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end(msg);
+}
+
+// On accumule des Buffer, puis on decode une seule fois en UTF-8.
+// Concatener les morceaux dans une chaine (brut += c) casserait tout caractere
+// accentue tombant a cheval sur deux paquets TCP : « é » deviendrait « <?> ».
+// Invisible sur un petit formulaire, systematique sur une longue blocklist.
+async function corpsJson(req, limite = 512 * 1024) {
+  return new Promise((resolve, reject) => {
+    const morceaux = [];
+    let taille = 0;
+    req.on('data', (c) => {
+      taille += c.length;
+      if (taille > limite) {
+        reject(new Error('corps trop volumineux'));
+        req.destroy();
+        return;
+      }
+      morceaux.push(c);
+    });
+    req.on('end', () => {
+      if (!taille) return resolve({});
+      try {
+        resolve(JSON.parse(Buffer.concat(morceaux).toString('utf8')));
+      } catch {
+        reject(new Error('JSON invalide'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+// Sert un fichier en empechant toute sortie du dossier autorise (../..).
+function servirFichier(res, base, relatif, { cache = false } = {}) {
+  const cible = normalize(join(base, relatif));
+  if (!cible.startsWith(normalize(base))) return texte(res, 403, 'Interdit');
+  if (!existsSync(cible)) return texte(res, 404, 'Introuvable');
+
+  res.writeHead(200, {
+    'Content-Type': MIME[extname(cible).toLowerCase()] ?? 'application/octet-stream',
+    'Cache-Control': cache ? 'public, max-age=3600' : 'no-cache',
+  });
+  createReadStream(cible).pipe(res);
+}
+
+// ---------------------------------------------------------------------------
+
+export function creerServeur(app) {
+  // `app` fournit les dependances (registre, twitch, maj...) : le serveur ne
+  // connait rien du reste, il ne fait que router.
+
+  const handler = async (req, res) => {
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const chemin = decodeURIComponent(url.pathname);
+    const methode = req.method ?? 'GET';
+
+    try {
+      // --- Overlays OBS ----------------------------------------------------
+      // /overlay/<module>/<vue>[/flux][/<fichier>]
+      if (chemin.startsWith('/overlay/')) {
+        const bouts = chemin.slice('/overlay/'.length).split('/').filter(Boolean);
+        const [idModule, vue, ...reste] = bouts;
+        const m = app.registre.get(idModule);
+        if (!m) return texte(res, 404, 'Module inconnu');
+
+        const dossierOverlay = join(MODULES_DIR, m.dossier, 'overlay');
+
+        if (reste[0] === 'flux') {
+          diffusion.brancher('overlay:' + idModule + ':' + vue, req, res);
+          return;
+        }
+        if (reste.length) return servirFichier(res, dossierOverlay, reste.join('/'), { cache: true });
+
+        const def = (m.manifeste.overlays ?? []).find((o) => o.chemin === vue);
+        if (!def) return texte(res, 404, 'Overlay inconnu');
+        return servirFichier(res, dossierOverlay, def.fichier);
+      }
+
+      // --- API -------------------------------------------------------------
+      if (chemin.startsWith('/api/')) {
+        // Etat general (bandeau du dashboard)
+        if (chemin === '/api/etat' && methode === 'GET') {
+          return json(res, 200, app.etatGeneral());
+        }
+
+        // --- Modules ---
+        if (chemin === '/api/modules' && methode === 'GET') {
+          return json(res, 200, app.registre.vues());
+        }
+
+        const mModule = chemin.match(/^\/api\/modules\/([\w-]+)(?:\/(\w+))?$/);
+        if (mModule) {
+          const [, id, sousRoute] = mModule;
+          if (!app.registre.get(id)) return json(res, 404, { erreur: 'module inconnu' });
+
+          if (!sousRoute && methode === 'GET') return json(res, 200, app.registre.vue(id));
+
+          if (sousRoute === 'actif' && methode === 'POST') {
+            const body = await corpsJson(req);
+            await app.definirActif(id, !!body.actif);
+            return json(res, 200, app.registre.vue(id));
+          }
+
+          if (sousRoute === 'config' && methode === 'POST') {
+            const body = await corpsJson(req);
+            const r = app.registre.definirReglages(id, body.reglages ?? body);
+            if (!r.ok) return json(res, 400, { erreur: 'reglages invalides', details: r.erreurs });
+            await app.recharger(id);
+            return json(res, 200, app.registre.vue(id));
+          }
+
+          if (sousRoute === 'redemarrer' && methode === 'POST') {
+            await app.recharger(id);
+            return json(res, 200, app.registre.vue(id));
+          }
+        }
+
+        // Action personnalisee exposee par un module (bouton « Tester », etc.)
+        const mAction = chemin.match(/^\/api\/modules\/([\w-]+)\/action\/([\w-]+)$/);
+        if (mAction && methode === 'POST') {
+          const [, id, nom] = mAction;
+          const body = await corpsJson(req);
+          const r = await app.executerAction(id, nom, body);
+          return json(res, r.ok ? 200 : 400, r);
+        }
+
+        // --- Journal ---
+        if (chemin === '/api/journal' && methode === 'GET') {
+          return json(res, 200, {
+            sources: journal.sources(),
+            niveaux: journal.NIVEAUX,
+            lignes: journal.historique({
+              source: url.searchParams.get('source') || undefined,
+              niveau: url.searchParams.get('niveau') || undefined,
+              recherche: url.searchParams.get('q') || undefined,
+              depuis: Number(url.searchParams.get('depuis') || 0),
+              limite: Number(url.searchParams.get('limite') || 500),
+            }),
+          });
+        }
+
+        if (chemin === '/api/journal/flux' && methode === 'GET') {
+          res.writeHead(200, {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            Connection: 'keep-alive',
+          });
+          res.write('retry: 2000\n\n');
+          const stop = journal.abonner((entree) => {
+            try {
+              res.write('event: ligne\ndata: ' + JSON.stringify(entree) + '\n\n');
+            } catch {
+              stop();
+            }
+          });
+          const battement = setInterval(() => {
+            try {
+              res.write(': ping\n\n');
+            } catch {
+              /* ferme au prochain close */
+            }
+          }, 25000);
+          req.on('close', () => {
+            clearInterval(battement);
+            stop();
+          });
+          return;
+        }
+
+        // Liste des fichiers de journal (pour telecharger la soiree d'hier)
+        if (chemin === '/api/journal/fichiers' && methode === 'GET') {
+          const fichiers = existsSync(JOURNAUX_DIR)
+            ? readdirSync(JOURNAUX_DIR)
+                .filter((f) => f.endsWith('.log'))
+                .sort()
+                .reverse()
+            : [];
+          return json(res, 200, fichiers);
+        }
+
+        const mFichierJournal = chemin.match(/^\/api\/journal\/fichier\/([\w-]+\.log)$/);
+        if (mFichierJournal && methode === 'GET') {
+          return servirFichier(res, JOURNAUX_DIR, mFichierJournal[1]);
+        }
+
+        // --- Twitch ---
+        if (chemin === '/api/twitch/etat' && methode === 'GET') {
+          return json(res, 200, app.twitch.getEtat());
+        }
+        if (chemin === '/api/twitch/app' && methode === 'POST') {
+          const body = await corpsJson(req);
+          const r = await app.definirAppTwitch(body);
+          return json(res, r.ok ? 200 : 400, r);
+        }
+        if (chemin === '/api/twitch/chaine' && methode === 'POST') {
+          const body = await corpsJson(req);
+          const r = await app.definirChaine(body.channel);
+          return json(res, r.ok ? 200 : 400, r);
+        }
+        if (chemin === '/api/twitch/autoriser' && methode === 'POST') {
+          const r = await app.demarrerAutorisation();
+          return json(res, r.ok ? 200 : 400, r);
+        }
+        if (chemin === '/api/twitch/reconnecter' && methode === 'POST') {
+          const r = await app.reconnecterTwitch();
+          return json(res, r.ok ? 200 : 400, r);
+        }
+
+        // --- Reglages generaux ---
+        if (chemin === '/api/reglages' && methode === 'POST') {
+          const body = await corpsJson(req);
+          return json(res, 200, await app.definirReglagesGeneraux(body));
+        }
+
+        // --- Mise a jour ---
+        if (chemin === '/api/maj/verifier' && methode === 'POST') {
+          return json(res, 200, await app.verifierMaj());
+        }
+        if (chemin === '/api/maj/appliquer' && methode === 'POST') {
+          return json(res, 200, await app.appliquerMaj());
+        }
+
+        return json(res, 404, { erreur: 'route inconnue' });
+      }
+
+      // --- Retour d'autorisation Twitch ------------------------------------
+      if (chemin === '/callback/twitch') {
+        return app.callbackTwitch(url, res);
+      }
+
+      // --- Retour d'autorisation d'un module (Spotify, Riot...) -------------
+      // Un module qui a besoin de son propre OAuth declare callbackOAuth() dans
+      // son manifeste ; il recoit l'URL de retour ici, sans ouvrir de serveur.
+      const mCallback = chemin.match(/^\/callback\/module\/([\w-]+)$/);
+      if (mCallback) {
+        return app.callbackModule(mCallback[1], url, res);
+      }
+
+      // --- Dashboard --------------------------------------------------------
+      if (chemin === '/' || chemin === '/index.html') {
+        const page = join(DASHBOARD_DIR, 'index.html');
+        if (!existsSync(page)) return texte(res, 200, 'StreamKit demarre. Dashboard non installe.');
+        res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
+        return res.end(await readFile(page));
+      }
+
+      return servirFichier(res, DASHBOARD_DIR, chemin.slice(1));
+    } catch (e) {
+      log.err(methode + ' ' + chemin + ' : ' + (e?.message || e));
+      if (!res.headersSent) json(res, 500, { erreur: e?.message || 'erreur interne' });
+      else res.end();
+    }
+  };
+
+  const serveur = http.createServer(handler);
+  serveur.handler = handler; // reutilise par l'ecoute IPv6 (voir ecouter)
+  return serveur;
+}
+
+// Ecoute sur les DEUX boucles locales, 127.0.0.1 ET ::1.
+//
+// Ce n'est pas du zele : sous Windows, « localhost » se resout tres souvent en
+// IPv6 d'abord. Or Twitch impose « localhost » dans l'URL de redirection OAuth
+// (il refuse une IP en http) -- avec une seule ecoute IPv4, le retour
+// d'autorisation tomberait dans le vide. Meme piege pour le navigateur interne
+// d'OBS, qui laisse alors la source desesperement vide.
+//
+// Rien n'est expose au reseau pour autant : uniquement les adresses de
+// bouclage, jamais 0.0.0.0.
+export function ecouter(serveur, port) {
+  return new Promise((resolve, reject) => {
+    serveur.once('error', (e) => {
+      if (e.code === 'EADDRINUSE') {
+        reject(
+          new Error(
+            'Le port ' + port + ' est deja utilise. StreamKit tourne peut-etre deja ' +
+              '(regarde dans la barre des taches), ou un ancien bot est reste ouvert.'
+          )
+        );
+      } else reject(e);
+    });
+
+    serveur.listen(port, '127.0.0.1', () => {
+      const jumeau = http.createServer(serveur.handler);
+      // Machine sans IPv6 : on continue simplement en IPv4.
+      jumeau.on('error', () => {});
+      jumeau.listen(port, '::1');
+      serveur.jumeauIPv6 = jumeau;
+      resolve(port);
+    });
+  });
+}

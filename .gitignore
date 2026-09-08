@@ -1,0 +1,5 @@
+node_modules/
+livraison/
+*.log
+config.json
+tokens.json

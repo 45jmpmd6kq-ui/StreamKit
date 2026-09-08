@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — démonstration</title>
+    <style>
+      /* Un overlay OBS est transparent : jamais de fond sur <body>. */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        font-family: "Segoe UI", system-ui, sans-serif;
+      }
+
+      #boite {
+        position: fixed;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.85rem 1.25rem;
+        border-radius: 0.75rem;
+        background: rgba(16, 16, 20, 0.88);
+        border-left: 4px solid var(--couleur, #9146ff);
+        color: #fff;
+        font-size: 1.15rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        transition: opacity 0.35s ease;
+      }
+      #boite.visible {
+        opacity: 1;
+      }
+
+      /* Le coin est piloté par les réglages du module. */
+      #boite[data-coin="top-left"] { top: 1.5rem; left: 1.5rem; }
+      #boite[data-coin="top-right"] { top: 1.5rem; right: 1.5rem; }
+      #boite[data-coin="bottom-left"] { bottom: 1.5rem; left: 1.5rem; }
+      #boite[data-coin="bottom-right"] { bottom: 1.5rem; right: 1.5rem; }
+
+      #compteur {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        color: var(--couleur, #9146ff);
+      }
+
+      #notif {
+        margin-left: 0.5rem;
+        padding-left: 0.75rem;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        font-size: 0.95rem;
+        color: #cfcfe0;
+      }
+      #notif:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="boite" data-coin="top-left">
+      <span id="message">En attente de StreamKit…</span>
+      <span id="compteur"></span>
+      <span id="notif"></span>
+    </div>
+
+    <script>
+      const boite = document.getElementById("boite");
+      const $message = document.getElementById("message");
+      const $compteur = document.getElementById("compteur");
+      const $notif = document.getElementById("notif");
+
+      // ?demo=1 : permet de placer la source dans OBS sans que StreamKit tourne.
+      if (new URLSearchParams(location.search).get("demo")) {
+        appliquer({ message: "Aperçu de placement", ticks: 42, couleur: "#9146ff", coin: "top-left" });
+      }
+
+      function appliquer(e) {
+        if (e.message !== undefined) $message.textContent = e.message;
+        if (e.ticks !== undefined) $compteur.textContent = e.ticks;
+        if (e.couleur) boite.style.setProperty("--couleur", e.couleur);
+        if (e.coin) boite.dataset.coin = e.coin;
+        boite.classList.add("visible");
+      }
+
+      // Le flux SSE du module. EventSource reconnecte tout seul si StreamKit
+      // redémarre — indispensable pendant une mise à jour en plein live.
+      //
+      // Attention : un chemin relatif ("flux") remplacerait le dernier segment
+      // de l'URL et taperait /overlay/exemple/flux au lieu de
+      // /overlay/exemple/compteur/flux. On construit donc l'adresse à partir du
+      // chemin courant.
+      const flux = new EventSource(location.pathname.replace(/\/$/, "") + "/flux");
+
+      flux.addEventListener("etat", (ev) => appliquer(JSON.parse(ev.data)));
+
+      flux.addEventListener("notification", (ev) => {
+        $notif.textContent = JSON.parse(ev.data).texte;
+        setTimeout(() => ($notif.textContent = ""), 5000);
+      });
+    </script>
+  </body>
+</html>

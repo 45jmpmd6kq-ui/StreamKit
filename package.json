@@ -1,0 +1,19 @@
+{
+  "name": "streamkit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Socle commun des outils de stream : un seul service, des modules activables, mise a jour automatique.",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@twurple/api": "^7.2.0",
+    "@twurple/auth": "^7.2.0",
+    "@twurple/chat": "^7.2.0",
+    "@twurple/eventsub-ws": "^7.2.0"
+  }
+}

@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — overlay musique</title>
+    <style>
+      :root {
+        --accent2: #9146ff; /* couleur secondaire : pseudo, numéros */
+        --accent1: #1db954; /* couleur principale : barre, égaliseur */
+        --bg: rgba(16, 16, 20, 0.92);
+        --line: rgba(255, 255, 255, 0.1);
+        --muted: #b9b9c6;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: transparent; /* indispensable pour OBS */
+        font-family: "Segoe UI", Inter, system-ui, sans-serif;
+        overflow: hidden;
+        height: 100%;
+      }
+
+      /* Positionnement dans le coin choisi (data-corner sur <body>) */
+      body { display: flex; }
+      body[data-corner="top-left"]     { align-items: flex-start; justify-content: flex-start; }
+      body[data-corner="top-right"]    { align-items: flex-start; justify-content: flex-end; }
+      body[data-corner="bottom-left"]  { align-items: flex-end;   justify-content: flex-start; }
+      body[data-corner="bottom-right"] { align-items: flex-end;   justify-content: flex-end; }
+      #wrap { padding: 18px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+      body[data-corner$="right"] #wrap { align-items: flex-end; }
+
+      /* ---- Notification ---- */
+      #notif {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-left: 5px solid var(--accent1);
+        border-radius: 14px;
+        padding: 14px 20px 14px 16px;
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        transform: translateX(-24px);
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        max-width: 560px;
+      }
+      #notif.show { opacity: 1; transform: translateX(0); }
+      #notif.cancel { border-left-color: #ff4d5e; }
+      #notif.clip { border-left-color: var(--accent2); }
+      #notif.clip .n-artist { color: var(--accent2); font-weight: 600; }
+
+      .ico { font-size: 26px; line-height: 1; }
+      .n-lines { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+      .n-top { font-size: 13px; color: var(--muted); letter-spacing: 0.3px; }
+      .n-top b { color: var(--accent2); font-weight: 700; }
+      .n-title {
+        font-size: 18px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 460px;
+      }
+      .n-artist { font-size: 14px; color: var(--muted); }
+
+      /* ---- Égaliseur ---- */
+      .eq { display: flex; align-items: flex-end; gap: 3px; height: 22px; }
+      .eq i { width: 4px; background: var(--accent1); border-radius: 2px; animation: bounce 0.9s ease-in-out infinite; }
+      .eq i:nth-child(2) { animation-delay: 0.15s; background: var(--accent2); }
+      .eq i:nth-child(3) { animation-delay: 0.3s; }
+      .eq i:nth-child(4) { animation-delay: 0.45s; background: var(--accent2); }
+      @keyframes bounce { 0%, 100% { height: 6px; } 50% { height: 20px; } }
+
+      /* ---- Liste « à venir » ---- */
+      #upcoming {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 16px;
+        color: #fff;
+        min-width: 300px;
+        max-width: 380px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      #upcoming.show { opacity: 1; }
+      .u-head {
+        font-size: 12px;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 9px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .u-head::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent1); }
+      .u-item { display: flex; gap: 9px; align-items: baseline; padding: 4px 0; font-size: 14px; }
+      .u-item + .u-item { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+      .u-num { color: var(--accent2); font-weight: 700; font-size: 12px; min-width: 14px; }
+      .u-txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .u-by { color: var(--muted); font-size: 12px; }
+      .u-cross { font-size: 13px; line-height: 1; }
+      .u-item.cancelled .u-txt,
+      .u-item.cancelled .u-by { text-decoration: line-through; opacity: 0.5; }
+      .u-item.cancelled .u-num { opacity: 0.4; }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <div id="notif">
+        <div class="ico" id="n-ico">🎶</div>
+        <div class="n-lines">
+          <div class="n-top" id="n-top"></div>
+          <div class="n-title" id="n-title"></div>
+          <div class="n-artist" id="n-artist"></div>
+        </div>
+        <div class="eq" id="n-eq"><i></i><i></i><i></i><i></i></div>
+      </div>
+
+      <div id="upcoming">
+        <div class="u-head">À venir</div>
+        <div id="u-list"></div>
+      </div>
+    </div>
+
+    <script>
+      const notif = document.getElementById("notif");
+      const nIco = document.getElementById("n-ico");
+      const nTop = document.getElementById("n-top");
+      const nTitle = document.getElementById("n-title");
+      const nArtist = document.getElementById("n-artist");
+      const nEq = document.getElementById("n-eq");
+      const upcoming = document.getElementById("upcoming");
+      const uList = document.getElementById("u-list");
+
+      let minuteurMasquage = null;
+
+      // ---- Vues : une adresse = une source OBS ------------------------------
+      // Le découpage suit la durée de vie : ce qui passe d'un côté, ce qui reste
+      // de l'autre.
+      //   /overlay/musique/annonces  les notifications de 7 s
+      //   /overlay/musique/liste     le panneau permanent « À venir »
+      const chemin = location.pathname.replace(/\/$/, "");
+      const nomVue = chemin.split("/").pop();
+      const VUES = {
+        annonces: { notifs: ["added", "cancelled", "clip"], liste: false },
+        liste: { notifs: [], liste: true },
+      };
+      const vue = VUES[nomVue] || { notifs: ["added", "cancelled", "clip"], liste: true };
+
+      // On retire vraiment du flux ce que la vue n'affiche pas : sinon un bloc
+      // invisible occuperait quand même sa place et décalerait le reste.
+      if (!vue.notifs.length) notif.style.display = "none";
+      if (!vue.liste) upcoming.style.display = "none";
+
+      // ---- Mode démo : ...?demo=1 -------------------------------------------
+      // Au repos l'overlay est invisible (c'est voulu), donc impossible à placer
+      // dans OBS. Avec ?demo=1 on affiche un exemple qui NE DISPARAÎT PAS, le
+      // temps de caler la source.
+      const modeDemo = new URLSearchParams(location.search).has("demo");
+
+      // Chaque source peut forcer son propre coin sans toucher aux réglages :
+      //   .../liste?corner=bottom-left
+      const COINS = ["top-left", "top-right", "bottom-left", "bottom-right"];
+      const coinUrl = new URLSearchParams(location.search).get("corner");
+      const coinDemande = COINS.includes(coinUrl) ? coinUrl : null;
+      document.body.dataset.corner = coinDemande || "top-left";
+
+      function esc(s) {
+        return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      }
+
+      function afficherNotif({ kind, who, name, artists }) {
+        clearTimeout(minuteurMasquage);
+        const annule = kind === "cancelled";
+        const clip = kind === "clip";
+        notif.classList.toggle("cancel", annule);
+        notif.classList.toggle("clip", clip);
+        nIco.textContent = annule ? "🚫" : clip ? "✂️" : "🎶";
+        nEq.style.display = annule || clip ? "none" : "flex"; // l'égaliseur n'a de sens que pour la musique
+        nTop.innerHTML = "<b>" + esc(who) + "</b> " + (annule ? "a annulé" : clip ? "a créé un clip" : "a demandé");
+        nTitle.textContent = name;
+        nArtist.textContent = artists;
+        notif.classList.add("show");
+        if (!modeDemo) minuteurMasquage = setTimeout(() => notif.classList.remove("show"), 7000);
+      }
+
+      function afficherListe(liste) {
+        if (!liste || !liste.length) {
+          upcoming.classList.remove("show");
+          uList.innerHTML = "";
+          return;
+        }
+        uList.innerHTML = liste
+          .slice(0, 5)
+          .map(
+            (it, i) =>
+              '<div class="u-item' + (it.cancelled ? " cancelled" : "") + '">' +
+              '<span class="u-num">' + (i + 1) + "</span>" +
+              (it.cancelled ? '<span class="u-cross">🚫</span>' : "") +
+              '<span class="u-txt">' + esc(it.name) + ' <span class="u-by">— ' + esc(it.artists) + "</span></span>" +
+              "</div>"
+          )
+          .join("");
+        upcoming.classList.add("show");
+      }
+
+      function appliquerTheme(t) {
+        if (!t) return;
+        const r = document.documentElement.style;
+        if (t.accent1) r.setProperty("--accent1", t.accent1);
+        if (t.accent2) r.setProperty("--accent2", t.accent2);
+        // Le coin de l'URL gagne toujours sur celui des réglages.
+        document.body.dataset.corner = coinDemande || t.corner || "top-left";
+      }
+
+      // ---- Flux temps réel ---------------------------------------------------
+      // Chemin construit depuis location.pathname : un simple "flux" relatif
+      // remplacerait le dernier segment et taperait /overlay/musique/flux.
+      // EventSource reconnecte tout seul (redémarrage de StreamKit, mise à jour).
+      const flux = new EventSource(chemin + "/flux");
+
+      // L'état porte le thème ET la liste : il est mémorisé côté serveur, donc
+      // une source OBS qui se reconnecte en plein live retrouve tout de suite
+      // ses couleurs et sa liste.
+      flux.addEventListener("etat", (e) => {
+        const d = JSON.parse(e.data);
+        appliquerTheme(d.theme);
+        // En démo, on ignore la liste réelle : sinon la file (vide) effacerait
+        // aussitôt la liste d'exemple qu'on vient d'afficher.
+        if (vue.liste && !modeDemo) afficherListe(d.upcoming);
+      });
+
+      for (const nom of vue.notifs) {
+        flux.addEventListener(nom, (e) => {
+          const d = JSON.parse(e.data);
+          if (nom === "clip") {
+            afficherNotif({
+              kind: "clip",
+              who: d.by,
+              name: d.title || "Moment enregistré !",
+              artists: String(d.url || "").replace(/^https?:\/\//, ""), // lien court, lisible à l'écran
+            });
+          } else {
+            afficherNotif({ kind: nom, who: d.requester, name: d.name, artists: d.artists });
+          }
+        });
+      }
+
+      // ---- Démo --------------------------------------------------------------
+      if (modeDemo) {
+        if (vue.liste) {
+          afficherListe([
+            { name: "Beautiful Things", artists: "Benson Boone" },
+            { name: "Prideful", artists: "Ren", cancelled: true },
+            { name: "Feel Good Inc.", artists: "Gorillaz" },
+          ]);
+        }
+        if (vue.notifs.length) {
+          const exemples = {
+            added: { kind: "added", who: "Viewer42", name: "Beautiful Things", artists: "Benson Boone" },
+            cancelled: { kind: "cancelled", who: "Viewer42", name: "Prideful", artists: "Ren" },
+            clip: { kind: "clip", who: "ModoDuStream", name: "Exemple de clip", artists: "clips.twitch.tv/exemple" },
+          };
+          const suite = vue.notifs.map((n) => exemples[n]);
+          let i = 0;
+          const montrer = () => afficherNotif(suite[i++ % suite.length]);
+          montrer();
+          setInterval(montrer, 3000);
+        }
+      }
+    </script>
+  </body>
+</html>

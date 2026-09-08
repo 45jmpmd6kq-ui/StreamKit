@@ -1,0 +1,7 @@
+# Normalisation des fins de ligne.
+# Sans ça, chaque poste Windows reformate tout et les diffs deviennent illisibles.
+* text=auto eol=lf
+
+# Les .bat doivent rester en CRLF : certains interpréteurs de commandes Windows
+# se comportent mal avec des fins de ligne Unix sur la dernière instruction.
+*.bat text eol=crlf

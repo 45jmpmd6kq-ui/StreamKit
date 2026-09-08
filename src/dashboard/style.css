@@ -1,0 +1,658 @@
+/* StreamKit — dashboard.
+   Thème sombre assumé : on l'ouvre à côté d'OBS, souvent lumière éteinte. */
+
+:root {
+  --fond: #0d0d12;
+  --panneau: #14141b;
+  --panneau-clair: #1b1b24;
+  --bordure: #272733;
+  --bordure-vive: #35354a;
+  --texte: #e9e9f2;
+  --texte-doux: #9797ab;
+  --texte-faible: #66667a;
+  --accent: #9146ff;
+  --accent-doux: #9146ff22;
+  --succes: #22c55e;
+  --avert: #f59e0b;
+  --erreur: #f43f5e;
+  --info: #60a5fa;
+  --rayon: 10px;
+  --hauteur-barre: 52px;
+  --largeur-rail: 260px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--fond);
+  color: var(--texte);
+  font: 14px/1.55 "Segoe UI", system-ui, -apple-system, sans-serif;
+  display: grid;
+  grid-template-rows: var(--hauteur-barre) 1fr auto;
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------- Barre du haut ---------- */
+
+.barre {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1rem;
+  background: var(--panneau);
+  border-bottom: 1px solid var(--bordure);
+}
+
+.marque {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.marque span {
+  color: var(--texte-faible);
+  font-weight: 400;
+  font-size: 0.85em;
+  margin-left: 0.4rem;
+}
+
+.barre .pousse {
+  margin-left: auto;
+}
+
+.pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: var(--panneau-clair);
+  border: 1px solid var(--bordure);
+  font-size: 0.85rem;
+  color: var(--texte-doux);
+  cursor: pointer;
+}
+.pastille:hover {
+  border-color: var(--bordure-vive);
+}
+.point {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--texte-faible);
+  flex: none;
+}
+.point.ok {
+  background: var(--succes);
+  box-shadow: 0 0 8px var(--succes);
+}
+.point.ko {
+  background: var(--erreur);
+}
+.point.attente {
+  background: var(--avert);
+}
+
+/* ---------- Boutons ---------- */
+
+.btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--bordure-vive);
+  background: var(--panneau-clair);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover:not(:disabled) {
+  background: #23232f;
+  border-color: #45455e;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* Certains boutons sont des liens (« Aperçu » ouvre l'overlay dans un onglet) :
+   sans ça ils héritent du style de lien et jurent à côté des vrais boutons. */
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--texte);
+}
+.btn.primaire {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.btn.primaire:hover:not(:disabled) {
+  background: #a163ff;
+  border-color: #a163ff;
+}
+.btn.discret {
+  background: transparent;
+  border-color: transparent;
+  color: var(--texte-doux);
+  padding: 0.3rem 0.5rem;
+}
+.btn.discret:hover:not(:disabled) {
+  background: var(--panneau-clair);
+  color: var(--texte);
+}
+.btn.petit {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+/* ---------- Corps : rail + détail ---------- */
+
+.corps {
+  display: grid;
+  grid-template-columns: var(--largeur-rail) 1fr;
+  min-height: 0;
+}
+
+.rail {
+  background: var(--panneau);
+  border-right: 1px solid var(--bordure);
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+
+.rail h2 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--texte-faible);
+  margin: 0.5rem 0.5rem 0.5rem;
+  font-weight: 600;
+}
+
+.entree {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--texte-doux);
+}
+.entree:hover {
+  background: var(--panneau-clair);
+  color: var(--texte);
+}
+.entree.actif {
+  background: var(--accent-doux);
+  border-color: #9146ff55;
+  color: var(--texte);
+}
+.entree .icone {
+  font-size: 1.05rem;
+  flex: none;
+}
+.entree .nom {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  overflow-y: auto;
+  padding: 1.5rem 1.75rem 2.5rem;
+  min-height: 0;
+}
+.detail-inner {
+  max-width: 720px;
+}
+
+.titre-module {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+.titre-module h1 {
+  font-size: 1.35rem;
+  margin: 0;
+  flex: 1;
+}
+.sous-titre {
+  color: var(--texte-doux);
+  margin: 0 0 1.5rem;
+}
+
+/* ---------- Interrupteur ---------- */
+
+.bascule {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  flex: none;
+  border-radius: 999px;
+  background: #2c2c3a;
+  border: 1px solid var(--bordure-vive);
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.bascule::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #7a7a90;
+  transition: transform 0.18s, background 0.18s;
+}
+.bascule[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.bascule[aria-checked="true"]::after {
+  transform: translateX(20px);
+  background: #fff;
+}
+
+/* ---------- Bandeaux d'état ---------- */
+
+.bandeau {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--rayon);
+  border: 1px solid var(--bordure);
+  background: var(--panneau);
+  margin-bottom: 1.25rem;
+  align-items: flex-start;
+}
+.bandeau.erreur {
+  border-color: #f43f5e55;
+  background: #f43f5e12;
+}
+.bandeau.avert {
+  border-color: #f59e0b55;
+  background: #f59e0b12;
+}
+.bandeau.info {
+  border-color: #60a5fa55;
+  background: #60a5fa12;
+}
+.bandeau b {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+.bandeau p {
+  margin: 0;
+  color: var(--texte-doux);
+  font-size: 0.92rem;
+}
+
+/* ---------- Formulaire généré ---------- */
+
+.section {
+  margin-bottom: 1.75rem;
+}
+.section > h3 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--texte-faible);
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--bordure);
+  font-weight: 600;
+}
+
+.champ {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid #1e1e28;
+}
+.champ:last-child {
+  border-bottom: none;
+}
+.champ label {
+  font-weight: 500;
+}
+.champ .aide {
+  grid-column: 1;
+  color: var(--texte-faible);
+  font-size: 0.85rem;
+  margin-top: -0.35rem;
+}
+.champ .saisie {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  justify-self: end;
+  width: 100%;
+}
+.champ.large {
+  grid-template-columns: 1fr;
+}
+.champ.large .saisie {
+  grid-column: 1;
+  grid-row: auto;
+  justify-self: stretch;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--bordure-vive);
+  background: #0f0f16;
+  outline: none;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-doux);
+}
+textarea {
+  min-height: 88px;
+  resize: vertical;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.88rem;
+}
+input[type="color"] {
+  width: 46px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid var(--bordure-vive);
+  border-radius: 8px;
+  background: #0f0f16;
+  cursor: pointer;
+}
+.couleur-ligne {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Barre d'enregistrement collante : sur un module à beaucoup de réglages, le
+   bouton reste atteignable sans remonter. Fond opaque et bordure haute pour
+   qu'elle se lise comme une barre d'action, et pas comme la fin du formulaire. */
+.barre-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.85rem 0;
+  background: var(--fond);
+  border-top: 1px solid var(--bordure);
+}
+.etat-sauvegarde {
+  color: var(--texte-faible);
+  font-size: 0.88rem;
+}
+.etat-sauvegarde.ok {
+  color: var(--succes);
+}
+.etat-sauvegarde.ko {
+  color: var(--erreur);
+}
+
+/* ---------- Overlays ---------- */
+
+.overlay-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+.overlay-ligne .infos {
+  flex: 1;
+  min-width: 0;
+}
+.overlay-ligne .nom {
+  font-weight: 500;
+}
+.overlay-ligne code {
+  display: block;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.82rem;
+  color: var(--texte-faible);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Tiroir du journal ---------- */
+
+.tiroir {
+  background: var(--panneau);
+  border-top: 1px solid var(--bordure);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  height: 280px;
+}
+.tiroir.replie {
+  height: auto;
+  grid-template-rows: auto;
+}
+.tiroir.replie .journal {
+  display: none;
+}
+
+.poignee {
+  height: 5px;
+  margin-top: -5px;
+  cursor: ns-resize;
+  background: transparent;
+}
+.poignee:hover {
+  background: var(--accent);
+}
+
+.entete-tiroir {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid var(--bordure);
+  flex-wrap: wrap;
+}
+.entete-tiroir .titre {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--texte-faible);
+  font-weight: 600;
+  user-select: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.entete-tiroir select,
+.entete-tiroir input {
+  width: auto;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.85rem;
+}
+.entete-tiroir input[type="text"] {
+  width: 190px;
+}
+.compteur-erreurs {
+  color: var(--erreur);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.journal {
+  overflow-y: auto;
+  padding: 0.4rem 0;
+  font-family: ui-monospace, Consolas, "Cascadia Mono", monospace;
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+.ligne {
+  display: grid;
+  grid-template-columns: 62px 22px 118px 1fr;
+  gap: 0.5rem;
+  padding: 0.05rem 0.85rem;
+  align-items: baseline;
+}
+.ligne:hover {
+  background: #ffffff08;
+}
+.ligne .h {
+  color: var(--texte-faible);
+}
+.ligne .src {
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ligne .msg {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ligne.debug .msg {
+  color: var(--texte-faible);
+}
+.ligne.avert .msg {
+  color: var(--avert);
+}
+.ligne.erreur .msg {
+  color: var(--erreur);
+}
+.ligne.succes .msg {
+  color: var(--succes);
+}
+
+.vide {
+  padding: 2rem;
+  text-align: center;
+  color: var(--texte-faible);
+}
+
+/* ---------- Fenêtre modale (assistant Twitch) ---------- */
+
+dialog {
+  border: 1px solid var(--bordure-vive);
+  border-radius: 14px;
+  background: var(--panneau);
+  color: var(--texte);
+  padding: 0;
+  width: min(620px, 92vw);
+  box-shadow: 0 24px 70px #000a;
+}
+dialog::backdrop {
+  background: #000000b0;
+}
+.modale-entete {
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--bordure);
+}
+.modale-entete h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.modale-corps {
+  padding: 1.2rem 1.4rem;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+.modale-pied {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding: 1rem 1.4rem;
+  border-top: 1px solid var(--bordure);
+}
+.etapes {
+  counter-reset: etape;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  list-style: none;
+}
+.etapes li {
+  counter-increment: etape;
+  position: relative;
+  padding-left: 2.1rem;
+  margin-bottom: 0.7rem;
+  color: var(--texte-doux);
+}
+.etapes li::before {
+  content: counter(etape);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: var(--accent-doux);
+  border: 1px solid #9146ff55;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.etapes code {
+  background: #0f0f16;
+  border: 1px solid var(--bordure);
+  border-radius: 5px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.85em;
+  color: var(--texte);
+  user-select: all;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(200%);
+  background: var(--panneau-clair);
+  border: 1px solid var(--bordure-vive);
+  padding: 0.7rem 1.15rem;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px #0008;
+  transition: transform 0.25s ease;
+  z-index: 50;
+}
+.toast.visible {
+  transform: translateX(-50%) translateY(0);
+}
+.toast.ko {
+  border-color: #f43f5e88;
+}
