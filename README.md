@@ -121,8 +121,10 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - [x] Module de référence `exemple` (sert aussi de banc d'essai)
 - [x] **Bot musique migré** depuis Bot-Musique-Twitch-V2, sans perte de fonction
 - [x] Script de packaging (`npm run release`)
-- [ ] Créer le dépôt GitHub distant
-- [ ] Publier une release et vérifier la mise à jour de bout en bout ← **le test qui valide le projet**
+- [x] Dépôt GitHub + release `v0.1.0` avec le zip joint
+- [x] **Mise à jour vérifiée de bout en bout** — une install en 0.0.9 détecte la
+      release, télécharge, se remplace (`node_modules` compris) et **conserve
+      tous les réglages du streamer**. C'est la thèse du projet, elle tient.
 - [ ] Recette du bot musique avec de vrais identifiants Twitch + Spotify
 - [ ] Migrer Roue RL, RL-Tracker, Valorant, RL-Challenge
 
