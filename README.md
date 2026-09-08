@@ -94,23 +94,29 @@ aussi bon marché que le 2ᵉ.
 
 ```bash
 npm version patch          # ou minor / major
-npm run dist               # -> livraison\StreamKit Setup <version>.exe
 git push && git push --tags
+npm run publier            # build + release GitHub + envoi des fichiers
 ```
 
-Puis créer la release GitHub sur le tag `v<version>` et y joindre **tout le
-contenu de `livraison\`** : l'installeur, `latest.yml` et le `.blockmap`.
+`npm run publier` fait tout d'un coup. Il lui faut un jeton dans la variable
+d'environnement `GH_TOKEN` — un jeton *fine-grained* limité à ce dépôt avec la
+seule permission **Contents : Read and write** suffit (sur GitHub, les releases
+et leurs fichiers relèvent de « Contents »).
+
+Sans jeton, `npm run dist` construit dans `livraison\` et il reste à créer la
+release à la main en y joignant **l'installeur, `latest.yml` et le `.blockmap`**.
 `latest.yml` est ce que lit `electron-updater` pour savoir qu'une version
 existe ; le `.blockmap` lui permet de ne télécharger que les octets modifiés.
 Sans eux, les streamers ne verront jamais la mise à jour.
 
- fait tout d'un coup — build, création de la release, envoi des
-trois fichiers — mais demande un  dans l'environnement (portée
- sur ce seul dépôt suffit).
+Deux pièges rencontrés :
 
-⚠️ Une variable d'environnement définie pendant que l'application tourne n'est
-pas vue par le processus en cours : il faut relancer, ou la relire depuis le
-registre utilisateur.
+- **Une variable d'environnement définie pendant que l'application tourne n'est
+  pas vue du processus en cours.** Il faut relancer, ou la relire depuis le
+  registre utilisateur (`[Environment]::GetEnvironmentVariable('GH_TOKEN','User')`).
+- **`electron-builder` crée la release en brouillon par défaut.** Un brouillon
+  est invisible des streamers : `latest.yml` n'est pas joignable, donc aucune
+  mise à jour ne part. D'où `releaseType: "release"` dans `build.publish`.
 
 Chez le streamer : un bouton « Mettre à jour » apparaît dans la fenêtre. Un
 clic, StreamKit télécharge, se remplace et redémarre — Electron sait remplacer
