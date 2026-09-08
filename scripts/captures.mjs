@@ -11,8 +11,17 @@
 // voit celui qui suit le mode operatoire.
 
 import { app, BrowserWindow } from 'electron';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+// La fenetre de mise a jour est remplie a la main : elle ne s'ouvre que quand
+// une version plus recente existe vraiment. Les numeros viennent donc de
+// package.json plutot que d'etre ecrits en dur — sinon la capture ment des la
+// version suivante.
+const VERSION = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).version;
+const PRECEDENTE =
+  process.env.SK_MAJ_AVANT ||
+  VERSION.replace(/(\d+)$/, (n) => Math.max(0, Number(n) - 1));
 
 const BASE = process.env.SK_URL || 'http://127.0.0.1:4466';
 const SORTIE = process.env.SK_OUT || join(process.cwd(), 'doc', 'captures');
@@ -74,11 +83,11 @@ const PRISES = [
     // La vraie fenetre de mise a jour, remplie avec le saut qui vient d'avoir
     // lieu pour de bon. Rien d'invente : c'est le composant tel qu'il s'affiche.
     js: `
-      document.querySelector('#maj-avant').textContent = '0.8.0';
-      document.querySelector('#maj-apres').textContent = '0.9.0';
+      document.querySelector('#maj-avant').textContent = '${PRECEDENTE}';
+      document.querySelector('#maj-apres').textContent = '${VERSION}';
       const n = document.querySelector('#maj-notes');
       n.hidden = false;
-      n.textContent = 'Module de démonstration masqué du rail.\\nLes docs pointent désormais les vrais modules.';
+      n.textContent = 'Le module de démonstration est masqué du rail.\\nDeux accents corrigés dans l’état Twitch.';
       document.querySelector('#modale-maj').showModal();
       'ok'`,
   },

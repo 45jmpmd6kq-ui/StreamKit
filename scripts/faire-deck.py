@@ -8,6 +8,7 @@ reprend celle du dashboard : meme fond, meme violet, memes cartes — un lecteur
 qui passe des slides a l'application ne change pas d'univers.
 """
 
+import json
 from pathlib import Path
 
 from pptx import Presentation
@@ -19,6 +20,10 @@ from pptx.util import Cm, Pt
 RACINE = Path(__file__).resolve().parent.parent
 CAPTURES = RACINE / "doc" / "captures"
 SORTIE = RACINE / "StreamKit_Presentation.pptx"
+
+# Le numero de version se lit dans package.json : ecrit en dur, il mentirait
+# des la publication suivante.
+VERSION = json.loads((RACINE / "package.json").read_text(encoding="utf-8"))["version"]
 
 # --- Charte ----------------------------------------------------------------
 
@@ -288,7 +293,7 @@ def slide_titre(prs):
          taille=17, couleur=DOUX, espace_apres=0, interligne=1.3, premier=True)
 
     xs, l = rangee(3, largeur_totale=18.0, gouttiere=0.5, x0=MARGE + 1.2)
-    for x, (haut, bas) in zip(xs, [("0.9.0", "version publiée"),
+    for x, (haut, bas) in zip(xs, [(VERSION, "version publiée"),
                                    ("5", "modules disponibles"),
                                    ("2 min", "pour installer")]):
         tf = zone_texte(s, x, 14.6, l, 2.0)
@@ -557,7 +562,7 @@ def slide_installer(prs, n, total):
     etapes(s, x_gauche, y + 0.7, largeur, [
         ("Télécharge le programme d'installation",
          "Sur la page des versions du dépôt, prends le fichier "
-         "StreamKit-Setup-0.9.0.exe (le plus récent)."),
+         "StreamKit-Setup-" + VERSION + ".exe (le plus récent)."),
         ("Double-clique dessus",
          "Il n'y a rien à choisir : ni dossier, ni options, ni redémarrage. "
          "L'installation dure quelques secondes."),
