@@ -159,9 +159,10 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - [x] **Passage à Electron** : application installable, icône près de l'horloge,
       fenêtre refermable sans rien couper, plus de Node.js à installer, plus de
       fenêtre noire. Noyau extrait dans `noyau.js`, partagé par les deux entrées.
-- [ ] Construire l'installeur — **bloqué** : demande le mode développeur Windows
-      ou un terminal administrateur (voir « Construire l'installeur » plus haut)
-- [ ] Publier une release Electron et revérifier la mise à jour
+- [x] Installeur construit et **application empaquetée vérifiée** : modules
+      découverts, dashboard affiché, updater qui interroge bien GitHub
+- [ ] Remplacer les fichiers de la release v0.1.0 par ceux d'Electron
+- [ ] Publier une 0.1.1 et revérifier la mise à jour de bout en bout
 - [ ] Recette du bot musique avec de vrais identifiants Twitch + Spotify
 - [ ] Migrer Roue RL, RL-Tracker, Valorant, RL-Challenge
 

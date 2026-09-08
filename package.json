@@ -58,7 +58,8 @@
         "owner": "45jmpmd6kq-ui",
         "repo": "StreamKit"
       }
-    ]
+    ],
+    "artifactName": "${productName}-Setup-${version}.${ext}"
   },
   "allowScripts": {
     "electron@33.4.11": true
