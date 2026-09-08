@@ -4,8 +4,14 @@ Un module = un dossier dans `src/modules/<id>/` avec un `module.js` qui exporte
 un manifeste. Le socle s'occupe du reste : connexion Twitch, écran de réglages,
 journal, overlays, persistance, mises à jour.
 
-Le modèle de référence est `src/modules/exemple/` — copie-le et vide ce qui ne
-sert pas.
+Le meilleur point de départ est un module qui fait déjà quelque chose :
+`src/modules/clips/` pour un module minimal (une commande de chat, un overlay),
+`src/modules/roue-rl/` s'il te faut une page de réglages sur mesure et des
+assets, `src/modules/valorant/` pour un module qui interroge une API externe
+sans passer par Twitch.
+
+(`src/modules/exemple/` existe encore, mais c'est devenu un outil de diagnostic
+masqué du rail — voir « Module de développement » plus bas — pas un modèle.)
 
 ```
 src/modules/mon-module/
@@ -25,7 +31,9 @@ export default {
   icone: '🎮',
   categorie: 'rocket-league',   // regroupement dans le rail — voir plus bas
 
-  scopes: ['chat:read'],   // droits Twitch nécessaires
+  scopes: ['chat:read'],        // droits Twitch nécessaires
+  connecteurs: ['spotify'],     // services à brancher — voir core/connecteurs.js
+  developpement: false,         // true = outil de diagnostic, masqué du rail
 
   config: { version: 1, champs: [ /* voir plus bas */ ] },
   migrations: {},
@@ -79,6 +87,17 @@ Pour ajouter une catégorie, une ligne dans `CATEGORIES` (`id`, `label`, `icone`
 > catégorie**. Le tracker RL et le compteur 1v1 liront tous les deux
 > `Launch.log` — leur demander deux fois le même chemin serait absurde. La
 > structure de `categories.js` est prête à l'accueillir.
+
+## Module de développement
+
+`developpement: true` sort le module du rail et des compteurs (« 5 modules »).
+Il reste chargé, activable, et réapparaît via **Réglages → Afficher les modules
+de développement**. Un module de dev déjà activé reste visible quoi qu'il
+arrive : sinon on ne pourrait plus l'éteindre.
+
+C'est pour les outils qui servent à diagnostiquer StreamKit, pas à streamer —
+`exemple` en est un : il ne dépend d'aucun service, donc s'il fonctionne, le
+problème est ailleurs.
 
 ## Les réglages : jamais de formulaire à la main
 

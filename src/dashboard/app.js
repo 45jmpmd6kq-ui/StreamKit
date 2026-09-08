@@ -264,9 +264,26 @@ let replis = lireReplis();
 
 // Regroupe les modules par catégorie, en respectant l'ordre du catalogue et en
 // n'affichant que les catégories qui ont au moins un module.
+// Les modules de développement sont des outils de diagnostic, pas des
+// fonctionnalités : masqués par défaut, révélés depuis les réglages. Un module
+// de dev déjà activé reste visible — sinon on ne pourrait plus le désactiver.
+function lireModulesDev() {
+  try {
+    return localStorage.getItem('streamkit.modulesDev') === '1';
+  } catch {
+    return false;
+  }
+}
+
+let modulesDevVisibles = lireModulesDev();
+
+function modulesAffiches() {
+  return etat.modules.filter((m) => !m.developpement || modulesDevVisibles || m.actif);
+}
+
 function grouperParCategorie() {
   const groupes = new Map();
-  for (const m of etat.modules) {
+  for (const m of modulesAffiches()) {
     const c = m.categorie ?? { id: 'outils', label: 'Outils', icone: '🧰', ordre: 90 };
     if (!groupes.has(c.id)) groupes.set(c.id, { categorie: c, modules: [] });
     groupes.get(c.id).modules.push(m);
@@ -1087,7 +1104,12 @@ function brancherModales() {
 
   $('#etat-twitch').addEventListener('click', () => mT.showModal());
   $('#btn-fermer-twitch').addEventListener('click', () => mT.close());
-  $('#btn-reglages').addEventListener('click', () => mR.showModal());
+  $('#btn-reglages').addEventListener('click', () => {
+    // L'etat des bascules se lit a l'ouverture : entre deux ouvertures,
+    // rafraichirEtat() a pu changer le demarrage auto.
+    $('#in-modules-dev').setAttribute('aria-checked', String(modulesDevVisibles));
+    mR.showModal();
+  });
   $('#btn-fermer-reglages').addEventListener('click', () => mR.close());
 
   $$('[data-copier]').forEach((b) =>
@@ -1114,6 +1136,23 @@ function brancherModales() {
     } catch (e) {
       toast(e.message, true);
     }
+  });
+
+  $('#in-modules-dev').addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    modulesDevVisibles = b.getAttribute('aria-checked') !== 'true';
+    b.setAttribute('aria-checked', String(modulesDevVisibles));
+    try {
+      localStorage.setItem('streamkit.modulesDev', modulesDevVisibles ? '1' : '0');
+    } catch {
+      /* le choix ne sera pas retenu, sans plus */
+    }
+    // Le module masque etait peut-etre celui qu'on regardait.
+    if (!modulesDevVisibles && etat.modules.find((m) => m.id === etat.selection)?.developpement) {
+      etat.selection = ACCUEIL;
+    }
+    dessinerRail();
+    dessinerDetail();
   });
 
   $('#in-demarrage-auto').addEventListener('click', (e) => {

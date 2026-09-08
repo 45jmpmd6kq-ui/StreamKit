@@ -208,7 +208,9 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
     port: PORT,
 
     etatGeneral() {
-      const modules = registre.liste();
+      // Un module de developpement ne compte que s'il est active : sinon le
+      // dashboard annoncerait « 5 modules » en n'en affichant que 4.
+      const modules = registre.liste().filter((m) => !m.manifeste.developpement || m.actif);
       return {
         version: maj.versionActuelle(),
         port: PORT,
@@ -441,11 +443,14 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         enDirect: etatDirect.enCours,
         directDepuis: etatDirect.depuis,
         version: maj.versionActuelle(),
-        modules: {
-          total: registre.liste().length,
-          demarres: registre.liste().filter((m) => m.etat === 'demarre').length,
-          enErreur: registre.liste().filter((m) => m.etat === 'erreur' || m.etat === 'incomplet').length,
-        },
+        modules: (() => {
+          const vus = registre.liste().filter((m) => !m.manifeste.developpement || m.actif);
+          return {
+            total: vus.length,
+            demarres: vus.filter((m) => m.etat === 'demarre').length,
+            enErreur: vus.filter((m) => m.etat === 'erreur' || m.etat === 'incomplet').length,
+          };
+        })(),
       };
     },
 

@@ -258,6 +258,7 @@ export function vue(id) {
     description: m.manifeste.description ?? '',
     categorie: categories.resoudre(m.manifeste.categorie),
     icone: m.manifeste.icone ?? '🧩',
+    developpement: !!m.manifeste.developpement,
     actif: m.actif,
     etat: m.etat,
     erreur: m.erreur,

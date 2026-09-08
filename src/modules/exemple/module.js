@@ -1,11 +1,12 @@
-// Module de reference — sert de modele pour tous les autres.
+// Module de demonstration — banc d essai du socle.
 //
-// Il n'a besoin de rien (ni Twitch, ni Spotify) : c'est aussi le banc d'essai du
-// socle. Active-le depuis le dashboard pour verifier que les reglages, le
-// journal et les overlays fonctionnent avant de brancher quoi que ce soit.
+// Ce n est PLUS le modele a copier : le contrat a beaucoup grandi et ce module
+// est reste au premier jour. Pour ecrire un module, regarde plutot roue-rl
+// (pages sur mesure, assets partages) ou valorant (sans Twitch, etat persistant).
 //
-// Pour creer un module : copier ce dossier, changer l'id (= le nom du dossier),
-// vider ce qui ne sert pas.
+// Il n'a besoin de rien : ni Twitch, ni Spotify, ni jeu lance. C'est ce qui en
+// fait un outil de diagnostic -- si son overlay s'affiche, le socle va bien et
+// le probleme est ailleurs.
 
 export default {
   // --- Identite -------------------------------------------------------------
@@ -16,6 +17,13 @@ export default {
   // Regroupement dans le rail du dashboard. Voir core/categories.js.
   // 'twitch' | 'rocket-league' | 'lol' | 'valorant' | 'outils'
   categorie: 'outils',
+
+  // Masque du rail par defaut : c'est un outil de diagnostic, pas une
+  // fonctionnalite. Il reste le SEUL module qui tourne sans aucune dependance
+  // externe -- quand un streamer dit « ca marche pas », l'activer repond a la
+  // question « est-ce le socle ou le service ? ».
+  // Revelable par « Afficher les modules de developpement » dans les reglages.
+  developpement: true,
 
   // --- Droits Twitch demandes ------------------------------------------------
   // StreamKit demande l'union des droits de TOUS les modules a l'autorisation :

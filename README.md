@@ -61,7 +61,7 @@ src/
     compteurs.js        compteurs d usage (session + total)
   dashboard/            l'interface (aucune dépendance, aucun build)
   modules/
-    exemple/            module de référence — voir MODULES.md
+    exemple/            module de diagnostic (masqué du rail)
     musique/            bot musique Spotify (portage de la V2)
     clips/              commande !clip, extraite du bot musique
     roue-rl/            roue des voitures Rocket League (portage)
@@ -176,7 +176,7 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - [x] Dashboard : modules, formulaire généré (9 types de champs), overlays,
       journal en tiroir (filtres, direct, pause, téléchargement)
 - [x] Assistant de connexion Twitch
-- [x] Module de référence `exemple` (sert aussi de banc d'essai)
+- [x] Module `exemple` — banc d'essai du socle, masqué du rail depuis 0.9.0
 - [x] **Bot musique migré** depuis Bot-Musique-Twitch-V2, sans perte de fonction
 - [x] Script de packaging
 - [x] Dépôt GitHub + release `v0.1.0` avec le zip joint
