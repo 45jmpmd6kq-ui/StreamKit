@@ -3,34 +3,37 @@
 ========================================
 
 Un seul programme pour tous tes modules : bot musique, roue, compteurs,
-overlays... Tu l'installes une fois, et il se met à jour tout seul.
+overlays... Tu l'installes une fois, et il se met a jour tout seul.
 
 
 -------------------------------------------------
   1. INSTALLATION
 -------------------------------------------------
 
-  a) Installe Node.js si ce n'est pas déjà fait :
-     https://nodejs.org  (prends la version "LTS", suivant-suivant-terminer)
+  Double-clique sur  StreamKit-Setup.exe  et laisse-toi guider.
 
-  b) Double-clique sur  start.bat
+  Rien d'autre a installer : pas de Node.js, pas de ligne de commande.
 
-  c) Ton navigateur s'ouvre sur le tableau de bord.
-     Laisse la fenêtre noire ouverte : c'est StreamKit qui tourne.
+  ATTENTION, au premier lancement Windows va afficher :
+     « Windows a protege votre ordinateur »
+  C'est normal : le programme n'est pas signe (un certificat coute
+  plusieurs centaines d'euros par an). Clique sur :
+     Informations complementaires  >  Executer quand meme
+  Une seule fois, jamais redemande ensuite.
 
 
 -------------------------------------------------
-  2. CONNECTER TA CHAÎNE TWITCH
+  2. CONNECTER TA CHAINE TWITCH
 -------------------------------------------------
 
-  En haut du tableau de bord, clique sur l'indicateur rouge
-  "application Twitch non configurée". L'assistant t'explique tout.
+  En haut de la fenetre, clique sur l'indicateur rouge
+  « application Twitch non configuree ». L'assistant t'explique tout.
 
-  Tu vas créer ta propre application Twitch : c'est gratuit, ça prend
-  3 minutes, et c'est à faire une seule fois.
+  Tu vas creer ta propre application Twitch : c'est gratuit, ca prend
+  3 minutes, et c'est a faire une seule fois.
 
-  Pourquoi ? Parce que StreamKit tourne entièrement sur TON PC. Rien ne
-  passe par un serveur, personne d'autre n'a accès à ta chaîne. Tes codes
+  Pourquoi ? Parce que StreamKit tourne entierement sur TON PC. Rien ne
+  passe par un serveur, personne d'autre n'a acces a ta chaine. Tes codes
   restent chez toi.
 
 
@@ -39,68 +42,76 @@ overlays... Tu l'installes une fois, et il se met à jour tout seul.
 -------------------------------------------------
 
   Colonne de gauche : la liste des modules.
-  Clique sur l'un d'eux, règle ce que tu veux, et bascule l'interrupteur
-  en haut à droite.
+  Clique sur l'un d'eux, regle ce que tu veux, et bascule l'interrupteur
+  en haut a droite.
 
-  Les réglages s'appliquent immédiatement : pas besoin de redémarrer.
+  Les reglages s'appliquent immediatement : pas besoin de redemarrer.
 
 
 -------------------------------------------------
   4. AJOUTER UN OVERLAY DANS OBS
 -------------------------------------------------
 
-  Chaque module liste ses overlays avec une adresse à copier.
+  Chaque module liste ses overlays avec une adresse a copier.
 
   Dans OBS :
      Sources  >  +  >  Navigateur
      URL      >  colle l'adresse
      Largeur 1920, Hauteur 1080
 
-  Astuce : ajoute  ?demo=1  à la fin de l'adresse pour voir un exemple et
-  placer la source au bon endroit. Retire-le une fois que c'est placé.
+  Astuce : ajoute  ?demo=1  a la fin de l'adresse pour voir un exemple et
+  placer la source au bon endroit. Retire-le une fois que c'est place.
 
-  Si un overlay reste vide : vérifie que StreamKit tourne, puis clique
-  droit sur la source dans OBS > Actualiser.
-
-
--------------------------------------------------
-  5. DÉMARRER AVEC WINDOWS
--------------------------------------------------
-
-  Double-clique sur  demarrer-avec-windows.bat
-  -> StreamKit se lancera tout seul quand tu allumes le PC.
-
-  Pour annuler :  arreter-avec-windows.bat
+  Si un overlay reste vide : verifie que StreamKit tourne (icone pres de
+  l'horloge), puis clic droit sur la source dans OBS > Actualiser.
 
 
 -------------------------------------------------
-  6. LES MISES À JOUR
+  5. PENDANT LE STREAM
 -------------------------------------------------
 
-  Quand une nouvelle version existe, un bouton "Mettre à jour" apparaît
-  en haut à droite du tableau de bord. Un clic, et c'est fait.
+  StreamKit vit pres de l'horloge, en bas a droite de l'ecran.
 
-  TES RÉGLAGES NE SONT JAMAIS PERDUS : ils sont rangés ailleurs que le
-  programme. Tu ne reconfigures jamais rien.
+  - Tu peux FERMER la fenetre sans crainte : les modules continuent de
+    tourner. C'est fait pour.
+  - Clic droit sur l'icone : ouvrir le dashboard, ou tout arreter.
+  - Double-clic sur l'icone : rouvrir la fenetre.
+
+  Pour qu'il demarre tout seul avec Windows :
+     roue crantee (en haut a droite)  >  « Demarrer avec Windows »
+  Il se lancera directement pres de l'horloge, sans ouvrir de fenetre.
+
+
+-------------------------------------------------
+  6. LES MISES A JOUR
+-------------------------------------------------
+
+  Quand une nouvelle version existe, un bouton « Mettre a jour »
+  apparait en haut a droite de la fenetre. Un clic, et c'est fait :
+  StreamKit se met a jour et redemarre tout seul.
+
+  TES REGLAGES NE SONT JAMAIS PERDUS : ils sont ranges ailleurs que le
+  programme. Tu ne reconfigures jamais rien, meme apres une
+  desinstallation suivie d'une reinstallation.
 
 
 -------------------------------------------------
   7. UN SOUCI ?
 -------------------------------------------------
 
-  Tout est écrit dans le JOURNAL, en bas du tableau de bord.
-  - Filtre par module et par gravité
-  - Bouton ⤓ : télécharge le journal du jour
+  Tout est ecrit dans le JOURNAL, en bas de la fenetre.
+  - Filtre par module et par gravite
+  - Bouton fleche vers le bas : telecharge le journal du jour
 
-  Si tu me signales un problème, envoie-moi ce fichier : j'y vois
-  exactement ce qui s'est passé, même plusieurs jours après.
+  Si tu me signales un probleme, envoie-moi ce fichier : j'y vois
+  exactement ce qui s'est passe, meme plusieurs jours apres.
 
 
 -------------------------------------------------
-  À NE JAMAIS PARTAGER
+  A NE JAMAIS PARTAGER
 -------------------------------------------------
 
   Le dossier   %APPDATA%\StreamKit
-  contient tes codes d'accès Twitch et Spotify.
-  Ne l'envoie à personne, ne le mets pas dans un zip.
-  (Pour y aller : touche Windows + R, colle %APPDATA%\StreamKit, Entrée)
+  contient tes codes d'acces Twitch et Spotify.
+  Ne l'envoie a personne, ne le mets pas dans un zip.
+  (Pour y aller : touche Windows + R, colle %APPDATA%\StreamKit, Entree)

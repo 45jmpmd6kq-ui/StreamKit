@@ -128,6 +128,17 @@
     <dialog id="modale-reglages">
       <div class="modale-entete"><h2>Réglages de StreamKit</h2></div>
       <div class="modale-corps">
+        <div class="champ" id="bloc-demarrage-auto" hidden>
+          <label>Démarrer avec Windows</label>
+          <div class="aide">
+            StreamKit se lance tout seul à l'ouverture de ta session, directement près de l'horloge,
+            sans ouvrir de fenêtre.
+          </div>
+          <div class="saisie" style="justify-self: end">
+            <button class="bascule" id="in-demarrage-auto" role="switch" aria-checked="false"></button>
+          </div>
+        </div>
+
         <div class="champ large">
           <label for="in-depot">Dépôt des mises à jour</label>
           <div class="aide">

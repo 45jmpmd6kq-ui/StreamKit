@@ -73,6 +73,16 @@ async function rafraichirEtat() {
   $('#url-retour').textContent = 'http://localhost:' + g.port + '/callback/twitch';
   $('#in-depot').value = g.depotMaj || '';
   if (g.chaine) $('#in-channel').value = g.chaine;
+
+  // Le démarrage avec Windows n'existe que dans l'application Electron : lancé
+  // en ligne de commande, l'option est simplement masquée plutôt que grisée.
+  const bloc = $('#bloc-demarrage-auto');
+  if (g.demarrageAuto?.disponible) {
+    bloc.hidden = false;
+    $('#in-demarrage-auto').setAttribute('aria-checked', String(!!g.demarrageAuto.actif));
+  } else {
+    bloc.hidden = true;
+  }
 }
 
 function majPastilleTwitch(t, g) {
@@ -586,10 +596,19 @@ function brancherModales() {
     }
   });
 
+  $('#in-demarrage-auto').addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true');
+  });
+
   $('#btn-sauver-reglages').addEventListener('click', async () => {
     // Le dépôt de mise à jour passe par la même route que la config générale.
     try {
-      await api('/api/reglages', { method: 'POST', corps: { depotMaj: $('#in-depot').value.trim() } });
+      const corps = { depotMaj: $('#in-depot').value.trim() };
+      if (!$('#bloc-demarrage-auto').hidden) {
+        corps.demarrageAuto = $('#in-demarrage-auto').getAttribute('aria-checked') === 'true';
+      }
+      await api('/api/reglages', { method: 'POST', corps });
       toast('Réglages enregistrés');
       mR.close();
       verifierMaj();

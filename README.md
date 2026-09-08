@@ -25,17 +25,20 @@ chacun le même socle (config, .bat, serveur web local, overlay OBS).
 
 ```bash
 npm install
-npm start          # http://127.0.0.1:4455
+npm start          # application Electron
+npm run dev        # noyau seul, sans Electron (http://127.0.0.1:4455)
 ```
 
-Pour le streamer : `start.bat` (installe les dépendances au premier lancement et
-ouvre le navigateur).
+Le streamer, lui, reçoit un installeur `.exe` : ni Node.js, ni ligne de commande,
+ni fenêtre noire — une icône près de l’horloge.
 
 ## Architecture
 
 ```
 src/
-  index.js              orchestration + contexte fourni aux modules
+  main.js               processus Electron : fenêtre, icône, mises à jour
+  index.js              lancement en ligne de commande (dev)
+  noyau.js              tout ce qui tourne, commun aux deux entrées
   core/
     paths.js            code vs données : la séparation qui rend l'update sûr
     journal.js          journal central (console + dashboard + fichier)
@@ -82,28 +85,49 @@ aussi bon marché que le 2ᵉ.
 
 ```bash
 npm version patch          # ou minor / major
-npm run release            # -> livraison\StreamKit-v<version>.zip
+npm run dist               # -> livraison\StreamKit Setup <version>.exe
 git push && git push --tags
 ```
 
-Puis créer la release GitHub sur le tag `v<version>` et y **joindre le zip**.
-Il embarque `node_modules` : les streamers ne lancent jamais `npm install`, et
-l'updater remplace le dossier tel quel.
+Puis créer la release GitHub sur le tag `v<version>` et y joindre **tout le
+contenu de `livraison\`** : l'installeur, `latest.yml` et le `.blockmap`.
+`latest.yml` est ce que lit `electron-updater` pour savoir qu'une version
+existe ; le `.blockmap` lui permet de ne télécharger que les octets modifiés.
+Sans eux, les streamers ne verront jamais la mise à jour.
 
-Chez le streamer : un bouton « Mettre à jour » apparaît dans le dashboard. Un
-clic, StreamKit télécharge, se ferme, se remplace et redémarre.
+`npm run publier` fait la même chose et téléverse directement sur GitHub, mais
+demande un `GH_TOKEN` dans l'environnement.
 
-Le remplacement passe par un `.bat` externe : Windows ne permet pas à un
-programme de réécrire ses propres fichiers pendant qu'il tourne.
+Chez le streamer : un bouton « Mettre à jour » apparaît dans la fenêtre. Un
+clic, StreamKit télécharge, se remplace et redémarre — Electron sait remplacer
+une application en cours d'exécution, contrairement au lancement Node qui
+imposait un `.bat` externe.
 
-Côté streamer, rien à saisir : le dépôt est pré-rempli
-(`45jmpmd6kq-ui/StreamKit`, voir `CONFIG_DEFAUT` dans `core/store.js`) et reste
-modifiable dans ⚙️ du dashboard.
+Côté streamer, rien à saisir : le dépôt est déclaré dans `build.publish`.
 
 **Le dépôt doit être public.** L'updater lit les releases sans s'authentifier ;
 en privé il faudrait distribuer un jeton GitHub à chaque streamer. Le code ne
 contient aucun secret : `config.json` et `tokens.json` vivent dans `%APPDATA%`
 et sont ignorés par git.
+
+### Construire l'installeur : le pré-requis Windows
+
+`electron-builder` extrait un paquet contenant des liens symboliques macOS
+(`libcrypto.dylib`…). Sous Windows, créer un lien symbolique demande le
+privilège `SeCreateSymbolicLinkPrivilege`, que n'a pas un compte standard :
+
+```
+ERROR: Cannot create symbolic link : Le client ne dispose pas d'un privilège nécessaire.
+```
+
+Il faut donc **activer le mode développeur** une fois — Paramètres ▸
+Confidentialité et sécurité ▸ Pour les développeurs ▸ Mode développeur — ou
+lancer `npm run dist` depuis un terminal administrateur. Pré-remplir le cache à
+la main ne marche pas : `app-builder` réextrait dans un dossier temporaire
+aléatoire à chaque exécution.
+
+Cela ne concerne que la machine qui **construit** l'installeur. Les streamers ne
+sont pas concernés.
 
 ### Changer un schéma de config sans rien casser
 
@@ -120,11 +144,17 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - [x] Assistant de connexion Twitch
 - [x] Module de référence `exemple` (sert aussi de banc d'essai)
 - [x] **Bot musique migré** depuis Bot-Musique-Twitch-V2, sans perte de fonction
-- [x] Script de packaging (`npm run release`)
+- [x] Script de packaging
 - [x] Dépôt GitHub + release `v0.1.0` avec le zip joint
 - [x] **Mise à jour vérifiée de bout en bout** — une install en 0.0.9 détecte la
       release, télécharge, se remplace (`node_modules` compris) et **conserve
       tous les réglages du streamer**. C'est la thèse du projet, elle tient.
+- [x] **Passage à Electron** : application installable, icône près de l'horloge,
+      fenêtre refermable sans rien couper, plus de Node.js à installer, plus de
+      fenêtre noire. Noyau extrait dans `noyau.js`, partagé par les deux entrées.
+- [ ] Construire l'installeur — **bloqué** : demande le mode développeur Windows
+      ou un terminal administrateur (voir « Construire l'installeur » plus haut)
+- [ ] Publier une release Electron et revérifier la mise à jour
 - [ ] Recette du bot musique avec de vrais identifiants Twitch + Spotify
 - [ ] Migrer Roue RL, RL-Tracker, Valorant, RL-Challenge
 

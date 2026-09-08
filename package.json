@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Socle commun des outils de stream : un seul service, des modules activables, mise a jour automatique.",
+  "main": "src/main.js",
+  "description": "Socle commun des outils de stream : une application, des modules activables, mise a jour automatique.",
   "scripts": {
-    "start": "node src/index.js",
-    "release": "node scripts/faire-release.mjs"
+    "start": "electron .",
+    "dev": "node src/index.js",
+    "icone": "node scripts/faire-icone.mjs",
+    "dist": "electron-builder --win",
+    "publier": "electron-builder --win --publish always"
   },
   "engines": {
     "node": ">=20"
@@ -15,6 +19,48 @@
     "@twurple/api": "^7.2.0",
     "@twurple/auth": "^7.2.0",
     "@twurple/chat": "^7.2.0",
-    "@twurple/eventsub-ws": "^7.2.0"
+    "@twurple/eventsub-ws": "^7.2.0",
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "fr.streamkit.app",
+    "productName": "StreamKit",
+    "copyright": "StreamKit",
+    "directories": {
+      "output": "livraison"
+    },
+    "asar": false,
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/icone.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "StreamKit",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "45jmpmd6kq-ui",
+        "repo": "StreamKit"
+      }
+    ]
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
   }
 }
