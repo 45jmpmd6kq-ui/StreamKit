@@ -66,7 +66,15 @@ src/
     clips/              commande !clip, extraite du bot musique
     roue-rl/            roue des voitures Rocket League (portage)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)
+
+scripts/                icône, captures, recadrages, deck — rien ne part chez le streamer
+doc/captures/           captures du dashboard, refaites par script et pas à la main
+StreamKit_Presentation.pptx   la doc du streamer : à quoi ça sert, puis l'installation
 ```
+
+> Il n'y a plus de `LISEZ-MOI.txt` : l'installeur n'embarque que `src/**` et
+> `package.json` (`build.files`), donc ce fichier ne quittait jamais le dépôt.
+> Tout ce qu'il disait est dans le deck, en illustré.
 
 ### La règle qui structure tout
 
