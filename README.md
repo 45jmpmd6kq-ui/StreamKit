@@ -18,7 +18,8 @@ chacun le même socle (config, .bat, serveur web local, overlay OBS).
 - **Pas un bot Twitch généraliste.** Firebot, Streamer.bot et Mix It Up font déjà
   ça, mieux et gratuitement. L'angle de StreamKit, c'est la **couche jeu** :
   Rocket League, Valorant, LoL — ce qu'aucun d'eux ne sait faire.
-- **Le service n'écoute que sur `127.0.0.1`.** Rien n'est exposé au réseau.
+- **Le service n'écoute que sur les boucles locales** (`127.0.0.1` et `::1`).
+  Rien n'est exposé au réseau, jamais de `0.0.0.0`.
 
 ## Démarrer
 

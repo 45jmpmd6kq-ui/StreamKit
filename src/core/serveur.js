@@ -6,8 +6,9 @@
 //   /overlay/<module>/<vue>  les sources Navigateur a coller dans OBS
 //   /overlay/<module>/<vue>/flux   le flux temps reel de cet overlay
 //
-// Le serveur n'ecoute que sur 127.0.0.1 : rien n'est expose sur le reseau, ni
-// sur internet. C'est volontaire -- les jetons du streamer sont derriere.
+// Le serveur n'ecoute que sur les boucles locales (127.0.0.1 et ::1, voir
+// ecouter) : rien n'est expose sur le reseau ni sur internet. C'est volontaire
+// -- les jetons du streamer sont derriere.
 
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
