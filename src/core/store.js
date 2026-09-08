@@ -27,7 +27,11 @@ const CONFIG_DEFAUT = {
 function lire(chemin, defaut) {
   if (!existsSync(chemin)) return structuredClone(defaut);
   try {
-    return JSON.parse(readFileSync(chemin, 'utf8'));
+    // On retire un eventuel BOM avant d'analyser. Ce n'est pas theorique : un
+    // streamer qui ouvre config.json dans le Bloc-notes pour jeter un oeil et
+    // l'enregistre y ajoute un BOM. JSON.parse echouerait, et il perdrait TOUS
+    // ses reglages sans le moindre message.
+    return JSON.parse(readFileSync(chemin, 'utf8').replace(/^﻿/, ''));
   } catch {
     // Fichier illisible : on repart du defaut plutot que de refuser de demarrer
     // en plein live. Le fichier fautif est conserve a cote, au cas ou.

@@ -112,14 +112,30 @@ const updater = {
       log.ok('Mise a jour prete. StreamKit va redemarrer.');
       // On laisse le temps a la reponse HTTP de partir avant de tout couper.
       setTimeout(async () => {
+        // Demontage complet AVANT de rendre la main a l'installeur.
+        //
+        // Ce n'est pas de la coquetterie : l'installeur attend que le processus
+        // soit mort pour remplacer les fichiers puis relancer l'application. Or
+        // l'icone pres de l'horloge et son minuteur de rafraichissement gardent
+        // Electron vivant. Resultat constate en 0.2.0 -> 0.2.1 : la mise a jour
+        // s'installe bien, mais StreamKit ne redemarre pas.
         onQuitteVraiment = true;
         await noyau?.fermer();
-        // isSilent = true : la mise a jour s'applique sans reafficher l'assistant
-        // d'installation. Le streamer a clique sur « Mettre a jour », il n'a pas
-        // demande a rechoisir un dossier d'installation — et encore moins a
-        // repondre a un assistant au milieu d'un live.
-        // isForceRunAfter = true : StreamKit se relance tout seul derriere.
+        arreterRafraichissementIcone();
+        icone?.destroy();
+        icone = null;
+        fenetre?.destroy();
+        fenetre = null;
+
+        // isSilent = true : pas d'assistant d'installation. Le streamer a clique
+        // sur « Mettre a jour », il n'a pas demande a rechoisir un dossier.
+        // isForceRunAfter = true : StreamKit se relance derriere.
         autoUpdater.quitAndInstall(true, true);
+
+        // Filet de securite : si quelque chose retient encore le processus,
+        // on force la sortie. Un StreamKit fantome empecherait l'installeur de
+        // faire son travail, et le port 4455 resterait pris.
+        setTimeout(() => app.exit(0), 4000);
       }, 800);
       return { ok: true, actuelle, derniere: derniereConnue };
     } catch (e) {
@@ -272,6 +288,16 @@ function majMenuIcone() {
   icone.setToolTip('StreamKit — ' + (twitchOk ? etat.chaine : 'non connecte'));
 }
 
+// Minuteur de rafraichissement de l'icone. On garde sa reference : un minuteur
+// actif maintient Electron en vie, ce qui empeche l'installeur de mise a jour
+// de reprendre la main (voir updater.appliquer).
+let rafraichissementIcone = null;
+
+function arreterRafraichissementIcone() {
+  clearInterval(rafraichissementIcone);
+  rafraichissementIcone = null;
+}
+
 function creerIcone() {
   // resize : sans ca, Windows affiche une icone 256 px ecrasee et floue.
   const image = nativeImage.createFromPath(ICONE).resize({ width: 16, height: 16 });
@@ -279,7 +305,7 @@ function creerIcone() {
   icone.on('double-click', () => creerFenetre());
   majMenuIcone();
   // L'etat bouge tout seul (chat qui se reconnecte, module qui tombe).
-  setInterval(majMenuIcone, 5000);
+  rafraichissementIcone = setInterval(majMenuIcone, 5000);
 }
 
 // --- Cycle de vie -----------------------------------------------------------
@@ -291,6 +317,11 @@ async function quitter() {
   } catch {
     /* on quitte de toute facon */
   }
+  // Meme demontage que pour la mise a jour : l'icone et son minuteur gardent
+  // Electron vivant, et le port 4455 resterait pris par un processus fantome.
+  arreterRafraichissementIcone();
+  icone?.destroy();
+  icone = null;
   app.quit();
 }
 
