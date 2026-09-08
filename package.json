@@ -56,7 +56,8 @@
       {
         "provider": "github",
         "owner": "45jmpmd6kq-ui",
-        "repo": "StreamKit"
+        "repo": "StreamKit",
+        "releaseType": "release"
       }
     ],
     "artifactName": "${productName}-Setup-${version}.${ext}"

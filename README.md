@@ -104,8 +104,13 @@ contenu de `livraison\`** : l'installeur, `latest.yml` et le `.blockmap`.
 existe ; le `.blockmap` lui permet de ne télécharger que les octets modifiés.
 Sans eux, les streamers ne verront jamais la mise à jour.
 
-`npm run publier` fait la même chose et téléverse directement sur GitHub, mais
-demande un `GH_TOKEN` dans l'environnement.
+ fait tout d'un coup — build, création de la release, envoi des
+trois fichiers — mais demande un  dans l'environnement (portée
+ sur ce seul dépôt suffit).
+
+⚠️ Une variable d'environnement définie pendant que l'application tourne n'est
+pas vue par le processus en cours : il faut relancer, ou la relire depuis le
+registre utilisateur.
 
 Chez le streamer : un bouton « Mettre à jour » apparaît dans la fenêtre. Un
 clic, StreamKit télécharge, se remplace et redémarre — Electron sait remplacer
