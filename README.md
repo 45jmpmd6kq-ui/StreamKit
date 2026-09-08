@@ -60,7 +60,8 @@ src/
   dashboard/            l'interface (aucune dépendance, aucun build)
   modules/
     exemple/            module de référence — voir MODULES.md
-    musique/            bot musique Spotify + clips (portage de la V2)
+    musique/            bot musique Spotify (portage de la V2)
+    clips/              commande !clip, extraite du bot musique
     roue-rl/            roue des voitures Rocket League (portage)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)
 ```

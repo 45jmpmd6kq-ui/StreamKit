@@ -4,7 +4,7 @@
 //  - recompense de points de chaine « demande de musique » -> ajout a la file Spotify
 //  - recompense « annuler une musique » -> le morceau sera saute a son passage
 //    (Spotify ne permet pas de retirer un morceau precis de sa file)
-//  - commandes de chat : passer le morceau, afficher le morceau en cours, !clip
+//  - commandes de chat : passer le morceau, afficher le morceau en cours
 //  - deux overlays OBS : les annonces (7 s) et la liste « a venir » (permanente)
 //
 // Ce qui a disparu par rapport a la version autonome, et que le socle fournit :
@@ -13,7 +13,6 @@
 
 import { SpotifyClient, looseMatch } from './spotify.js';
 import { creerFile } from './file.js';
-import { creerClipper } from './clips.js';
 import * as spotifyAuth from './spotify-auth.js';
 
 const TITRE_ANNULATION = '🚫 On écoute pas ta musique de merde';
@@ -23,7 +22,7 @@ export default {
   id: 'musique',
   nom: 'Bot Musique',
   description:
-    'Les viewers demandent une musique avec leurs points de chaîne, elle part dans ta file Spotify. Avec refus, passage et clips.',
+    'Les viewers demandent une musique avec leurs points de chaîne, elle part dans ta file Spotify. Avec refus et passage.',
   icone: '🎵',
   categorie: 'twitch',
 
@@ -32,14 +31,10 @@ export default {
     'channel:manage:redemptions',
     'chat:read',
     'chat:edit',
-    'clips:edit', // commande !clip
-    // Nommer un clip = basculer le titre du stream une fraction de seconde
-    // (l'API Twitch ne permet pas de nommer un clip autrement).
-    'channel:manage:broadcast',
   ],
 
   config: {
-    version: 1,
+    version: 2,
     champs: [
       // --- Spotify ---
       {
@@ -121,29 +116,6 @@ export default {
         defaut: true,
       },
 
-      // --- Clips ---
-      {
-        cle: 'clipCommand',
-        type: 'commande',
-        label: 'Commande de clip',
-        aide: '« !clip pentakill » nomme le clip. Laisse vide pour désactiver.',
-        defaut: '!clip',
-      },
-      {
-        cle: 'modsCanClip',
-        type: 'bool',
-        label: 'Les modérateurs peuvent clipper',
-        defaut: true,
-      },
-      {
-        cle: 'clipCooldownSec',
-        type: 'nombre',
-        label: 'Délai entre deux clips (secondes)',
-        defaut: 30,
-        min: 0,
-        max: 3600,
-      },
-
       // --- Habillage ---
       {
         cle: 'accent1',
@@ -175,13 +147,23 @@ export default {
     ],
   },
 
-  migrations: {},
+  migrations: {
+    // v2 : la commande de clip est partie dans son propre module « Clips ».
+    // On retire ses réglages d'ici — ils n'ont plus d'effet, et les laisser
+    // traîner ferait croire que la commande marche encore depuis ce module.
+    2: (r) => {
+      delete r.clipCommand;
+      delete r.modsCanClip;
+      delete r.clipCooldownSec;
+      return r;
+    },
+  },
 
   overlays: [
     {
       chemin: 'annonces',
       nom: 'Annonces',
-      description: 'Les notifications de 7 secondes : demande, refus, clip.',
+      description: 'Les notifications de 7 secondes : demande et refus.',
       fichier: 'overlay.html',
     },
     {
@@ -297,12 +279,6 @@ export default {
     ctx._spotify = spotify; // lu par sante() pour la vue d ensemble
 
     const file = creerFile();
-    const clipper = creerClipper({
-      api: ctx.twitch.api,
-      broadcasterId: ctx.twitch.broadcasterId,
-      log: ctx.log,
-    });
-
     // Spotify peut faire tourner le refresh token : on le repersiste s'il change.
     const persisterSpotify = () => {
       if (spotify.refreshToken && spotify.refreshToken !== refreshToken) {
@@ -323,10 +299,6 @@ export default {
     const annoncer = (msg) => {
       if (c.announceInChat !== false) ctx.twitch.dire(msg);
     };
-    // Reponse a une commande explicite : on ecrit meme si les annonces
-    // automatiques sont coupees (sinon !clip ne renverrait aucun lien).
-    const repondre = (msg) => ctx.twitch.dire(msg);
-
     // --- Recompenses ---------------------------------------------------------
 
     const principale = await ctx.twitch.assurerRecompense({
@@ -488,71 +460,6 @@ export default {
       });
     }
 
-    // --- 5) Clips -------------------------------------------------------------
-
-    if (c.clipCommand) {
-      const peutClipper = ctx.twitch.aLeDroit('clips:edit');
-      const peutNommer = ctx.twitch.aLeDroit('channel:manage:broadcast');
-      const delaiMs = Math.max(0, c.clipCooldownSec * 1000);
-      let dernierClip = 0;
-      let clipEnCours = false;
-
-      if (!peutClipper) {
-        ctx.log.warn(
-          'Commande ' + c.clipCommand + ' indisponible : ton autorisation Twitch ne couvre pas la création de clips. ' +
-            'Reconnecte ta chaîne depuis le dashboard.'
-        );
-      } else if (!peutNommer) {
-        ctx.log.warn('« ' + c.clipCommand + ' <nom> » ne pourra pas nommer le clip : droit manquant.');
-      }
-
-      ctx.twitch.surCommande(
-        c.clipCommand,
-        async ({ user, argument }) => {
-          if (!peutClipper) {
-            repondre('@' + user + ' le bot n’a pas le droit de créer des clips — reconnecte la chaîne dans StreamKit 🔑');
-            return;
-          }
-          if (clipEnCours) return;
-
-          const restant = delaiMs - (Date.now() - dernierClip);
-          if (restant > 0) {
-            repondre('@' + user + ' encore ' + Math.ceil(restant / 1000) + ' s avant le prochain clip ⏳');
-            return;
-          }
-
-          clipEnCours = true;
-          try {
-            const clip = await clipper.creer({ nom: peutNommer ? argument : '' });
-            dernierClip = Date.now();
-            diffuser('clip', { by: user, url: clip.url, title: clip.title });
-
-            const nom = clip.renamed ? ' « ' + clip.title + ' »' : '';
-            let souci = '';
-            if (argument && peutNommer && !clip.renamed) souci = ' (nom non appliqué cette fois)';
-
-            repondre('✂️ Clip' + nom + ' créé par @' + user + ' : ' + clip.url + souci);
-            ctx.log.ok('Clip créé par ' + user + nom + ' : ' + clip.url);
-          } catch (err) {
-            if (err.reason === 'OFFLINE') {
-              repondre('@' + user + ' impossible de clipper : la chaîne n’est pas en live ❌');
-            } else if (err.reason === 'RATE_LIMIT') {
-              repondre('@' + user + ' trop de clips d’un coup, laisse souffler Twitch ⏳');
-            } else if (err.reason === 'NO_SCOPE') {
-              repondre('@' + user + ' le bot n’a pas le droit de créer des clips — reconnecte la chaîne 🔑');
-              ctx.log.warn('Droit « clips:edit » manquant.');
-            } else {
-              repondre('@' + user + ' le clip n’a pas pu être créé 🙏');
-              ctx.log.err('Clip : ' + err.message);
-            }
-          } finally {
-            clipEnCours = false;
-          }
-        },
-        { qui: c.modsCanClip ? 'mods' : 'streamer' }
-      );
-    }
-
     // --- Demarrage termine ----------------------------------------------------
 
     ctx.log.ok('Prêt. Récompense surveillée : « ' + c.rewardTitle + ' ».');
@@ -564,11 +471,8 @@ export default {
       })
       .catch(() => {});
 
-    return {
-      async arreter() {
-        // Si un clip etait en train d'etre nomme, on rend son vrai titre au stream.
-        await clipper.restaurerTitre();
-      },
-    };
+    // Rien à libérer : les abonnements Twitch et les minuteurs sont retirés
+    // automatiquement par le socle quand le module s'arrête.
+    return {};
   },
 };

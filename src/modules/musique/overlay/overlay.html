@@ -148,10 +148,10 @@
       const chemin = location.pathname.replace(/\/$/, "");
       const nomVue = chemin.split("/").pop();
       const VUES = {
-        annonces: { notifs: ["added", "cancelled", "clip"], liste: false },
+        annonces: { notifs: ["added", "cancelled"], liste: false },
         liste: { notifs: [], liste: true },
       };
-      const vue = VUES[nomVue] || { notifs: ["added", "cancelled", "clip"], liste: true };
+      const vue = VUES[nomVue] || { notifs: ["added", "cancelled"], liste: true };
 
       // On retire vraiment du flux ce que la vue n'affiche pas : sinon un bloc
       // invisible occuperait quand même sa place et décalerait le reste.
@@ -265,7 +265,6 @@
           const exemples = {
             added: { kind: "added", who: "Viewer42", name: "Beautiful Things", artists: "Benson Boone" },
             cancelled: { kind: "cancelled", who: "Viewer42", name: "Prideful", artists: "Ren" },
-            clip: { kind: "clip", who: "ModoDuStream", name: "Exemple de clip", artists: "clips.twitch.tv/exemple" },
           };
           const suite = vue.notifs.map((n) => exemples[n]);
           let i = 0;

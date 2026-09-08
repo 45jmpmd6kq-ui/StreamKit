@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — annonce de clip</title>
+    <style>
+      /* Fond transparent obligatoire : OBS incruste la page telle quelle. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        font-family: "Segoe UI", Inter, system-ui, sans-serif;
+      }
+
+      body {
+        display: flex;
+      }
+      body[data-coin="top-left"] { align-items: flex-start; justify-content: flex-start; }
+      body[data-coin="top-right"] { align-items: flex-start; justify-content: flex-end; }
+      body[data-coin="bottom-left"] { align-items: flex-end; justify-content: flex-start; }
+      body[data-coin="bottom-right"] { align-items: flex-end; justify-content: flex-end; }
+
+      #carte {
+        margin: 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        max-width: 560px;
+        padding: 14px 20px 14px 16px;
+        border-radius: 14px;
+        background: rgba(16, 16, 20, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-left: 5px solid var(--accent, #9146ff);
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        /* Au repos l'overlay est totalement invisible : pas de cadre vide à l'écran. */
+        opacity: 0;
+        transform: translateX(-24px);
+        transition: opacity 0.35s ease, transform 0.35s ease;
+      }
+      #carte.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .ico { font-size: 26px; line-height: 1; }
+      .lignes { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+      .haut { font-size: 13px; color: #b9b9c6; letter-spacing: 0.3px; }
+      .haut b { color: var(--accent, #9146ff); font-weight: 700; }
+      .titre {
+        font-size: 18px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 460px;
+      }
+      .lien { font-size: 14px; color: var(--accent, #9146ff); font-weight: 600; }
+    </style>
+  </head>
+  <body data-coin="top-left">
+    <div id="carte">
+      <div class="ico">✂️</div>
+      <div class="lignes">
+        <div class="haut" id="haut"></div>
+        <div class="titre" id="titre"></div>
+        <div class="lien" id="lien"></div>
+      </div>
+    </div>
+
+    <script>
+      const carte = document.getElementById('carte');
+      const $ = (id) => document.getElementById(id);
+      let minuteur = null;
+
+      function esc(s) {
+        return String(s ?? '').replace(/[&<>"]/g, (c) =>
+          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+      }
+
+      function appliquerTheme(t) {
+        if (!t) return;
+        if (t.accent) document.documentElement.style.setProperty('--accent', t.accent);
+        if (t.coin) document.body.dataset.coin = t.coin;
+      }
+
+      function afficher({ by, url, title }) {
+        $('haut').innerHTML = '<b>' + esc(by) + '</b> a créé un clip';
+        $('titre').textContent = title || 'Moment enregistré !';
+        // Lien raccourci : « clips.twitch.tv/... » se lit à l'écran, pas l'URL complète.
+        $('lien').textContent = String(url || '').replace(/^https?:\/\//, '');
+        carte.classList.add('visible');
+        clearTimeout(minuteur);
+        if (!demo) minuteur = setTimeout(() => carte.classList.remove('visible'), 7000);
+      }
+
+      // ?demo=1 : affiche un exemple qui ne disparaît pas, le temps de placer la
+      // source dans OBS. À retirer une fois calé.
+      const demo = new URLSearchParams(location.search).has('demo');
+
+      // Chemin construit depuis location.pathname : un relatif remplacerait le
+      // dernier segment de l'URL et taperait /overlay/clips/flux.
+      const BASE = location.pathname.replace(/\/$/, '');
+      const flux = new EventSource(BASE + '/flux');
+
+      flux.addEventListener('etat', (e) => appliquerTheme(JSON.parse(e.data).theme));
+      flux.addEventListener('clip', (e) => {
+        const d = JSON.parse(e.data);
+        appliquerTheme(d.theme);
+        afficher(d);
+      });
+
+      if (demo) {
+        afficher({ by: 'ModoDuStream', title: 'pentakill', url: 'https://clips.twitch.tv/exemple' });
+      }
+    </script>
+  </body>
+</html>
