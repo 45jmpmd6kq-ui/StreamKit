@@ -61,6 +61,7 @@ src/
   modules/
     exemple/            module de référence — voir MODULES.md
     musique/            bot musique Spotify + clips (portage de la V2)
+    roue-rl/            roue des voitures Rocket League (portage)
 ```
 
 ### La règle qui structure tout
@@ -164,7 +165,9 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - [x] Release Electron publiée et **détection de mise à jour vérifiée en réel** :
       une installation 0.1.0 voit la 0.1.2 et propose le bouton
 - [ ] Recette du bot musique avec de vrais identifiants Twitch + Spotify
-- [ ] Migrer Roue RL, RL-Tracker, Valorant, RL-Challenge
+- [x] **Roue RL migrée** : 2e module porté — a fait émerger les pages sur mesure
+      et le partage d assets entre page et overlay
+- [ ] Migrer RL-Tracker, Valorant, RL-Challenge
 
 ## Pièges rencontrés (à ne pas refaire)
 

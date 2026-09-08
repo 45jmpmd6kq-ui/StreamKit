@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mes voitures — Random Car</title>
+<style>
+  :root {
+    --bg: #0B1220;
+    --card: #131C2E;
+    --card-on: #16304A;
+    --line: #223047;
+    --accent1: #00B0FF;
+    --accent2: #FF9800;
+    --text: #E8EFF8;
+    --muted: #8A9BB4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    padding-bottom: 96px;
+  }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(11, 18, 32, .96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    padding: 18px 24px 14px;
+  }
+  h1 { margin: 0 0 4px; font-size: 21px; letter-spacing: .3px; }
+  h1 .em { color: var(--accent1); }
+  .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+  .sub b { color: var(--accent2); }
+
+  .tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  input[type="search"] {
+    flex: 1 1 260px; min-width: 200px;
+    padding: 10px 14px; border-radius: 9px;
+    border: 1px solid var(--line); background: #0E1626; color: var(--text);
+    font-size: 14.5px; outline: none;
+  }
+  input[type="search"]:focus { border-color: var(--accent1); }
+  button {
+    padding: 10px 15px; border-radius: 9px; cursor: pointer;
+    border: 1px solid var(--line); background: #182236; color: var(--text);
+    font-size: 13.5px; font-weight: 600;
+  }
+  button:hover { border-color: var(--accent1); }
+
+  .grid {
+    display: grid; gap: 12px; padding: 22px 24px;
+    grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+  }
+  .car {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px; border-radius: 11px;
+    background: var(--card); border: 2px solid transparent;
+    cursor: pointer; user-select: none;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .car:hover { transform: translateY(-1px); border-color: var(--line); }
+  .car.on { background: var(--card-on); border-color: var(--accent1); }
+  .car img {
+    width: 58px; height: 42px; object-fit: contain; flex: 0 0 auto;
+    opacity: .42; transition: opacity .15s ease;
+  }
+  .car.on img { opacity: 1; }
+  .car .n {
+    font-size: 13.5px; font-weight: 600; line-height: 1.25;
+    color: var(--muted);
+  }
+  .car.on .n { color: var(--text); }
+  .car.hidden { display: none; }
+
+  .empty { padding: 40px 24px; color: var(--muted); text-align: center; }
+
+  footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 24px;
+    background: rgba(11, 18, 32, .97);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--line);
+  }
+  .count { font-size: 15px; font-weight: 700; }
+  .count b { color: var(--accent1); font-size: 19px; }
+  .save {
+    margin-left: auto;
+    background: var(--accent1); color: #06121D;
+    border-color: var(--accent1); font-weight: 800;
+    padding: 12px 24px; font-size: 14.5px;
+  }
+  .save:disabled { opacity: .45; cursor: default; }
+  .status { font-size: 13.5px; color: var(--muted); }
+  .status.ok { color: #4ADE80; }
+  .status.err { color: #FF6B7A; }
+
+  .warn {
+    margin: 0 24px 4px; padding: 11px 14px;
+    border-radius: 9px; font-size: 13.5px;
+    background: #2A1F0B; border: 1px solid #6B4E14; color: #F0C674;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Mes voitures <span class="em">Rocket League</span></h1>
+    <div class="sub" id="sub">Coche les voitures que tu possedes : ce sont les seules qui pourront sortir a la roue.</div>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Rechercher une voiture..." autocomplete="off">
+      <button id="all">Tout cocher (visibles)</button>
+      <button id="none">Tout decocher</button>
+      <button id="base">+ Voitures de base</button>
+    </div>
+  </header>
+
+  <div id="warn"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none">Aucune voiture ne correspond a la recherche.</div>
+
+  <footer>
+    <div class="count"><b id="n">0</b> voiture(s) selectionnee(s)</div>
+    <div class="status" id="status"></div>
+    <button class="save" id="save">Enregistrer</button>
+  </footer>
+
+<script>
+// Les voitures offertes a tous arrivent du module (VOITURES_DE_BASE dans
+// voitures.js). Elles etaient recopiees ici : deux listes a maintenir, dont une
+// qui se serait desynchronisee au premier ajout de Psyonix.
+let voituresDeBase = [];
+
+const grid   = document.getElementById('grid');
+const q      = document.getElementById('q');
+const nEl    = document.getElementById('n');
+const status = document.getElementById('status');
+const save   = document.getElementById('save');
+const empty  = document.getElementById('empty');
+
+// Les icones sont servies depuis le dossier overlay/ du module : la page et
+// l'overlay les partagent au lieu de dupliquer 1,5 Mo. Chemin construit depuis
+// location.pathname, un relatif remplacerait le dernier segment de l'URL.
+const RACINE = location.pathname.replace(/\/$/, '');
+
+let catalog = [];
+const selected = new Set();
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function render() {
+  grid.innerHTML = catalog.map((c) =>
+    '<div class="car' + (selected.has(c.slug) ? ' on' : '') + '" data-slug="' + esc(c.slug) + '">'
+    + '<img src="' + RACINE + '/cars/' + encodeURIComponent(c.file) + '" alt="" loading="lazy">'
+    + '<div class="n">' + esc(c.name) + '</div>'
+    + '</div>').join('');
+  updateCount();
+}
+
+function updateCount() {
+  nEl.textContent = selected.size;
+  save.disabled = false;
+}
+
+function setDirty() {
+  status.textContent = 'Modifications non enregistrees';
+  status.className = 'status';
+}
+
+grid.addEventListener('click', (e) => {
+  const el = e.target.closest('.car');
+  if (!el) return;
+  const slug = el.dataset.slug;
+  if (selected.has(slug)) { selected.delete(slug); el.classList.remove('on'); }
+  else                    { selected.add(slug);    el.classList.add('on'); }
+  updateCount();
+  setDirty();
+});
+
+// Filtre insensible a la casse, aux accents et aux tirets.
+function norm(s) {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+q.addEventListener('input', () => {
+  const term = norm(q.value);
+  let visible = 0;
+  for (const el of grid.children) {
+    const car = catalog.find((c) => c.slug === el.dataset.slug);
+    const hit = !term || norm(car.name).includes(term);
+    el.classList.toggle('hidden', !hit);
+    if (hit) visible++;
+  }
+  empty.style.display = visible ? 'none' : 'block';
+});
+
+document.getElementById('all').addEventListener('click', () => {
+  for (const el of grid.children) {
+    if (el.classList.contains('hidden')) continue;
+    selected.add(el.dataset.slug);
+    el.classList.add('on');
+  }
+  updateCount();
+  setDirty();
+});
+
+document.getElementById('none').addEventListener('click', () => {
+  selected.clear();
+  for (const el of grid.children) el.classList.remove('on');
+  updateCount();
+  setDirty();
+});
+
+document.getElementById('base').addEventListener('click', () => {
+  const slugs = new Set(catalog.filter((c) => voituresDeBase.includes(c.name)).map((c) => c.slug));
+  for (const el of grid.children) {
+    if (!slugs.has(el.dataset.slug)) continue;
+    selected.add(el.dataset.slug);
+    el.classList.add('on');
+  }
+  updateCount();
+  setDirty();
+});
+
+save.addEventListener('click', async () => {
+  const names = catalog.filter((c) => selected.has(c.slug)).map((c) => c.name);
+  save.disabled = true;
+  status.textContent = 'Enregistrement...';
+  status.className = 'status';
+  try {
+    const j = await action('enregistrer', { noms: names });
+    status.textContent = j.nombre + ' voiture(s) enregistrée(s). StreamKit en tient compte dès le tirage suivant.';
+    status.className = 'status ok';
+  } catch (err) {
+    status.textContent = 'Échec : ' + err.message;
+    status.className = 'status err';
+  }
+  save.disabled = false;
+});
+
+// Cette page dialogue avec son module par ses ACTIONS, exactement comme le
+// dashboard. Elle n'a aucune route a elle : le socle n'expose que /api/modules.
+async function action(nom, corps = {}) {
+  const r = await fetch('/api/modules/roue-rl/action/' + nom, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corps),
+  });
+  const j = await r.json();
+  if (!r.ok || j.ok === false) throw new Error(j.erreur || 'erreur ' + r.status);
+  return j;
+}
+
+action('catalogue')
+  .then((data) => {
+    catalog = data.catalogue;
+    voituresDeBase = data.base ?? [];
+    for (const slug of data.selection) selected.add(slug);
+    render();
+
+    document.getElementById('sub').innerHTML =
+      'Coche ou décoche, puis enregistre — StreamKit en tient compte dès le tirage suivant, '
+      + 'même en plein live.';
+
+    // Noms enregistres mais absents du catalogue : a signaler, sinon ils
+    // disparaitraient silencieusement au prochain enregistrement.
+    if (data.inconnues && data.inconnues.length) {
+      document.getElementById('warn').innerHTML =
+        '<div class="warn">' + data.inconnues.length + ' nom(s) non reconnu(s) et ignoré(s) : '
+        + esc(data.inconnues.join(', ')) + '</div>';
+    }
+  })
+  .catch((err) => {
+    grid.innerHTML = '<div class="empty">Impossible de charger le catalogue : ' + esc(err.message)
+      + '<br>StreamKit doit tourner pour que cette page fonctionne.</div>';
+  });
+</script>
+</body>
+</html>

@@ -30,7 +30,13 @@ export default {
   config: { version: 1, champs: [ /* voir plus bas */ ] },
   migrations: {},
   overlays: [ { chemin: 'vue', nom: 'Ma vue', fichier: 'vue.html' } ],
-  actions: { async tester(ctx) { /* bouton dans le dashboard */ } },
+  pages:    [ { chemin: 'reglage', nom: 'Mon écran', fichier: 'reglage.html' } ],
+
+  libellesActions: { tester: 'Tester' },   // ← ce qui devient un bouton
+  actions: {
+    async tester(ctx) { /* bouton dans le dashboard */ },
+    async interne(ctx, corps) { /* appelé par une page, pas de bouton */ },
+  },
 
   async demarrer(ctx) {
     // ... brancher ce qu'il faut
@@ -176,6 +182,46 @@ Trois règles apprises sur les projets précédents :
 Dans OBS : Source ▸ Navigateur ▸ `http://127.0.0.1:4455/overlay/<module>/<vue>`
 (`127.0.0.1` plutôt que `localhost` : le navigateur d'OBS préfère parfois l'IPv6
 et n'affiche alors rien).
+
+## Les actions, et lesquelles deviennent des boutons
+
+Une action est une fonction appelable en `POST /api/modules/<id>/action/<nom>`.
+
+**Seules les actions listées dans `libellesActions` apparaissent en bouton** dans
+le dashboard. Les autres restent appelables — par les pages du module — mais
+invisibles.
+
+Ce n'est pas cosmétique. La roue expose une action `enregistrer` que sa page de
+sélection appelle avec la liste des voitures cochées. Si elle était un bouton,
+un clic l'appellerait **sans données** et viderait la sélection du streamer.
+
+## Les pages : quand le formulaire généré ne suffit pas
+
+Certains modules ont besoin d'une interface que le schéma ne peut pas produire :
+cocher 137 voitures dans une grille d'icônes, par exemple.
+
+```js
+pages: [{ chemin: 'voitures', nom: 'Mes voitures', fichier: 'voitures.html' }]
+```
+
+Le fichier va dans `pages/`, StreamKit le sert sous
+`/module/<module>/<chemin>`, et le dashboard y met un bouton **Ouvrir**.
+
+Une page dialogue avec son module **par ses actions**, exactement comme le
+dashboard — elle n'a aucune route à elle :
+
+```js
+const r = await fetch('/api/modules/mon-module/action/enregistrer', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ noms: [...] }),
+});
+```
+
+**Les fichiers d'une page sont cherchés dans `pages/`, puis dans `overlay/`.**
+Une page et un overlay partagent souvent les mêmes images — les 137 icônes de
+voitures pèsent 1,5 Mo, on ne va pas les dupliquer pour une question de dossier.
+Là aussi, construis l'adresse depuis `location.pathname` et non en relatif.
 
 ## Le journal
 

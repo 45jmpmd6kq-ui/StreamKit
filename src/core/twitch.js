@@ -268,7 +268,22 @@ export function contextePour(moduleId, logModule) {
 
     // Cree la recompense si elle n'existe pas deja (evite de refaire un setup
     // complet quand un module ajoute une recompense).
-    async assurerRecompense({ titre, cout, prompt, saisieRequise = false, couleur, autoFulfill = false }) {
+    // autoFulfill reste a false : une recompense en validation automatique ne
+    // peut plus etre remboursee par le bot. Or rembourser est indispensable --
+    // morceau introuvable, aucune voiture configuree, Spotify eteint.
+    //
+    // Attention aussi : seule l'application qui a CREE la recompense peut la
+    // piloter. Une recompense creee a la main dans le panneau Twitch ne sera
+    // jamais validable ni remboursable par StreamKit.
+    async assurerRecompense({
+      titre,
+      cout,
+      prompt,
+      saisieRequise = false,
+      couleur,
+      autoFulfill = false,
+      cooldownSec = 0,
+    }) {
       exige();
       const existantes = await api.channelPoints.getCustomRewards(etat.broadcasterId, true);
       const trouvee = existantes.find((r) => r.title === titre);
@@ -282,6 +297,7 @@ export function contextePour(moduleId, logModule) {
         autoFulfill,
         backgroundColor: couleur,
         isEnabled: true,
+        ...(cooldownSec > 0 ? { globalCooldown: cooldownSec } : {}),
       });
       logModule.ok('Recompense creee : ' + titre);
       return { id: r.id, titre: r.title, creee: true };

@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Random Car — overlay</title>
+<style>
+  /* Fond transparent obligatoire : OBS incruste la page telle quelle. */
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :root {
+    --accent1: #00B0FF;
+    --accent2: #FF9800;
+    --bg: #0B1220;
+    --item: 104px;      /* hauteur d'une case du rouleau */
+    --width: 340px;
+  }
+
+  /* Position dans l'ecran, pilotee par data-corner sur <body>. */
+  #stage { position: fixed; display: flex; }
+  body[data-corner="top-left"]     #stage { top: 40px;    left: 40px; }
+  body[data-corner="top-right"]    #stage { top: 40px;    right: 40px; }
+  body[data-corner="bottom-left"]  #stage { bottom: 40px; left: 40px; }
+  body[data-corner="bottom-right"] #stage { bottom: 40px; right: 40px; }
+  body[data-corner="center"]       #stage { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+  /* Au repos l'overlay est totalement invisible : pas de cadre vide a l'ecran. */
+  #machine {
+    width: var(--width);
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    border: 2px solid color-mix(in srgb, var(--accent1) 55%, transparent);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .05) inset;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(18px) scale(.96);
+    transition: opacity .32s ease, transform .32s cubic-bezier(.2, .9, .25, 1.15);
+    pointer-events: none;
+  }
+  #machine.show { opacity: 1; transform: translateY(0) scale(1); }
+
+  .head {
+    display: flex; align-items: center; gap: 9px;
+    padding: 12px 16px;
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--accent1) 30%, transparent),
+      color-mix(in srgb, var(--accent2) 22%, transparent));
+    border-bottom: 1px solid rgba(255, 255, 255, .09);
+  }
+  .head .ico { font-size: 19px; line-height: 1; }
+  .head .txt {
+    font-size: 13px; font-weight: 800; letter-spacing: 2.2px;
+    text-transform: uppercase; color: #fff;
+  }
+  .head .who {
+    margin-left: auto; font-size: 12.5px; font-weight: 700;
+    color: var(--accent2); max-width: 140px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Fenetre du rouleau : 3 cases visibles, celle du milieu est la gagnante. */
+  .window {
+    position: relative;
+    height: calc(var(--item) * 3);
+    overflow: hidden;
+  }
+
+  .reel { will-change: transform; }
+
+  .cell {
+    height: var(--item);
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 18px;
+    box-sizing: border-box;
+    border-bottom: 1px solid rgba(255, 255, 255, .05);
+  }
+  .cell img {
+    width: 76px; height: 56px; object-fit: contain;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .6));
+    flex: 0 0 auto;
+  }
+  .cell .name {
+    font-size: 16px; font-weight: 700; color: #EAF1FA;
+    line-height: 1.2;
+    overflow: hidden; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+
+  /* Voile degrade haut/bas : donne la sensation de rouleau qui tourne. */
+  .fade {
+    position: absolute; left: 0; right: 0; height: var(--item);
+    pointer-events: none; z-index: 3;
+  }
+  .fade.top {
+    top: 0;
+    background: linear-gradient(to bottom, var(--bg) 8%, color-mix(in srgb, var(--bg) 30%, transparent) 70%, transparent);
+  }
+  .fade.bottom {
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg) 8%, color-mix(in srgb, var(--bg) 30%, transparent) 70%, transparent);
+  }
+
+  /* Curseur : encadre la case centrale. */
+  .selector {
+    position: absolute; z-index: 4; left: 0; right: 0;
+    top: var(--item); height: var(--item);
+    border-top: 2px solid var(--accent1);
+    border-bottom: 2px solid var(--accent1);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--accent1) 45%, transparent) inset;
+    transition: border-color .3s ease, box-shadow .3s ease;
+  }
+  .selector::before, .selector::after {
+    content: ''; position: absolute; top: 50%; margin-top: -8px;
+    border-top: 8px solid transparent; border-bottom: 8px solid transparent;
+  }
+  .selector::before { left: 0;  border-left: 11px solid var(--accent1); }
+  .selector::after  { right: 0; border-right: 11px solid var(--accent1); }
+
+  /* Etat "resultat" : le curseur passe a la couleur d'accent 2 et pulse. */
+  #machine.landed .selector {
+    border-color: var(--accent2);
+    box-shadow: 0 0 34px color-mix(in srgb, var(--accent2) 60%, transparent) inset;
+    animation: pulse 1.1s ease-in-out 2;
+  }
+  #machine.landed .selector::before { border-left-color: var(--accent2); }
+  #machine.landed .selector::after  { border-right-color: var(--accent2); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 34px color-mix(in srgb, var(--accent2) 60%, transparent) inset; }
+    50%      { box-shadow: 0 0 60px color-mix(in srgb, var(--accent2) 85%, transparent) inset; }
+  }
+
+  .foot {
+    position: relative;
+    padding: 11px 16px 13px;
+    border-top: 1px solid rgba(255, 255, 255, .09);
+    background: rgba(0, 0, 0, .28);
+    height: 21px;
+  }
+  .foot .result {
+    font-size: 17px; font-weight: 800; color: #fff;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity .3s ease .1s, transform .3s ease .1s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #machine.landed .foot .result { opacity: 1; transform: translateY(0); }
+  .foot .result .car { color: var(--accent2); }
+
+  /* Trois points qui clignotent pendant le spin, remplaces par le resultat. */
+  .foot .spinning {
+    position: absolute; top: 13px; left: 16px;
+    display: flex; gap: 5px; align-items: center; height: 17px;
+  }
+  #machine.landed .foot .spinning { display: none; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent1); opacity: .35;
+    animation: blink 1.05s infinite;
+  }
+  .dot:nth-child(2) { animation-delay: .18s; }
+  .dot:nth-child(3) { animation-delay: .36s; }
+  @keyframes blink { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+</style>
+</head>
+<body data-corner="bottom-right">
+  <div id="stage">
+    <div id="machine">
+      <div class="head">
+        <span class="ico">&#128663;</span>
+        <span class="txt">Random Car</span>
+        <span class="who" id="who"></span>
+      </div>
+      <div class="window">
+        <div class="fade top"></div>
+        <div class="reel" id="reel"></div>
+        <div class="fade bottom"></div>
+        <div class="selector"></div>
+      </div>
+      <div class="foot">
+        <div class="spinning"><i class="dot"></i><i class="dot"></i><i class="dot"></i></div>
+        <div class="result" id="result"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const machine = document.getElementById('machine');
+const reel    = document.getElementById('reel');
+const who     = document.getElementById('who');
+const result  = document.getElementById('result');
+
+const ITEM = 104;         // doit rester synchrone avec --item dans le CSS
+const STRIP = 42;         // nombre de cases fabriquees pour un tour
+const TAIL  = 3;          // cases conservees sous la gagnante
+
+let hideTimer = null;
+let busy = false;
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function cell(car) {
+  return '<div class="cell">'
+       +   '<img src="' + BASE + '/cars/' + encodeURIComponent(car.file) + '" alt="">'
+       +   '<div class="name">' + esc(car.name) + '</div>'
+       + '</div>';
+}
+
+// Fabrique la bande : du remplissage aleatoire, la gagnante en avant-derniere
+// position, puis quelques cases pour que le rouleau ne finisse pas dans le vide.
+function buildStrip(pool, winner) {
+  const cells = [];
+  const target = STRIP - TAIL - 1;
+  for (let i = 0; i < STRIP; i++) {
+    cells.push(i === target ? winner : pool[Math.floor(Math.random() * pool.length)]);
+  }
+  return { cells, target };
+}
+
+function spin(payload) {
+  const { by, winner, pool, spinMs = 5200, holdMs = 6500 } = payload;
+  if (!winner || !pool || !pool.length) return;
+
+  clearTimeout(hideTimer);
+  busy = true;
+
+  const { cells, target } = buildStrip(pool, winner);
+  reel.innerHTML = cells.map(cell).join('');
+
+  who.textContent = by ? '@' + by : '';
+  result.innerHTML = '';
+  machine.classList.remove('landed');
+
+  // Depart : case 1 centree (translateY = 0), sans transition.
+  reel.style.transition = 'none';
+  reel.style.transform = 'translateY(0px)';
+  void reel.offsetHeight;                       // force l'application du reset
+
+  machine.classList.add('show');
+
+  requestAnimationFrame(() => {
+    // Deceleration longue facon machine a sous : tres rapide au debut,
+    // puis les dernieres cases defilent au ralenti.
+    reel.style.transition = 'transform ' + spinMs + 'ms cubic-bezier(.08, .82, .12, 1)';
+    reel.style.transform = 'translateY(' + ((1 - target) * ITEM) + 'px)';
+  });
+
+  setTimeout(() => {
+    machine.classList.add('landed');
+    result.innerHTML = '<span class="car">' + esc(winner.name) + '</span>';
+    busy = false;
+    hideTimer = setTimeout(() => machine.classList.remove('show'), holdMs);
+  }, spinMs + 60);
+}
+
+// Adresse de base de cette vue. Un chemin relatif ne marcherait pas : l'URL
+// n'a pas de slash final, donc « flux » remplacerait le dernier segment et on
+// taperait /overlay/roue-rl/flux au lieu de /overlay/roue-rl/roue/flux.
+const BASE = location.pathname.replace(/\/$/, '');
+
+// Theme et flux temps reel arrivent ensemble dans l'evenement « etat », qui est
+// memorise cote serveur : une source OBS rechargee en plein live retrouve
+// immediatement ses couleurs. EventSource se reconnecte tout seul.
+const flux = new EventSource(BASE + '/flux');
+
+flux.addEventListener('etat', (e) => {
+  const t = JSON.parse(e.data).theme ?? {};
+  const r = document.documentElement.style;
+  if (t.accent1) r.setProperty('--accent1', t.accent1);
+  if (t.accent2) r.setProperty('--accent2', t.accent2);
+  if (t.background) r.setProperty('--bg', t.background);
+  if (t.corner) document.body.dataset.corner = t.corner;
+});
+
+flux.addEventListener('spin', (e) => spin(JSON.parse(e.data)));
+flux.addEventListener('hide', () => {
+  clearTimeout(hideTimer);
+  machine.classList.remove('show');
+});
+
+// Mode demo pour placer la source dans OBS sans lancer de vrai tirage :
+//   .../overlay/roue-rl/roue?demo=1   (Espace ou clic = nouveau tirage)
+if (new URLSearchParams(location.search).has('demo')) {
+  fetch(BASE + '/cars/manifest.json')
+    .then((r) => r.json())
+    .then((catalogue) => {
+      const pool = catalogue.slice(0, 20);
+      const fire = () => {
+        if (busy) return;
+        spin({ by: 'DemoViewer', winner: pool[Math.floor(Math.random() * pool.length)], pool });
+      };
+      addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          fire();
+        }
+      });
+      addEventListener('click', fire);
+      fire();
+    })
+    .catch(() => { /* catalogue indisponible : pas de demo, l'overlay reste utilisable */ });
+}
+</script>
+</body>
+</html>

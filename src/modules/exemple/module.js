@@ -94,7 +94,13 @@ export default {
     },
   ],
 
-  // --- Actions (boutons dans le dashboard) ----------------------------------
+  // --- Actions -------------------------------------------------------------
+  // Seules celles listees dans libellesActions apparaissent en bouton dans le
+  // dashboard. Les autres restent appelables par les pages du module.
+  libellesActions: {
+    tester: "Tester l’overlay",
+  },
+
   actions: {
     // POST /api/modules/exemple/action/tester
     async tester(ctx) {

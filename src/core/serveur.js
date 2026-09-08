@@ -126,6 +126,40 @@ export function creerServeur(app) {
         return servirFichier(res, dossierOverlay, def.fichier);
       }
 
+      // --- Pages d'un module -----------------------------------------------
+      // /module/<id>/<page>[/<fichier>]
+      //
+      // Certains modules ont besoin d'une interface que le formulaire genere ne
+      // peut pas rendre : cocher 137 voitures Rocket League dans une grille
+      // d'icones, par exemple. Le module fournit sa page, StreamKit la sert et
+      // le dashboard y met un bouton. Elle dialogue avec le module via ses
+      // actions, comme le dashboard lui-meme.
+      if (chemin.startsWith('/module/')) {
+        const bouts = chemin.slice('/module/'.length).split('/').filter(Boolean);
+        const [idModule, page, ...reste] = bouts;
+        const m = app.registre.get(idModule);
+        if (!m) return texte(res, 404, 'Module inconnu');
+
+        const dossierPages = join(MODULES_DIR, m.dossier, 'pages');
+
+        if (reste.length) {
+          // Les fichiers d'une page sont cherches dans pages/, puis dans
+          // overlay/. Une page et un overlay partagent souvent les memes images
+          // -- les 137 icones de voitures de la roue, par exemple : 1,5 Mo qu'on
+          // ne va pas dupliquer pour une question de dossier.
+          const relatif = reste.join('/');
+          const dansPages = normalize(join(dossierPages, relatif));
+          if (dansPages.startsWith(normalize(dossierPages)) && existsSync(dansPages)) {
+            return servirFichier(res, dossierPages, relatif, { cache: true });
+          }
+          return servirFichier(res, join(MODULES_DIR, m.dossier, 'overlay'), relatif, { cache: true });
+        }
+
+        const def = (m.manifeste.pages ?? []).find((p) => p.chemin === page);
+        if (!def) return texte(res, 404, 'Page inconnue');
+        return servirFichier(res, dossierPages, def.fichier);
+      }
+
       // --- API -------------------------------------------------------------
       if (chemin.startsWith('/api/')) {
         // Etat general (bandeau du dashboard)

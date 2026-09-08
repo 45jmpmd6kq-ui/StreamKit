@@ -252,12 +252,15 @@ export function vue(id) {
     manque: m.manque,
     demarreA: m.demarreA,
     scopes: m.manifeste.scopes ?? [],
-    // Les actions deviennent des boutons dans le dashboard. Le libelle vient de
-    // `libellesActions` s'il existe, sinon on affiche le nom brut.
-    actions: Object.keys(m.manifeste.actions ?? {}).map((nom) => ({
-      nom,
-      label: m.manifeste.libellesActions?.[nom] ?? nom,
-    })),
+    // Seules les actions DECLAREES dans `libellesActions` deviennent des boutons.
+    // Les autres restent appelables par les pages du module, sans apparaitre.
+    //
+    // Ce n'est pas cosmetique : la roue expose une action « enregistrer » que sa
+    // page de selection appelle avec la liste des voitures. En bouton, un clic
+    // l'appellerait sans donnees et VIDERAIT la selection du streamer.
+    actions: Object.entries(m.manifeste.libellesActions ?? {})
+      .filter(([nom]) => typeof m.manifeste.actions?.[nom] === 'function')
+      .map(([nom, label]) => ({ nom, label })),
     champs: m.champs,
     reglages: schema.masquerSecrets(m.champs, reglages),
     overlays: (m.manifeste.overlays ?? []).map((o) => ({
@@ -265,6 +268,14 @@ export function vue(id) {
       nom: o.nom,
       description: o.description ?? '',
       url: '/overlay/' + m.id + '/' + o.chemin,
+    })),
+    // Interfaces sur mesure du module (voir MODULES.md). Le dashboard y met un
+    // bouton ; ce ne sont pas des overlays, elles ne vont pas dans OBS.
+    pages: (m.manifeste.pages ?? []).map((p) => ({
+      chemin: p.chemin,
+      nom: p.nom,
+      description: p.description ?? '',
+      url: '/module/' + m.id + '/' + p.chemin,
     })),
   };
 }

@@ -313,6 +313,24 @@ function dessinerDetail() {
         : ''
     }
 
+    ${
+      m.pages?.length
+        ? `<div class="section"><h3>Interfaces</h3>
+             ${m.pages
+               .map(
+                 (p) => `<div class="overlay-ligne">
+                    <div class="infos">
+                      <div class="nom">${echapper(p.nom)}</div>
+                      <code>${echapper(p.description)}</code>
+                    </div>
+                    <a class="btn petit primaire" href="${p.url}" target="_blank" rel="noreferrer">Ouvrir</a>
+                  </div>`
+               )
+               .join('')}
+           </div>`
+        : ''
+    }
+
     <div class="section">
       <h3>Actions</h3>
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
