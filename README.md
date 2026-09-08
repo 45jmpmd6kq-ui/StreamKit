@@ -161,8 +161,8 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       fenêtre noire. Noyau extrait dans `noyau.js`, partagé par les deux entrées.
 - [x] Installeur construit et **application empaquetée vérifiée** : modules
       découverts, dashboard affiché, updater qui interroge bien GitHub
-- [ ] Remplacer les fichiers de la release v0.1.0 par ceux d'Electron
-- [ ] Publier une 0.1.1 et revérifier la mise à jour de bout en bout
+- [x] Release Electron publiée et **détection de mise à jour vérifiée en réel** :
+      une installation 0.1.0 voit la 0.1.2 et propose le bouton
 - [ ] Recette du bot musique avec de vrais identifiants Twitch + Spotify
 - [ ] Migrer Roue RL, RL-Tracker, Valorant, RL-Challenge
 
