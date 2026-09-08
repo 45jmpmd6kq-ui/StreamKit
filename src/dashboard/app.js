@@ -149,12 +149,34 @@ function repousserMaj(version) {
   }
 }
 
+// GitHub renvoie les notes de release en HTML : « <p>fix update</p> ». Affichées
+// telles quelles, les balises se voient. On les convertit en texte plutôt que de
+// les injecter en innerHTML — ce texte vient d'une page web, il n'a rien à faire
+// dans le DOM de l'application.
+function notesEnTexte(html) {
+  if (!html) return '';
+  return String(html)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    // Entités que GitHub produit couramment dans les messages de commit.
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function ouvrirModaleMaj(info) {
   $('#maj-avant').textContent = info.actuelle;
   $('#maj-apres').textContent = info.derniere;
 
   const notes = $('#maj-notes');
-  const texte = (info.notes || '').trim();
+  const texte = notesEnTexte(info.notes);
   notes.hidden = !texte;
   notes.textContent = texte;
 
@@ -652,9 +674,31 @@ function brancherFluxJournal() {
 function brancherTiroir() {
   const tiroir = $('#tiroir');
 
-  $('#bascule-tiroir').addEventListener('click', () => {
-    const replie = tiroir.classList.toggle('replie');
+  // Le journal est REPLIÉ par défaut : au quotidien le streamer vient régler un
+  // module, pas lire des lignes de log. Il reste à un clic, et son en-tête
+  // continue d'afficher le compteur d'erreurs même replié — un souci ne passe
+  // donc jamais inaperçu.
+  function appliquerRepli(replie) {
+    tiroir.classList.toggle('replie', replie);
     $('#fleche').textContent = replie ? '▲' : '▼';
+  }
+
+  let replieJournal = true;
+  try {
+    replieJournal = localStorage.getItem('streamkit.journalOuvert') !== '1';
+  } catch {
+    /* pas de stockage : replié, comme au premier lancement */
+  }
+  appliquerRepli(replieJournal);
+
+  $('#bascule-tiroir').addEventListener('click', () => {
+    replieJournal = !replieJournal;
+    appliquerRepli(replieJournal);
+    try {
+      localStorage.setItem('streamkit.journalOuvert', replieJournal ? '0' : '1');
+    } catch {
+      /* le choix ne sera pas retenu, sans plus */
+    }
   });
 
   // Redimensionnement à la souris.
