@@ -72,8 +72,8 @@ export async function demarrer() {
   const jeton = tokens.twitch;
 
   if (!app.clientId || !app.clientSecret) {
-    etat = { ...etat, pret: false, raison: 'application Twitch non configuree' };
-    log.warn("Twitch non configure : renseigne l'application dans le dashboard.");
+    etat = { ...etat, pret: false, raison: 'application Twitch non configurée' };
+    log.warn("Twitch non configuré : renseigne l'application dans le dashboard.");
     return etat;
   }
   if (!jeton) {
