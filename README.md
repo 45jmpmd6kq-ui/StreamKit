@@ -118,6 +118,17 @@ en privé il faudrait distribuer un jeton GitHub à chaque streamer. Le code ne
 contient aucun secret : `config.json` et `tokens.json` vivent dans `%APPDATA%`
 et sont ignorés par git.
 
+### Un correctif d'update ne se voit qu'une version plus tard
+
+Le code qui pilote une mise à jour est **toujours celui de la version qu'on
+quitte**. Un correctif touchant à la façon dont une mise à jour est présentée ou
+exécutée ne peut donc jamais être constaté sur sa propre livraison : il faut une
+version de plus.
+
+Vécu sur la série 0.2.x — installeur silencieux, fenêtre d'annonce, relance
+automatique, conversion des notes : chacun n'a été visible qu'au cycle suivant.
+Le dire d'emblée évite de croire à une régression.
+
 ### Construire l'installeur : le pré-requis Windows
 
 `electron-builder` extrait un paquet contenant des liens symboliques macOS
@@ -164,6 +175,8 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       découverts, dashboard affiché, updater qui interroge bien GitHub
 - [x] Release Electron publiée et **détection de mise à jour vérifiée en réel** :
       une installation 0.1.0 voit la 0.1.2 et propose le bouton
+- [x] **Chaîne de mise à jour validée en réel** : installation silencieuse,
+      fenêtre d'annonce, relance automatique, réglages conservés
 - [ ] Recette du bot musique avec de vrais identifiants Twitch + Spotify
 - [x] **Roue RL migrée** : 2e module porté — a fait émerger les pages sur mesure
       et le partage d assets entre page et overlay
