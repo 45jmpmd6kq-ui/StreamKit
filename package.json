@@ -44,12 +44,12 @@
       "icon": "src/assets/icone.png"
     },
     "nsis": {
-      "oneClick": false,
+      "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "StreamKit",
+      "runAfterFinish": true,
       "deleteAppDataOnUninstall": false
     },
     "publish": [

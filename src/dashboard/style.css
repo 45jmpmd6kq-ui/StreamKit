@@ -696,6 +696,56 @@ dialog::backdrop {
   user-select: all;
 }
 
+/* ---------- Fenêtre de mise à jour ---------- */
+
+.saut-version {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 0.6rem 0 1.3rem;
+}
+.saut-version .v-avant {
+  font-size: 1.35rem;
+  color: var(--texte-faible);
+  font-variant-numeric: tabular-nums;
+}
+.saut-version .v-fleche {
+  color: var(--texte-faible);
+}
+.saut-version .v-apres {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.maj-texte {
+  margin: 0;
+  text-align: center;
+  color: var(--texte-doux);
+  line-height: 1.6;
+}
+.maj-texte b {
+  color: var(--texte);
+}
+
+/* Notes de version : texte libre venant de la release GitHub, donc de longueur
+   imprévisible — on le borne pour que la fenêtre ne déborde jamais de l'écran. */
+.maj-notes {
+  margin-top: 1.2rem;
+  padding: 0.85rem 1rem;
+  max-height: 11rem;
+  overflow-y: auto;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: #0f0f16;
+  color: var(--texte-doux);
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .toast {
   position: fixed;
   bottom: 1.25rem;

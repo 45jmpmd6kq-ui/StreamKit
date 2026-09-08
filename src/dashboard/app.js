@@ -110,6 +110,61 @@ function majPastilleTwitch(t, g) {
   }
 }
 
+// Lance la mise à jour. Partagé par le bouton de la barre et la fenêtre.
+async function lancerMaj(bouton) {
+  const texteOrigine = bouton.textContent;
+  bouton.disabled = true;
+  bouton.textContent = 'Mise à jour…';
+  try {
+    const r = await api('/api/maj/appliquer', { method: 'POST' });
+    if (r.ok) {
+      toast('StreamKit redémarre avec la version ' + r.derniere);
+    } else {
+      toast(r.raison || 'Mise à jour impossible', true);
+      bouton.disabled = false;
+      bouton.textContent = texteOrigine;
+    }
+  } catch (e) {
+    toast(e.message, true);
+    bouton.disabled = false;
+    bouton.textContent = texteOrigine;
+  }
+}
+
+// « Plus tard » vaut pour CETTE version : on ne represente pas la même fenêtre
+// à chaque ouverture, mais une version suivante s'annonce bien.
+function majRepoussee(version) {
+  try {
+    return localStorage.getItem('streamkit.majRepoussee') === version;
+  } catch {
+    return false;
+  }
+}
+
+function repousserMaj(version) {
+  try {
+    localStorage.setItem('streamkit.majRepoussee', version);
+  } catch {
+    /* pas de stockage : la fenêtre reviendra, ce n'est pas grave */
+  }
+}
+
+function ouvrirModaleMaj(info) {
+  $('#maj-avant').textContent = info.actuelle;
+  $('#maj-apres').textContent = info.derniere;
+
+  const notes = $('#maj-notes');
+  const texte = (info.notes || '').trim();
+  notes.hidden = !texte;
+  notes.textContent = texte;
+
+  // Un module démarré = quelque chose tourne peut-être en direct. On ne bloque
+  // pas, on prévient : c'est au streamer de juger.
+  $('#maj-en-live').hidden = !(etat.general?.modules?.demarres > 0);
+
+  $('#modale-maj').showModal();
+}
+
 async function verifierMaj() {
   let info;
   try {
@@ -117,25 +172,28 @@ async function verifierMaj() {
   } catch {
     return;
   }
+
   const btn = $('#btn-maj');
-  if (info.ok && info.dispo) {
-    btn.hidden = false;
-    btn.className = 'btn petit primaire';
-    btn.textContent = 'Mettre à jour → ' + info.derniere;
-    btn.onclick = async () => {
-      btn.disabled = true;
-      btn.textContent = 'Mise à jour…';
-      try {
-        const r = await api('/api/maj/appliquer', { method: 'POST' });
-        if (r.ok) toast('StreamKit redémarre avec la version ' + r.derniere);
-        else toast(r.raison || 'Mise à jour impossible', true);
-      } catch (e) {
-        toast(e.message, true);
-      }
-    };
-  } else {
+  if (!info.ok || !info.dispo) {
     btn.hidden = true;
+    return;
   }
+
+  // Le bouton de la barre reste : c'est l'accès permanent, même après « Plus tard ».
+  btn.hidden = false;
+  btn.className = 'btn petit primaire';
+  btn.textContent = 'Mettre à jour → ' + info.derniere;
+  btn.onclick = () => ouvrirModaleMaj(info);
+
+  if (!majRepoussee(info.derniere) && !$('#modale-maj').open) {
+    ouvrirModaleMaj(info);
+  }
+
+  $('#btn-maj-plus-tard').onclick = () => {
+    repousserMaj(info.derniere);
+    $('#modale-maj').close();
+  };
+  $('#btn-maj-maintenant').onclick = (e) => lancerMaj(e.currentTarget);
 }
 
 // ------------------------------------------------------------------- les modules
@@ -736,3 +794,8 @@ setInterval(async () => {
     dessinerDetail();
   }
 }, 5000);
+
+// StreamKit reste ouvert des jours d'affilée chez un streamer. Sans cette
+// revérification, une nouvelle version ne serait vue qu'au prochain démarrage
+// de l'application — c'est-à-dire rarement.
+setInterval(verifierMaj, 30 * 60 * 1000);
