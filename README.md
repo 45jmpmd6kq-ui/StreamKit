@@ -49,6 +49,7 @@ src/
   dashboard/            l'interface (aucune dépendance, aucun build)
   modules/
     exemple/            module de référence — voir MODULES.md
+    musique/            bot musique Spotify + clips (portage de la V2)
 ```
 
 ### La règle qui structure tout
@@ -98,9 +99,6 @@ Prérequis côté streamer : le dépôt (`utilisateur/projet`) renseigné dans �
 dashboard. **Les releases doivent être lisibles sans authentification** — donc
 dépôt public, sinon il faudrait distribuer un jeton GitHub à chaque streamer.
 
-Le remplacement passe par un `.bat` externe : Windows ne permet pas à un
-programme de réécrire ses propres fichiers pendant qu'il tourne.
-
 ### Changer un schéma de config sans rien casser
 
 Incrémenter `config.version` **et** fournir la migration correspondante dans
@@ -131,6 +129,15 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - **Concaténer les morceaux du corps HTTP dans une chaîne** (`brut += c`) casse
   tout caractère accentué tombant à cheval sur deux paquets TCP. Accumuler des
   `Buffer`, décoder une seule fois.
-- **`127.0.0.1` plutôt que `localhost`** dans les URL d'overlay : le navigateur
-  d'OBS part parfois en IPv6 et n'affiche rien. Exception : l'URL de redirection
-  OAuth, où Twitch impose `localhost`.
+- **Écouter sur `127.0.0.1` seulement ne suffit pas.** Sous Windows, `localhost`
+  se résout très souvent en IPv6 d'abord — et Twitch comme Spotify imposent
+  `localhost` dans l'URL de redirection OAuth (ils refusent une IP en http). Le
+  retour d'autorisation tombait donc dans le vide. `ecouter()` ouvre les deux
+  boucles locales, `127.0.0.1` **et** `::1`. Rien n'est exposé au réseau pour
+  autant : jamais de `0.0.0.0`.
+- **Dans les URL d'overlay, on donne `127.0.0.1`** et pas `localhost` : le
+  navigateur interne d'OBS a le même travers, et laisse alors la source vide.
+- **Un module ne doit pas garder son état au niveau du fichier.** StreamKit
+  redémarre les modules à chaud (changement de réglages) ; avec un état global,
+  l'ancienne file d'attente survit et les morceaux fantômes reviennent. D'où
+  `creerFile()` en fabrique plutôt que l'ancien `queue.js` à état de module.
