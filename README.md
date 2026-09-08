@@ -96,9 +96,14 @@ clic, StreamKit télécharge, se ferme, se remplace et redémarre.
 Le remplacement passe par un `.bat` externe : Windows ne permet pas à un
 programme de réécrire ses propres fichiers pendant qu'il tourne.
 
-Prérequis côté streamer : le dépôt (`utilisateur/projet`) renseigné dans ⚙️ du
-dashboard. **Les releases doivent être lisibles sans authentification** — donc
-dépôt public, sinon il faudrait distribuer un jeton GitHub à chaque streamer.
+Côté streamer, rien à saisir : le dépôt est pré-rempli
+(`45jmpmd6kq-ui/StreamKit`, voir `CONFIG_DEFAUT` dans `core/store.js`) et reste
+modifiable dans ⚙️ du dashboard.
+
+**Le dépôt doit être public.** L'updater lit les releases sans s'authentifier ;
+en privé il faudrait distribuer un jeton GitHub à chaque streamer. Le code ne
+contient aucun secret : `config.json` et `tokens.json` vivent dans `%APPDATA%`
+et sont ignorés par git.
 
 ### Changer un schéma de config sans rien casser
 

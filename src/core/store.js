@@ -17,7 +17,10 @@ const CONFIG_DEFAUT = {
   version: 1,
   twitch: { channel: '', broadcasterId: '', utilisateurId: '' },
   reseau: { port: 4455 },
-  maj: { auto: true, depot: '' }, // depot GitHub, au format "utilisateur/projet"
+  // Depot GitHub des mises a jour, au format "utilisateur/projet".
+  // Pre-rempli : un streamer n'a rien a saisir pour recevoir les nouvelles
+  // versions. Modifiable dans les reglages du dashboard (fork, test, rename).
+  maj: { auto: true, depot: '45jmpmd6kq-ui/StreamKit' },
   modules: {}, // { <id>: { actif, schemaVersion, reglages } }
 };
 
@@ -43,10 +46,34 @@ function ecrireAtomique(chemin, contenu) {
   renameSync(tmp, chemin);
 }
 
+// Fusion PROFONDE des defauts et du fichier existant.
+//
+// Une fusion superficielle ({ ...defaut, ...stocke }) suffirait aujourd'hui,
+// mais casserait a la premiere mise a jour qui ajoute une cle dans un objet
+// existant : `maj: { auto, depot }` stocke ecraserait en bloc un
+// `maj: { auto, depot, canal }` tout neuf, et la nouvelle option n'existerait
+// jamais chez ceux qui ont deja un config.json. C'est exactement le genre de
+// regression que StreamKit doit rendre impossible.
+//
+// Regle : la valeur du streamer gagne toujours ; le defaut ne fait que combler
+// ce qui manque.
+function fusionner(defaut, stocke) {
+  if (!estObjet(defaut) || !estObjet(stocke)) return stocke === undefined ? defaut : stocke;
+  const out = { ...defaut };
+  for (const [cle, valeur] of Object.entries(stocke)) {
+    out[cle] = cle in defaut ? fusionner(defaut[cle], valeur) : valeur;
+  }
+  return out;
+}
+
+function estObjet(v) {
+  return v !== null && typeof v === 'object' && !Array.isArray(v);
+}
+
 let config = null;
 
 export function chargerConfig() {
-  config = { ...structuredClone(CONFIG_DEFAUT), ...lire(CONFIG_PATH, CONFIG_DEFAUT) };
+  config = fusionner(structuredClone(CONFIG_DEFAUT), lire(CONFIG_PATH, {}));
   return config;
 }
 
