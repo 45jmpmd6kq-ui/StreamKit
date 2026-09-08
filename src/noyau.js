@@ -610,6 +610,24 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
 
   await registre.charger();
 
+  // Migration ponctuelle de la config, schema 1 -> 2.
+  //
+  // Jusqu'a la 0.9.0, le module de demonstration s'affichait dans le rail comme
+  // une fonctionnalite : certains l'ont donc active par curiosite. Depuis, un
+  // module de developpement est masque — mais pas quand il est actif, sinon on
+  // ne pourrait plus l'eteindre. Resultat : il resterait visible a vie chez ceux
+  // qui l'ont allume. On les eteint une bonne fois, ici et pas ailleurs.
+  if ((config.version ?? 1) < 2) {
+    for (const m of registre.liste()) {
+      if (!m.manifeste.developpement || !m.actif) continue;
+      m.actif = false;
+      store.sauverModule(m.id, { actif: false });
+      log.info('« ' + m.manifeste.nom + " » desactive : c'est un outil de diagnostic, pas un module.");
+    }
+    config.version = 2;
+    store.sauverConfig(config);
+  }
+
   try {
     await twitch.demarrer();
     if (twitch.estPret()) brancherSuiviDuDirect();

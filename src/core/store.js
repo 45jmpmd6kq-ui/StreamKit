@@ -14,7 +14,9 @@ import { join } from 'node:path';
 import { CONFIG_PATH, TOKENS_PATH, ETAT_DIR } from './paths.js';
 
 const CONFIG_DEFAUT = {
-  version: 1,
+  // 1 -> 2 : les modules de developpement laisses actifs sont eteints une fois
+  // (voir la migration au demarrage, dans noyau.js).
+  version: 2,
   twitch: { channel: '', broadcasterId: '', utilisateurId: '' },
   reseau: { port: 4455 },
   // Depot GitHub des mises a jour, au format "utilisateur/projet".
