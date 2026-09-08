@@ -16,10 +16,21 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { demarrerNoyau } from './noyau.js';
 import * as journal from './core/journal.js';
+import { DONNEES } from './core/paths.js';
 import { versionActuelle } from './core/maj.js';
 
 const { autoUpdater } = pkg;
 const log = journal.pour('app');
+
+// Electron range SES donnees (cache Chromium, cookies, preferences, GPUCache)
+// dans %APPDATA%\<productName> — exactement le dossier ou StreamKit met
+// config.json, tokens.json, etat/ et journaux/. Sans separation, 6 Mo de cache
+// noient les 6 Ko qui comptent vraiment, et le dossier qu'on demande au
+// streamer de ne jamais partager devient illisible : impossible de lui dire
+// « envoie-moi ce dossier » pour du support.
+//
+// A appeler AVANT requestSingleInstanceLock, qui pose son verrou dans userData.
+app.setPath('userData', join(DONNEES, 'electron'));
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ICONE = join(RACINE, 'src', 'assets', 'icone.png');

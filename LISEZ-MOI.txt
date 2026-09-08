@@ -112,6 +112,10 @@ overlays... Tu l'installes une fois, et il se met a jour tout seul.
 -------------------------------------------------
 
   Le dossier   %APPDATA%\StreamKit
-  contient tes codes d'acces Twitch et Spotify.
+  contient tes reglages (config.json) et tes codes d'acces Twitch et
+  Spotify (tokens.json).
   Ne l'envoie a personne, ne le mets pas dans un zip.
   (Pour y aller : touche Windows + R, colle %APPDATA%\StreamKit, Entree)
+
+  Le sous-dossier « electron » n'est que du cache technique : aucun
+  secret dedans, et tu peux l'ignorer.
