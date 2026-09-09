@@ -1,4 +1,4 @@
-// Roue des voitures — portage du projet Roue-Voitures-RL dans StreamKit.
+// Random Car — portage du projet Roue-Voitures-RL dans StreamKit.
 //
 // A chaque utilisation de la recompense de points de chaine, tire une voiture
 // au sort parmi celles que le streamer possede, et l'affiche dans un overlay
@@ -16,7 +16,7 @@ import * as voitures from './voitures.js';
 
 export default {
   id: 'roue-rl',
-  nom: 'Roue des voitures',
+  nom: 'Random Car',
   description:
     'Les viewers tirent au sort une de tes voitures avec leurs points de chaîne. Machine à sous animée dans OBS.',
   icone: '🎡',

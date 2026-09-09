@@ -17,7 +17,7 @@ import * as session from './session.js';
 
 export default {
   id: 'valorant',
-  nom: 'Bandeau de session',
+  nom: 'Overlay W/L',
   description:
     'Rang, RR gagné sur la session, bilan V/D et série en cours, dans un bandeau OBS. Lit le Riot Client, sans toucher au jeu.',
   icone: '📊',

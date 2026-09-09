@@ -390,12 +390,12 @@ def slide_modules(prs, n, total):
                             "part dans ta file Spotify. Refus et passage inclus."),
         ]),
         ("🚀  Rocket League", RGBColor(0x62, 0xA8, 0xFF), [
-            ("Roue des voitures", "Une récompense tire une carrosserie au hasard "
+            ("Random Car", "Une récompense tire une carrosserie au hasard "
                                   "parmi celles que tu possèdes, en machine à sous "
                                   "sur l'overlay."),
         ]),
         ("🔫  Valorant", RGBColor(0xFF, 0x6B, 0x6B), [
-            ("Bandeau de session", "Victoires, défaites et RR gagnés depuis le début "
+            ("Overlay W/L", "Victoires, défaites et RR gagnés depuis le début "
                                    "du live, affichés en direct."),
         ]),
     ]
