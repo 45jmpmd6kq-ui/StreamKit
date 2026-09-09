@@ -392,6 +392,38 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         aide: total ? vues.join(' · ') : 'Ajoute les overlays de tes modules en source Navigateur.',
       });
 
+      // --- Connecteurs : Spotify & co, meme quand aucun module ne tourne ---
+      // Un connecteur se configure au niveau du socle : son etat ne depend pas
+      // d'un module demarre. Sans cette boucle, « est-ce que Spotify est
+      // branche ? » n'avait de reponse qu'une fois le bot musique allume —
+      // exactement l'inverse de ce qu'on vient verifier avant un live.
+      for (const c of connecteurs.catalogue()) {
+        const requis = registre
+          .liste()
+          .filter((m) => (m.manifeste.connecteurs ?? []).includes(c.id));
+        // Personne ne s'en sert : pas la peine d'encombrer l'ecran.
+        if (!requis.length) continue;
+
+        const e = connecteurs.pour(c.id);
+        connexions.push({
+          id: c.id,
+          nom: c.nom,
+          // Pas connecte n'est pas une panne : un streamer qui n'utilise pas le
+          // bot musique n'a aucune raison d'avoir Spotify branche.
+          etat: e.connecte ? 'ok' : 'inactif',
+          detail: e.connecte
+            ? e.compte || 'connecté'
+            : e.configure
+              ? 'application enregistrée, autorisation à donner'
+              : 'non configuré',
+          aide: e.connecte
+            ? 'Utilisé par : ' + requis.map((m) => m.manifeste.nom).join(', ')
+            : e.configure
+              ? 'Écran Connecteurs → carte ' + c.nom + ' → Connecter.'
+              : 'Écran Connecteurs : renseigne ton application ' + c.nom + '.',
+        });
+      }
+
       // --- Modules : chacun declare ses propres connexions ---
       for (const m of registre.liste()) {
         if (typeof m.manifeste.sante !== 'function') continue;
@@ -399,7 +431,15 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         if (m.etat !== 'demarre') continue;
         try {
           const r = (await m.manifeste.sante(contextes.get(m.id))) ?? [];
-          for (const c of r) connexions.push({ ...c, module: m.manifeste.nom });
+          for (const c of r) {
+            const enrichi = { ...c, module: m.manifeste.nom };
+            // Un module qui tourne en sait plus que le socle sur son connecteur
+            // — l'appareil Spotify actif, par exemple. Sa version remplace la
+            // carte generique, a la meme place, au lieu de doubler avec elle.
+            const i = connexions.findIndex((x) => x.id === enrichi.id);
+            if (i >= 0) connexions[i] = enrichi;
+            else connexions.push(enrichi);
+          }
         } catch (e) {
           connexions.push({
             id: m.id + ':sante',
