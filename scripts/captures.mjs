@@ -43,8 +43,13 @@ const PRISES = [
     js: `document.querySelector('#entree-accueil').click(); 'ok'`,
   },
   {
+    // Twitch se configure sur l'ecran Connecteurs comme les autres services :
+    // la fenetre qui doublonnait avec cette carte a ete supprimee.
     fichier: '02-twitch.png',
-    js: `document.querySelector('#modale-twitch').showModal(); 'ok'`,
+    js: `
+      document.querySelector('#etat-twitch').click();
+      await new Promise((r) => setTimeout(r, 700));
+      'ok'`,
   },
   {
     fichier: '03-connecteurs.png',

@@ -292,20 +292,10 @@ export function creerServeur(app) {
         if (chemin === '/api/twitch/etat' && methode === 'GET') {
           return json(res, 200, app.twitch.getEtat());
         }
-        if (chemin === '/api/twitch/app' && methode === 'POST') {
-          const body = await corpsJson(req);
-          const r = await app.definirAppTwitch(body);
-          return json(res, r.ok ? 200 : 400, r);
-        }
-        if (chemin === '/api/twitch/chaine' && methode === 'POST') {
-          const body = await corpsJson(req);
-          const r = await app.definirChaine(body.channel);
-          return json(res, r.ok ? 200 : 400, r);
-        }
-        if (chemin === '/api/twitch/autoriser' && methode === 'POST') {
-          const r = await app.demarrerAutorisation();
-          return json(res, r.ok ? 200 : 400, r);
-        }
+        // Configurer Twitch passe par /api/connecteurs/twitch/... comme tout
+        // service : les routes /api/twitch/app, /chaine et /autoriser faisaient
+        // double emploi avec elles — elles appelaient d'ailleurs exactement les
+        // memes fonctions — et sont parties avec la fenetre qui les utilisait.
         if (chemin === '/api/twitch/reconnecter' && methode === 'POST') {
           const r = await app.reconnecterTwitch();
           return json(res, r.ok ? 200 : 400, r);

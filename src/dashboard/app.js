@@ -77,8 +77,6 @@ async function rafraichirEtat() {
   majPastilleTwitch(g.twitch, g);
 
   if (g.dossierDonnees) $('#chemin-donnees').textContent = g.dossierDonnees;
-  $('#url-retour').textContent = 'http://localhost:' + g.port + '/callback/twitch';
-  if (g.chaine) $('#in-channel').value = g.chaine;
 
   // Le démarrage avec Windows n'existe que dans l'application Electron : lancé
   // en ligne de commande, l'option est simplement masquée plutôt que grisée.
@@ -478,6 +476,22 @@ async function chargerSante() {
 // autorisation de compte au même endroit, pour Twitch comme pour Spotify.
 
 const deplies = new Set();
+
+// Amene sur l'ecran Connecteurs avec une carte ouverte. C'est ce que fait
+// l'indicateur du bandeau : il pointe le service a brancher, sans obliger le
+// streamer a le retrouver dans la liste.
+async function ouvrirConnecteur(id) {
+  etat.selection = CONNECTEURS;
+  deplies.add(id);
+  dessinerRail();
+  dessinerConnecteurs();
+  // Au premier clic la liste n'est pas encore chargee : on redessine apres.
+  if (!etat.connecteurs) {
+    await chargerConnecteurs();
+    if (etat.selection === CONNECTEURS) dessinerConnecteurs();
+  }
+  $('.detail')?.scrollTo({ top: 0 });
+}
 
 function dessinerConnecteurs() {
   const cible = $('#detail');
@@ -1096,14 +1110,17 @@ function brancherTiroir() {
   });
 }
 
-// ------------------------------------------------------------ assistant Twitch
+// ------------------------------------------------------------------- modales
 
 function brancherModales() {
-  const mT = $('#modale-twitch');
   const mR = $('#modale-reglages');
 
-  $('#etat-twitch').addEventListener('click', () => mT.showModal());
-  $('#btn-fermer-twitch').addEventListener('click', () => mT.close());
+  // L'indicateur du bandeau menait a une fenetre qui demandait exactement ce
+  // que demande la carte Twitch de l'ecran Connecteurs, en ecrivant au meme
+  // endroit. Deux formulaires pour une seule donnee finissent toujours par
+  // diverger : l'indicateur emmene maintenant sur la carte, depliee.
+  $('#etat-twitch').addEventListener('click', () => ouvrirConnecteur('twitch'));
+
   $('#btn-reglages').addEventListener('click', () => {
     // L'etat des bascules se lit a l'ouverture : entre deux ouvertures,
     // rafraichirEtat() a pu changer le demarrage auto.
@@ -1115,28 +1132,6 @@ function brancherModales() {
   $$('[data-copier]').forEach((b) =>
     b.addEventListener('click', () => copier($('#' + b.dataset.copier).textContent))
   );
-
-  $('#btn-autoriser').addEventListener('click', async () => {
-    const channel = $('#in-channel').value.trim();
-    const clientId = $('#in-client-id').value.trim();
-    const clientSecret = $('#in-client-secret').value.trim();
-
-    if (!channel) return toast('Indique le nom de ta chaîne', true);
-    if (!clientId || !clientSecret) return toast('ID client et secret client sont nécessaires', true);
-
-    try {
-      await api('/api/twitch/chaine', { method: 'POST', corps: { channel } });
-      await api('/api/twitch/app', { method: 'POST', corps: { clientId, clientSecret } });
-      const r = await api('/api/twitch/autoriser', { method: 'POST' });
-      if (!r.ok) return toast(r.conseil || r.erreur || 'Autorisation impossible', true);
-
-      $('#info-autorisation').hidden = false;
-      // Le navigateur s'ouvre côté serveur ; on laisse un lien de secours.
-      if (r.url) window.open(r.url, '_blank');
-    } catch (e) {
-      toast(e.message, true);
-    }
-  });
 
   $('#in-modules-dev').addEventListener('click', (e) => {
     const b = e.currentTarget;

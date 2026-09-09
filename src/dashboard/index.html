@@ -93,60 +93,6 @@
       <div class="journal" id="journal"></div>
     </section>
 
-    <!-- Assistant de connexion Twitch -->
-    <dialog id="modale-twitch">
-      <div class="modale-entete"><h2>Connecter ta chaîne Twitch</h2></div>
-      <div class="modale-corps">
-        <p style="margin-top: 0; color: var(--texte-doux)">
-          StreamKit tourne entièrement sur ton PC : rien n'est envoyé sur un serveur. Tu crées donc ta
-          propre application Twitch — c'est gratuit et ça prend 3 minutes, une seule fois.
-        </p>
-
-        <ol class="etapes">
-          <li>
-            Ouvre <a href="https://dev.twitch.tv/console/apps/create" target="_blank" rel="noreferrer">la console
-            développeur Twitch</a> et connecte-toi.
-          </li>
-          <li>Nom : <code>StreamKit</code> — Catégorie : <code>Chat Bot</code>.</li>
-          <li>
-            URL de redirection OAuth : colle exactement
-            <code id="url-retour">http://localhost:4455/callback/twitch</code>
-            <button class="btn petit discret" data-copier="url-retour" title="Copier">📋</button>
-          </li>
-          <li>Valide, puis récupère l'<b>ID client</b> et génère un <b>secret client</b>.</li>
-          <li>Colle les deux ici :</li>
-        </ol>
-
-        <div class="champ large">
-          <label for="in-channel">Nom de ta chaîne Twitch</label>
-          <div class="aide">Tel qu'il apparaît dans l'adresse : twitch.tv/<b>ton-pseudo</b></div>
-          <div class="saisie"><input type="text" id="in-channel" placeholder="ton-pseudo" autocomplete="off" /></div>
-        </div>
-
-        <div class="champ large">
-          <label for="in-client-id">ID client</label>
-          <div class="saisie"><input type="text" id="in-client-id" autocomplete="off" spellcheck="false" /></div>
-        </div>
-
-        <div class="champ large">
-          <label for="in-client-secret">Secret client</label>
-          <div class="aide">Il reste sur ce PC, dans un fichier que tu ne partages jamais.</div>
-          <div class="saisie"><input type="password" id="in-client-secret" autocomplete="off" spellcheck="false" /></div>
-        </div>
-
-        <div class="bandeau info" id="info-autorisation" hidden>
-          <div>
-            <b>Autorisation en cours</b>
-            <p>Une page Twitch s'est ouverte dans ton navigateur. Clique sur « Autoriser », puis reviens ici.</p>
-          </div>
-        </div>
-      </div>
-      <div class="modale-pied">
-        <button class="btn" id="btn-fermer-twitch">Fermer</button>
-        <button class="btn primaire" id="btn-autoriser">Enregistrer et autoriser</button>
-      </div>
-    </dialog>
-
     <!-- Réglages de StreamKit -->
     <dialog id="modale-reglages">
       <div class="modale-entete"><h2>Réglages de StreamKit</h2></div>

@@ -614,29 +614,26 @@ def slide_twitch(prs, n, total):
               sous="À faire une seule fois. Tous les modules Twitch se serviront de "
                    "cette connexion.")
 
-    # La fenêtre en grand : c'est elle que le streamer a sous les yeux pendant
-    # qu'il lit la colonne de droite.
-    image(s, "c-twitch.png", MARGE, y + 0.55, hauteur=11.4)
+    # Twitch se configure sur l'écran Connecteurs, comme Spotify : même carte,
+    # même geste. La slide suivante n'aura donc rien de nouveau à apprendre.
+    image(s, "c-twitch.png", MARGE, y + 0.7, largeur=17.0)
 
-    x = MARGE + 14.5
+    x = MARGE + 18.2
     largeur = L_SLIDE - MARGE - x
-    etapes(s, x, y + 0.55, largeur, [
+    etapes(s, x, y + 0.6, largeur, [
         ("Clique sur l'indicateur rouge",
-         "Tout en haut de la fenêtre. L'assistant ci-contre s'ouvre."),
+         "En haut de la fenêtre. Il t'amène sur l'écran Connecteurs, carte Twitch "
+         "ouverte."),
         ("Ouvre la console développeur Twitch",
-         "Le lien est dans l'assistant. C'est gratuit et ça ne demande que ton compte "
-         "Twitch habituel."),
+         "Gratuit, avec ton compte Twitch habituel."),
         ("Crée une application",
-         "Nom : StreamKit. Catégorie : Chat Bot. Les deux sont libres, mais autant "
-         "s'y retrouver plus tard."),
-        ("Colle l'URL de redirection affichée",
-         "http://localhost:4455/callback/twitch — au caractère près. C'est la cause "
-         "numéro un des échecs d'autorisation."),
-        ("Récupère l'ID et le secret client",
-         "Colle-les avec le nom de ta chaîne, puis « Enregistrer et autoriser »."),
-        ("Autorise dans le navigateur",
-         "Une page Twitch s'ouvre. Tu cliques sur Autoriser, tu reviens : "
-         "l'indicateur est passé au vert."),
+         "Nom : StreamKit. Catégorie : Chat Bot."),
+        ("Colle l'adresse de retour affichée",
+         "Au caractère près : c'est la cause numéro un des refus d'autorisation."),
+        ("Renseigne chaîne, ID et secret",
+         "Puis « Enregistrer »."),
+        ("Clique sur « Connecter »",
+         "Une page Twitch s'ouvre : Autoriser. L'indicateur passe au vert."),
     ], ecart=1.95)
 
     numero(s, n, total)

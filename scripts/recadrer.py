@@ -19,7 +19,7 @@ FOND = (10, 9, 14)
 DECOUPES = {
     "c-rail.png": ("01-accueil.png", (10, 120, 550, 990)),
     "c-bandeau.png": ("01-accueil.png", (0, 0, 900, 108)),
-    "c-twitch.png": ("02-twitch.png", (652, 117, 1891, 1202)),
+    "c-twitch.png": ("02-twitch.png", (610, 318, 2054, 1220)),
     "c-spotify.png": ("03-connecteurs.png", (610, 318, 2054, 1221)),
     "c-module.png": ("04-module.png", (559, 114, 2470, 1144)),
     "c-overlay.png": ("05-overlays.png", (585, 195, 2072, 560)),
