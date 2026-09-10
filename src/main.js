@@ -160,22 +160,29 @@ const updater = {
 // --- Demarrage avec Windows -------------------------------------------------
 // Remplace les anciens .bat qui bricolaient un raccourci dans le dossier
 // Demarrage : Electron le fait nativement, et sait aussi le retirer.
-// `openAsHidden` : au demarrage de session, StreamKit se met directement pres
-// de l'horloge sans ouvrir sa fenetre — un stream ne commence pas par une
-// fenetre a fermer.
+//
+// C'est l'argument `--cache` qui fait tout le travail : au demarrage de
+// session, StreamKit se met directement pres de l'horloge sans ouvrir sa
+// fenetre — un stream ne commence pas par une fenetre a fermer.
+//
+// Il y avait ici deux autres champs, `openAsHidden` a l'ecriture et
+// `wasOpenedAtLogin` a la lecture. Tous deux etaient documentes macOS
+// uniquement : sous Windows, le premier etait ignore et le second valait
+// toujours undefined. Ils ne servaient donc a rien, et `openAsHidden` a fini
+// par disparaitre completement d'Electron (44). Le comportement, lui, ne
+// change pas d'un iota.
 
 const demarrageAuto = {
   disponible: process.platform === 'win32',
   lire: () => app.getLoginItemSettings().openAtLogin,
   ecrire: (actif) => {
-    app.setLoginItemSettings({ openAtLogin: !!actif, openAsHidden: true, args: ['--cache'] });
+    app.setLoginItemSettings({ openAtLogin: !!actif, args: ['--cache'] });
     return app.getLoginItemSettings().openAtLogin;
   },
 };
 
 // Lance-t-on depuis le demarrage de session ? Si oui, on n'ouvre pas la fenetre.
-const lanceAuDemarrage =
-  process.argv.includes('--cache') || app.getLoginItemSettings().wasOpenedAtLogin;
+const lanceAuDemarrage = process.argv.includes('--cache');
 
 // --- Fenetre ----------------------------------------------------------------
 

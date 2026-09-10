@@ -19,7 +19,11 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist "node_modules\electron\dist\electron.exe" (
+REM On teste la presence du PAQUET, pas du binaire Electron : depuis Electron
+REM 42, npm install ne telecharge plus l'executable, c'est le premier
+REM lancement qui s'en charge. Chercher dist\electron.exe ici relancerait donc
+REM un npm install inutile a chaque fois, sans jamais rien y changer.
+if not exist "node_modules\electron\package.json" (
   echo.
   echo   Dependances manquantes, installation...
   echo.
