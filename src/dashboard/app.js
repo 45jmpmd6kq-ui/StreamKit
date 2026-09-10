@@ -562,15 +562,26 @@ function carteConnecteur(c) {
 
         <div class="champ large">
           <label for="cid-${c.id}">ID client</label>
+          ${
+            c.pkce
+              ? `<div class="aide">C’est le seul champ à remplir : ${echapper(c.nom)} n’a pas besoin de secret
+                   client. StreamKit prouve son identité autrement (PKCE), il n’y a donc rien de plus à garder
+                   sur ce PC.</div>`
+              : ''
+          }
           <div class="saisie"><input type="text" id="cid-${c.id}" autocomplete="off" spellcheck="false"
             placeholder="${c.configure ? '••••••••  (déjà enregistré)' : ''}" /></div>
         </div>
-        <div class="champ large">
+        ${
+          c.pkce
+            ? ''
+            : `<div class="champ large">
           <label for="csec-${c.id}">Secret client</label>
           <div class="aide">Reste sur ce PC, dans un fichier que tu ne partages jamais.</div>
           <div class="saisie"><input type="password" id="csec-${c.id}" autocomplete="off" spellcheck="false"
             placeholder="${c.configure ? '••••••••  (déjà enregistré)' : ''}" /></div>
-        </div>
+        </div>`
+        }
 
         <div class="conn-actions">
           <a class="btn petit" href="${c.consoleUrl}" target="_blank" rel="noreferrer">Ouvrir la console développeur</a>
@@ -624,9 +635,12 @@ function brancherConnecteurs() {
   $$('[data-enregistrer-conn]').forEach((b) =>
     b.addEventListener('click', async () => {
       const id = b.dataset.enregistrerConn;
+      const pkce = etat.connecteurs.find((x) => x.id === id)?.pkce;
       const clientId = $('#cid-' + id).value.trim();
-      const clientSecret = $('#csec-' + id).value.trim();
-      if (!clientId || !clientSecret) return retour(id, 'ID et secret sont nécessaires', true);
+      // Le champ n'existe pas pour un connecteur PKCE : il n'y a pas de secret.
+      const clientSecret = $('#csec-' + id)?.value.trim() ?? '';
+      if (!clientId) return retour(id, 'ID client nécessaire', true);
+      if (!pkce && !clientSecret) return retour(id, 'ID et secret sont nécessaires', true);
       try {
         if (id === 'twitch') {
           const chaine = $('#cid-chaine')?.value.trim();

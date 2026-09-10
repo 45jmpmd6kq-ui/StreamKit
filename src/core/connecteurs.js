@@ -12,7 +12,7 @@
 // (résolution de la chaîne, scopes calculés depuis les modules). Il apparaît sur
 // le même écran, mais son code ne passe pas par ici.
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import * as store from './store.js';
 import * as journal from './journal.js';
 import { ouvrirNavigateur } from './auth.js';
@@ -28,7 +28,10 @@ export const CATALOGUE = [
     id: 'spotify',
     nom: 'Spotify',
     icone: '🎵',
-    type: 'oauth',
+    // PKCE : Spotify rafraichit le jeton avec le seul identifiant client.
+    // Un secret que le streamer ne saisit pas est un secret qu'on ne peut ni
+    // stocker, ni perdre, ni faire fuiter dans un journal.
+    type: 'pkce',
     description: 'Nécessaire au bot musique : ajouter un morceau à ta file, passer au suivant.',
     consoleUrl: 'https://developer.spotify.com/dashboard',
     autorisation: 'https://accounts.spotify.com/authorize',
@@ -45,7 +48,7 @@ export const CATALOGUE = [
       'Ouvre le tableau de bord développeur Spotify et connecte-toi.',
       'Create app — nom et description libres.',
       'Redirect URI : colle l’adresse affichée ci-dessous, exactement.',
-      'Coche « Web API », valide, puis récupère l’ID et le secret client.',
+      'Coche « Web API », valide, puis récupère l’ID client. Le secret est inutile.',
     ],
     // Chaque streamer crée sa propre application : une app Spotify en mode
     // développement est plafonnée à 25 utilisateurs à ajouter un par un, et le
@@ -78,11 +81,29 @@ function ecrire(id, patch) {
   });
 }
 
+export function estPkce(c) {
+  return (typeof c === 'string' ? trouver(c) : c)?.type === 'pkce';
+}
+
 export function definirApp(id, { clientId, clientSecret }) {
   const c = trouver(id);
   if (!c) return { ok: false, erreur: 'connecteur inconnu' };
-  if (!clientId || !clientSecret) return { ok: false, erreur: 'identifiants incomplets' };
-  ecrire(id, { clientId: String(clientId).trim(), clientSecret: String(clientSecret).trim() });
+  // On nettoie AVANT de valider : un champ rempli d'espaces passait le controle
+  // puis etait range vide, laissant un connecteur « configure » avec rien
+  // dedans -- et un message d'erreur incomprehensible a la connexion.
+  const idClient = String(clientId ?? '').trim();
+  const secret = String(clientSecret ?? '').trim();
+
+  if (!idClient) return { ok: false, erreur: 'identifiant client manquant' };
+  if (!estPkce(c) && !secret) return { ok: false, erreur: 'identifiants incomplets' };
+
+  const patch = { clientId: idClient };
+  // En PKCE on ne touche PAS a un secret deja stocke : il appartient a une
+  // autorisation obtenue par l'ancien flux, et c'est lui qui la fait encore
+  // vivre. Il disparaitra tout seul a la prochaine reconnexion.
+  if (!estPkce(c)) patch.clientSecret = secret;
+
+  ecrire(id, patch);
   log.ok('Application ' + c.nom + ' enregistrée.');
   return { ok: true };
 }
@@ -96,8 +117,11 @@ export function pour(id) {
     clientSecret: clientSecret ?? '',
     refreshToken: refreshToken ?? '',
     compte: compte ?? '',
-    configure: !!(clientId && clientSecret),
-    connecte: !!(clientId && clientSecret && refreshToken),
+    pkce: estPkce(id),
+    // En PKCE l'identifiant client suffit : il n'y a pas d'autre secret a
+    // reclamer au streamer.
+    configure: estPkce(id) ? !!clientId : !!(clientId && clientSecret),
+    connecte: (estPkce(id) ? !!clientId : !!(clientId && clientSecret)) && !!refreshToken,
     // Certains services font tourner le jeton de rafraichissement en cours
     // d'usage : le module qui s'en apercoit le repersiste ici, la ou le socle
     // le relira au prochain demarrage.
@@ -123,34 +147,78 @@ export function urlDeRetour(id, port) {
 // Une autorisation en cours à la fois : { id, state }
 let attente = null;
 
+// --- PKCE (RFC 7636) --------------------------------------------------------
+//
+// Le principe : au lieu de prouver son identite avec un secret partage, le
+// client tire un « verifieur » au hasard, n'envoie que son EMPREINTE dans
+// l'URL d'autorisation, et ne devoile le verifieur qu'au moment d'echanger le
+// code. Quiconque intercepterait le code n'aurait pas le verifieur, et le code
+// ne lui servirait a rien.
+//
+// Pour StreamKit, l'interet n'est pas la : c'est qu'il n'y a plus AUCUN secret
+// Spotify. Un champ de moins dans l'assistant, rien a chiffrer, rien a perdre,
+// rien qui puisse fuiter dans un journal.
+
+const base64url = (tampon) =>
+  tampon.toString('base64').replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+
+// 64 octets -> 86 caracteres, bien dans la fourchette 43-128 imposee par la RFC.
+export function fabriquerVerifieur() {
+  return base64url(randomBytes(64));
+}
+
+export function defiDeCode(verifieur) {
+  return base64url(createHash('sha256').update(verifieur).digest());
+}
+
+// Construit l'URL d'autorisation. Sortie de demarrerAutorisation pour etre
+// testable : celle-ci ouvre un navigateur, ce qu'une suite de tests ne peut pas
+// se permettre.
+export function urlAutorisation(c, { clientId, redirect, state, defi }) {
+  const params = {
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: redirect,
+    scope: c.scopes.join(' '),
+    state,
+    // Sans ça, le service réutilise silencieusement l'ancienne autorisation :
+    // impossible de changer de compte, et de nouveaux droits ne seraient
+    // jamais demandés.
+    show_dialog: 'true',
+  };
+  if (defi) {
+    params.code_challenge_method = 'S256';
+    params.code_challenge = defi;
+  }
+  return c.autorisation + '?' + new URLSearchParams(params);
+}
+
 export function demarrerAutorisation(id, port) {
   const c = trouver(id);
   if (!c) return { ok: false, erreur: 'connecteur inconnu' };
 
   const { clientId, clientSecret } = lire(id);
-  if (!clientId || !clientSecret) {
-    return { ok: false, erreur: 'renseigne d’abord l’ID et le secret client, puis enregistre' };
+  if (!clientId || (!estPkce(c) && !clientSecret)) {
+    return {
+      ok: false,
+      erreur: estPkce(c)
+        ? 'renseigne d’abord l’ID client, puis enregistre'
+        : 'renseigne d’abord l’ID et le secret client, puis enregistre',
+    };
   }
 
   // Voir auth.js : ce jeton lie le retour du service a notre propre demande,
   // il doit etre imprevisible.
   const state = randomBytes(16).toString('hex');
-  attente = { id, state };
+  const verifieur = estPkce(c) ? fabriquerVerifieur() : null;
+  attente = { id, state, verifieur };
 
-  const url =
-    c.autorisation +
-    '?' +
-    new URLSearchParams({
-      client_id: clientId,
-      response_type: 'code',
-      redirect_uri: urlDeRetour(id, port),
-      scope: c.scopes.join(' '),
-      state,
-      // Sans ça, le service réutilise silencieusement l'ancienne autorisation :
-      // impossible de changer de compte, et de nouveaux droits ne seraient
-      // jamais demandés.
-      show_dialog: 'true',
-    });
+  const url = urlAutorisation(c, {
+    clientId,
+    redirect: urlDeRetour(id, port),
+    state,
+    defi: verifieur ? defiDeCode(verifieur) : null,
+  });
 
   ouvrirNavigateur(url);
   log.info('Page d’autorisation ' + c.nom + ' ouverte.');
@@ -177,21 +245,32 @@ export async function traiterRetour(id, url, port) {
   }
   if (!code) return { ok: false, message: 'Réponse incomplète de ' + c.nom + '. Réessaie.' };
 
+  const verifieur = attente.verifieur;
   attente = null;
   const { clientId, clientSecret } = lire(id);
+
+  // Deux facons de prouver qu'on est bien le client :
+  //   PKCE       le verifieur tire au hasard au depart, jamais transmis avant
+  //              cet instant. Aucun secret n'a jamais existe.
+  //   classique  l'en-tete Basic, donc le secret client.
+  const entetes = { 'Content-Type': 'application/x-www-form-urlencoded' };
+  const corps = {
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: urlDeRetour(id, port),
+  };
+  if (verifieur) {
+    corps.client_id = clientId;
+    corps.code_verifier = verifieur;
+  } else {
+    entetes.Authorization = 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64');
+  }
 
   try {
     const r = await fetchAvecDelai(c.jeton, {
       method: 'POST',
-      headers: {
-        Authorization: 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: urlDeRetour(id, port),
-      }),
+      headers: entetes,
+      body: new URLSearchParams(corps),
     });
 
     const data = await r.json().catch(() => ({}));
@@ -224,7 +303,12 @@ export async function traiterRetour(id, url, port) {
       }
     }
 
-    ecrire(id, { refreshToken: data.refresh_token, compte, connecteA: new Date().toISOString() });
+    // En PKCE, le secret eventuellement herite de l'ancien flux ne sert plus a
+    // rien : on le jette maintenant qu'une autorisation sans secret a pris le
+    // relais. C'est la migration douce, cote streamer elle ne se voit pas.
+    const patch = { refreshToken: data.refresh_token, compte, connecteA: new Date().toISOString() };
+    if (verifieur) patch.clientSecret = '';
+    ecrire(id, patch);
     log.ok(c.nom + ' connecté' + (compte ? ' — ' + compte : '') + '.');
     return { ok: true, message: c.nom + ' est connecté ! Tu peux fermer cet onglet.' };
   } catch (err) {

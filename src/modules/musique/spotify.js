@@ -188,7 +188,8 @@ export class SpotifyClient {
     });
     if (!r.ok) {
       throw new Error(
-        `Spotify : echec du rafraichissement du token (${r.status}). Relance setup.bat si ca persiste.`
+        `Spotify : echec du rafraichissement du token (${r.status}). ` +
+          `Reconnecte Spotify dans l'ecran Connecteurs si ca persiste.`
       );
     }
     const j = await r.json();

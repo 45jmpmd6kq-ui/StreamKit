@@ -360,6 +360,9 @@ export async function demarrerNoyau({
           description: c.description,
           consoleUrl: c.consoleUrl,
           urlDeRetour: connecteurs.urlDeRetour(c.id, PORT),
+          // Le dashboard en a besoin pour ne PAS reclamer de secret client a un
+          // connecteur qui n'en utilise plus.
+          pkce: connecteurs.estPkce(c),
           configure: e.configure,
           connecte: e.connecte,
           compte: e.compte,
