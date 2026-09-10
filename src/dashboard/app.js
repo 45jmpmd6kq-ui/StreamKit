@@ -1156,11 +1156,11 @@ function brancherModales() {
   });
 
   $('#btn-sauver-reglages').addEventListener('click', async () => {
-    // Le dépôt de mise à jour passe par la même route que la config générale.
+    // Le depot des mises a jour n'est plus un reglage : sous Electron il est
+    // embarque a la compilation (build.publish), et le champ n'avait aucun
+    // effet. Il ne restait qu'a le faire croire au streamer. Le socle ne
+    // l'accepte plus non plus (voir definirReglagesGeneraux dans noyau.js).
     try {
-      // Le depot des mises a jour n'est plus un reglage : sous Electron il est
-      // embarque a la compilation (build.publish), et le champ n'avait aucun
-      // effet. Il ne restait qu'a le faire croire au streamer.
       const corps = {};
       if (!$('#bloc-demarrage-auto').hidden) {
         corps.demarrageAuto = $('#in-demarrage-auto').getAttribute('aria-checked') === 'true';

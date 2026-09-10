@@ -12,9 +12,11 @@
 // (résolution de la chaîne, scopes calculés depuis les modules). Il apparaît sur
 // le même écran, mais son code ne passe pas par ici.
 
+import { randomBytes } from 'node:crypto';
 import * as store from './store.js';
 import * as journal from './journal.js';
 import { ouvrirNavigateur } from './auth.js';
+import { fetchAvecDelai } from './reseau.js';
 
 const log = journal.pour('connecteurs');
 
@@ -130,7 +132,9 @@ export function demarrerAutorisation(id, port) {
     return { ok: false, erreur: 'renseigne d’abord l’ID et le secret client, puis enregistre' };
   }
 
-  const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  // Voir auth.js : ce jeton lie le retour du service a notre propre demande,
+  // il doit etre imprevisible.
+  const state = randomBytes(16).toString('hex');
   attente = { id, state };
 
   const url =
@@ -177,7 +181,7 @@ export async function traiterRetour(id, url, port) {
   const { clientId, clientSecret } = lire(id);
 
   try {
-    const r = await fetch(c.jeton, {
+    const r = await fetchAvecDelai(c.jeton, {
       method: 'POST',
       headers: {
         Authorization: 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
@@ -211,7 +215,7 @@ export async function traiterRetour(id, url, port) {
     let compte = '';
     if (c.profil) {
       try {
-        const p = await fetch(c.profil, {
+        const p = await fetchAvecDelai(c.profil, {
           headers: { Authorization: 'Bearer ' + data.access_token },
         }).then((x) => x.json());
         compte = p.display_name || p.id || '';

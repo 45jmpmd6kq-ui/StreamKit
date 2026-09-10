@@ -69,9 +69,13 @@ export async function charger() {
   for (const dossier of dossiersDeModules()) {
     try {
       const url = pathToFileURL(join(MODULES_DIR, dossier, 'module.js')).href;
-      // Cache-buster : permet de recharger un module modifie sans redemarrer
-      // StreamKit (pratique pendant le developpement d'un nouveau module).
-      const mod = await import(url + '?v=' + Date.now());
+      // Pas de cache-buster « ?v=Date.now() » ici. Il promettait de recharger un
+      // module modifie sans redemarrer StreamKit, mais charger() n'est appele
+      // qu'une seule fois : il ne servait qu'a casser le cache ESM. Et s'il
+      // etait rappele un jour, il ferait pire -- les modules qui gardent un etat
+      // de fichier (le catalogue de voitures de la roue, l'agent HTTPS de Riot)
+      // seraient instancies deux fois, chacun avec son propre cache.
+      const mod = await import(url);
       const manifeste = mod.default;
 
       const erreurs = validerManifeste(manifeste, dossier);

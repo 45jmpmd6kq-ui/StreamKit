@@ -12,8 +12,8 @@
 
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { existsSync, readdirSync, createReadStream } from 'node:fs';
-import { join, normalize, extname } from 'node:path';
+import { existsSync, readdirSync, createReadStream, statSync } from 'node:fs';
+import { join, normalize, extname, sep } from 'node:path';
 import { DASHBOARD_DIR, MODULES_DIR, JOURNAUX_DIR } from './paths.js';
 import * as journal from './journal.js';
 import * as diffusion from './diffusion.js';
@@ -92,17 +92,55 @@ async function corpsJson(req, limite = 512 * 1024) {
   });
 }
 
+// Resout `relatif` DANS `base`, ou renvoie null si on en sort.
+//
+// normalize() reduit les « .. » : il suffit ensuite de verifier que le resultat
+// commence toujours par le dossier autorise. Le separateur final n'est pas du
+// zele -- sans lui, « modules/overlay-bis » passerait le test pour la base
+// « modules/overlay ».
+function cheminSous(base, relatif) {
+  const racine = normalize(base);
+  const prefixe = racine.endsWith(sep) ? racine : racine + sep;
+  const cible = normalize(join(racine, relatif));
+  return cible.startsWith(prefixe) ? cible : null;
+}
+
 // Sert un fichier en empechant toute sortie du dossier autorise (../..).
 function servirFichier(res, base, relatif, { cache = false } = {}) {
-  const cible = normalize(join(base, relatif));
-  if (!cible.startsWith(normalize(base))) return texte(res, 403, 'Interdit');
-  if (!existsSync(cible)) return texte(res, 404, 'Introuvable');
+  const cible = cheminSous(base, relatif);
+  if (!cible) return texte(res, 403, 'Interdit');
 
-  res.writeHead(200, {
-    'Content-Type': MIME[extname(cible).toLowerCase()] ?? 'application/octet-stream',
-    'Cache-Control': cache ? 'public, max-age=3600' : 'no-cache',
+  // statSync et pas existsSync : un DOSSIER existe, lui aussi. Or
+  // createReadStream sur un dossier emet EISDIR de facon asynchrone -- sans
+  // gestionnaire d'erreur, c'etait une exception non rattrapee, et sous
+  // Electron l'application entiere mourait. Une balise <img> pointant sur
+  // /overlay/roue-rl/roue/cars, posee sur n'importe quel site, suffisait donc a
+  // couper le stream : une requete d'image n'envoie pas d'Origin, et l'en-tete
+  // Host est legitime, les deux gardes laissent passer.
+  if (!statSync(cible, { throwIfNoEntry: false })?.isFile()) return texte(res, 404, 'Introuvable');
+
+  const flux = createReadStream(cible);
+
+  // Le fichier peut encore disparaitre entre le stat et l'ouverture (antivirus,
+  // mise a jour de module). On n'ecrit donc l'en-tete qu'une fois le descripteur
+  // ouvert : tant qu'il ne l'est pas, on peut encore repondre une erreur propre.
+  flux.once('open', () => {
+    res.writeHead(200, {
+      'Content-Type': MIME[extname(cible).toLowerCase()] ?? 'application/octet-stream',
+      'Cache-Control': cache ? 'public, max-age=3600' : 'no-cache',
+    });
+    flux.pipe(res);
   });
-  createReadStream(cible).pipe(res);
+
+  flux.once('error', (e) => {
+    log.warn('Lecture impossible (' + relatif + ') : ' + (e?.message || e));
+    if (!res.headersSent) texte(res, 500, 'Lecture impossible');
+    else res.destroy();
+  });
+
+  // pipe() ne detruit pas la source quand la destination se ferme : un OBS qui
+  // coupe sa source en plein telechargement laisserait le descripteur ouvert.
+  res.once('close', () => flux.destroy());
 }
 
 // --- Qui a le droit de nous parler ? ---------------------------------------
@@ -156,8 +194,8 @@ export function creerServeur(app) {
 
   const handler = async (req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
-    const chemin = decodeURIComponent(url.pathname);
     const methode = req.method ?? 'GET';
+    let chemin = url.pathname;
 
     if (!hoteLocal(req.headers.host, app.port) || !origineLocale(req.headers.origin, app.port)) {
       // On ne dit pas pourquoi : une page qui sonde n'a pas a savoir si elle
@@ -168,6 +206,16 @@ export function creerServeur(app) {
           ') : ' + methode + ' ' + chemin
       );
       return texte(res, 403, 'Interdit');
+    }
+
+    // Le decodage est fait APRES le controle d'acces, et surtout dans un try :
+    // « /overlay/%E0%A4%A » est une sequence percent tronquee, decodeURIComponent
+    // leve alors URIError. Comme ce handler est async, le rejet partait dans le
+    // vide -- aucune reponse n'etait envoyee et la connexion restait pendue.
+    try {
+      chemin = decodeURIComponent(chemin);
+    } catch {
+      return texte(res, 400, 'Chemin invalide');
     }
 
     try {
@@ -214,8 +262,8 @@ export function creerServeur(app) {
           // -- les 137 icones de voitures de la roue, par exemple : 1,5 Mo qu'on
           // ne va pas dupliquer pour une question de dossier.
           const relatif = reste.join('/');
-          const dansPages = normalize(join(dossierPages, relatif));
-          if (dansPages.startsWith(normalize(dossierPages)) && existsSync(dansPages)) {
+          const dansPages = cheminSous(dossierPages, relatif);
+          if (dansPages && statSync(dansPages, { throwIfNoEntry: false })?.isFile()) {
             return servirFichier(res, dossierPages, relatif, { cache: true });
           }
           return servirFichier(res, join(MODULES_DIR, m.dossier, 'overlay'), relatif, { cache: true });

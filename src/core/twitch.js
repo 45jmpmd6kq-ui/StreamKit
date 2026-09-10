@@ -134,9 +134,30 @@ export async function demarrer() {
 
   // --- EventSub en WebSocket : pas d'URL publique, pas de serveur a exposer ---
   listener = new EventSubWsListener({ apiClient: api });
+
+  // On MESURE l'etat de la socket au lieu de le declarer. Avant, la ligne
+  // « eventsubConnecte = true » suivait immediatement start() : la vue
+  // d'ensemble affirmait « EventSub connecte » sans rien en savoir, et un
+  // support parti de la n'avait aucune chance d'aboutir.
+  //
+  // A noter : Twurple n'ouvre la socket qu'a partir du premier abonnement
+  // (StreamKit en pose un au demarrage, stream.online/offline). Le drapeau
+  // reste donc brievement faux au lancement, ce qui est la verite.
+  if (typeof listener.onUserSocketConnect === 'function') {
+    listener.onUserSocketConnect(() => {
+      etat.eventsubConnecte = true;
+      log.ok('EventSub connecte.');
+    });
+  }
+  if (typeof listener.onUserSocketDisconnect === 'function') {
+    listener.onUserSocketDisconnect((_utilisateur, err) => {
+      etat.eventsubConnecte = false;
+      if (err) log.warn('EventSub deconnecte (' + (err?.message || err) + '), reconnexion...');
+    });
+  }
+
   listener.start();
-  etat.eventsubConnecte = true;
-  log.ok('EventSub demarre (WebSocket).');
+  log.info('EventSub demarre (WebSocket).');
 
   return etat;
 }

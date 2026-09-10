@@ -50,14 +50,22 @@ const pad = (n) => String(n).padStart(2, '0');
 const heure = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 const jour = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
+// Une ligne de journal tient sur UNE ligne.
+//
+// Sans ca, une saisie de viewer qui contient un retour a la ligne fabrique de
+// FAUSSES entrees dans le fichier du jour : le spectateur y ecrit ce qu'il veut,
+// horodatage et niveau compris, et le diagnostic du lendemain part sur une piste
+// inventee. (JSON.stringify, lui, echappe deja les retours a la ligne.)
+const uneLigne = (s) => s.replace(/[\r\n]+/g, ' ');
+
 // Une erreur transmise telle quelle donne "[object Object]" dans le dashboard.
 function texte(v) {
-  if (v instanceof Error) return v.message || String(v);
-  if (typeof v === 'string') return v;
+  if (v instanceof Error) return uneLigne(v.message || String(v));
+  if (typeof v === 'string') return uneLigne(v);
   try {
     return JSON.stringify(v);
   } catch {
-    return String(v);
+    return uneLigne(String(v));
   }
 }
 

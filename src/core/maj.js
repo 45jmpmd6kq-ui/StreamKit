@@ -27,6 +27,7 @@ import { join } from 'node:path';
 import { RACINE } from './paths.js';
 import * as journal from './journal.js';
 import * as store from './store.js';
+import { fetchAvecDelai } from './reseau.js';
 
 const log = journal.pour('maj');
 
@@ -67,7 +68,7 @@ export async function verifier() {
   if (!depot) return { ok: false, raison: 'aucun depot configure', actuelle };
 
   try {
-    const r = await fetch('https://api.github.com/repos/' + depot + '/releases/latest', {
+    const r = await fetchAvecDelai('https://api.github.com/repos/' + depot + '/releases/latest', {
       headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'StreamKit' },
     });
     if (r.status === 404) return { ok: false, raison: 'depot ou release introuvable', actuelle };

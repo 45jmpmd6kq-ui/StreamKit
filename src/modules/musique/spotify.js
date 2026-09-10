@@ -5,6 +5,12 @@
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const API = 'https://api.spotify.com/v1';
 
+// fetch() n'a aucun delai par defaut. Une connexion qui reste ouverte sans
+// jamais repondre (VPN qui tombe, proxy d'antivirus) gelerait le bot musique
+// SANS erreur dans le journal : le tour de boucle suivant ne demarre pas tant
+// que le precedent tourne. Meme garde-fou que dans le module Valorant.
+const DELAI_RESEAU = 15000;
+
 // --- Aide a la correspondance stricte des titres ---
 // Mots vides ignores dans la comparaison (articles, "feat", "by", etc.)
 const STOPWORDS = new Set([
@@ -109,6 +115,7 @@ export class SpotifyClient {
       method: 'POST',
       headers: { Authorization: this.basicAuth, 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
+      signal: AbortSignal.timeout(DELAI_RESEAU),
     });
     if (!r.ok) {
       throw new Error(`Spotify : echec du rafraichissement du token (${r.status}). Relance setup.bat si ca persiste.`);
@@ -144,6 +151,7 @@ export class SpotifyClient {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(DELAI_RESEAU),
     });
 
     if (r.status === 204) return null; // Pas de contenu (fréquent pour player)

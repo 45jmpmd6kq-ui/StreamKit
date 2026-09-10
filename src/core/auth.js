@@ -10,8 +10,10 @@
 // (http://localhost:<port>/callback/twitch) : pas de second serveur temporaire.
 
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import * as journal from './journal.js';
 import * as store from './store.js';
+import { fetchAvecDelai } from './reseau.js';
 
 const log = journal.pour('auth');
 
@@ -27,7 +29,9 @@ export function urlDeRetour(port) {
 // (reprise du bot musique V2, ou ces cas se sont reellement produits)
 export function expliquerErreurReseau(err) {
   const cause = err?.cause ?? {};
-  const code = cause.code || err?.code || '';
+  // err.name recupere les TimeoutError d'AbortSignal.timeout, qui n'ont pas de
+  // code : sans lui, un delai depasse tombait dans le conseil generique.
+  const code = cause.code || err?.code || err?.name || '';
   let conseil = 'Verifie ta connexion internet, puis reessaie.';
   if (/ENOTFOUND|EAI_AGAIN/i.test(code)) {
     conseil = "Le PC n'arrive pas a joindre id.twitch.tv (DNS). Coupe un eventuel VPN, puis reessaie.";
@@ -45,7 +49,7 @@ export function expliquerErreurReseau(err) {
 
 export async function twitchJoignable() {
   try {
-    await fetch('https://id.twitch.tv/oauth2/validate');
+    await fetchAvecDelai('https://id.twitch.tv/oauth2/validate');
     return { ok: true };
   } catch (err) {
     return { ok: false, ...expliquerErreurReseau(err) };
@@ -77,7 +81,10 @@ export function demarrerAutorisation({ port, scopes }) {
 
   annuler('nouvelle demande');
 
-  const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  // randomBytes et pas Math.random : ce jeton est ce qui lie le retour de
+  // Twitch a la demande qu'on a nous-meme lancee. Math.random n'est pas
+  // imprevisible, et coute ici exactement la meme chose que le vrai aleatoire.
+  const state = randomBytes(16).toString('hex');
   const url =
     'https://id.twitch.tv/oauth2/authorize?' +
     new URLSearchParams({
@@ -133,7 +140,7 @@ export async function traiterRetour(url, port) {
   const app = tokens.twitchApp;
 
   try {
-    const r = await fetch('https://id.twitch.tv/oauth2/token', {
+    const r = await fetchAvecDelai('https://id.twitch.tv/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({

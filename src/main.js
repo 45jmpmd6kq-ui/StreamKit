@@ -17,7 +17,7 @@ import { dirname, join } from 'node:path';
 import { demarrerNoyau } from './noyau.js';
 import * as journal from './core/journal.js';
 import { DONNEES } from './core/paths.js';
-import { versionActuelle } from './core/maj.js';
+import { versionActuelle, comparer } from './core/maj.js';
 
 const { autoUpdater } = pkg;
 const log = journal.pour('app');
@@ -95,7 +95,11 @@ const updater = {
         ok: true,
         actuelle,
         derniere,
-        dispo: derniere !== actuelle,
+        // comparer() et pas « !== » : une release plus ancienne que
+        // l'installee (rollback, tag retire) affichait « Mettre a jour » vers
+        // une version inferieure. electron-updater aurait refuse de la poser,
+        // mais le bouton, lui, mentait.
+        dispo: comparer(derniere, actuelle) > 0,
         notes: typeof r.updateInfo.releaseNotes === 'string' ? r.updateInfo.releaseNotes : '',
         publieeLe: r.updateInfo.releaseDate,
       };
@@ -254,6 +258,11 @@ function creerFenetre() {
 
 // --- Icone pres de l'horloge ------------------------------------------------
 
+// Dernier resume affiche : reconstruire le menu a l'identique toutes les 5
+// secondes le REFERME sous la souris du streamer qui vient de l'ouvrir. On ne
+// touche a rien tant que le texte n'a pas bouge.
+let dernierResumeIcone = null;
+
 function majMenuIcone() {
   if (!icone) return;
 
@@ -263,6 +272,9 @@ function majMenuIcone() {
     ? (twitchOk ? '● Connecte — ' + etat.chaine : '○ Twitch non connecte') +
       '  (' + etat.modules.demarres + '/' + etat.modules.total + ' modules)'
     : 'Demarrage...';
+
+  if (resume === dernierResumeIcone) return;
+  dernierResumeIcone = resume;
 
   const menu = Menu.buildFromTemplate([
     { label: 'StreamKit ' + versionActuelle(), enabled: false },
@@ -366,3 +378,10 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 process.on('unhandledRejection', (e) => log.err('Erreur non geree : ' + (e?.message || e)));
+
+// Meme filet que dans index.js, et il manquait justement ici -- la ou il compte
+// le plus. Sans lui, la moindre exception non rattrapee (un flux de fichier qui
+// echoue, une dependance qui jette) fait afficher a Electron sa boite d'erreur
+// et tue le processus : icone, bot, overlays, tout s'arrete en plein live. Une
+// ligne dans le journal est infiniment preferable.
+process.on('uncaughtException', (e) => log.err('Exception non capturee : ' + (e?.message || e)));

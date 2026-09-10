@@ -26,9 +26,12 @@ const PORT = 45455;
 const app = {
   port: PORT,
   registre: {
-    // Un module reel, pour que les routes /overlay et /module aboutissent
-    // quelque part et que le test de traversee de dossier ait un sens.
-    get: (id) => (id === 'musique' ? { id, dossier: 'musique', manifeste: { overlays: [] } } : undefined),
+    // Des modules REELS, pour que les routes /overlay et /module aboutissent
+    // quelque part : sans vrai dossier sur le disque, ni la traversee ni le
+    // dossier-servi-comme-fichier ne voudraient dire quoi que ce soit.
+    // roue-rl porte overlay/cars/, le dossier des 137 icones de voitures.
+    get: (id) =>
+      ['musique', 'roue-rl'].includes(id) ? { id, dossier: id, manifeste: { overlays: [] } } : undefined,
     vue: () => null,
     vues: () => [],
   },
@@ -161,6 +164,32 @@ test('on ne sort pas du dossier d un module par ../', async () => {
     assert.equal(r.code, 403, 'chemin non bloque : ' + suffixe);
     assert.ok(!r.corps.includes('"name"'), 'du contenu a fuite');
   }
+});
+
+// --- Ce qui tuait StreamKit a distance ------------------------------------
+
+test('un dossier demande comme un fichier repond 404, sans exception', { timeout: 5000 }, async () => {
+  // Le scenario, tel qu'il a ete reproduit : une balise
+  // <img src="http://127.0.0.1:4455/overlay/roue-rl/roue/cars"> posee sur
+  // n'importe quel site ouvert par le streamer. Une requete d'image n'envoie
+  // pas d'en-tete Origin et son Host est legitime : les deux gardes laissent
+  // passer. createReadStream sur un DOSSIER emettait alors EISDIR sans
+  // gestionnaire d'erreur -- exception non rattrapee, et sous Electron
+  // l'application entiere mourait : icone, bot, overlays, en plein live.
+  //
+  // Si la regression revenait, ce test ne verrait pas un code inattendu : il
+  // EXPIRERAIT, parce que la reponse ne partait jamais. D'ou le delai explicite.
+  const r = await requete({ chemin: '/overlay/roue-rl/roue/cars' });
+  assert.equal(r.code, 404);
+});
+
+test('une URL mal encodee repond 400 au lieu de rester pendue', { timeout: 5000 }, async () => {
+  // « %E0%A4%A » est une sequence percent tronquee : decodeURIComponent leve
+  // URIError. Le decodage se faisait hors du try du handler, et comme celui-ci
+  // est async, le rejet partait dans le vide -- aucune reponse, connexion
+  // ouverte jusqu'au delai du navigateur.
+  const r = await requete({ chemin: '/overlay/%E0%A4%A' });
+  assert.equal(r.code, 400);
 });
 
 // --- Page de retour OAuth : pas de script injecte -------------------------

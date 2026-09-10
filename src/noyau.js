@@ -45,6 +45,16 @@ const UPDATER_PAR_DEFAUT = {
 // il n'est pas fourni, le dashboard masque simplement l'option.
 const DEMARRAGE_AUTO_ABSENT = { disponible: false, lire: () => false, ecrire: () => false };
 
+// Ce que le streamer lit du lien avec Twitch. Les deux canaux sont
+// INDEPENDANTS : le chat peut tourner pendant qu'EventSub se reconnecte (les
+// points de chaine ne repondent plus, mais les commandes si). Un « tout va
+// bien » global l'aurait envoye chercher ailleurs.
+function canauxTwitch(t) {
+  if (t.chatConnecte && t.eventsubConnecte) return 'chat et EventSub connectés';
+  if (!t.chatConnecte && !t.eventsubConnecte) return 'connexion en cours…';
+  return t.chatConnecte ? 'chat connecté, EventSub en attente' : 'EventSub connecté, chat en reconnexion';
+}
+
 export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAuto = DEMARRAGE_AUTO_ABSENT } = {}) {
   preparerDossiers();
   journal.purger();
@@ -273,7 +283,6 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         dossierDonnees: DONNEES,
         twitch: twitch.getEtat(),
         chaine: store.getConfig().twitch.channel,
-        depotMaj: store.getConfig().maj?.depot || '',
         appConfiguree: !!store.lireTokens().twitchApp?.clientId,
         modules: {
           total: modules.length,
@@ -308,7 +317,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
           connecte: t.pret,
           compte: t.channel || '',
           detail: t.pret
-            ? (t.chatConnecte ? 'chat et EventSub connectés' : 'connexion du chat…') +
+            ? canauxTwitch(t) +
               (manquants.length ? ' — ' + manquants.length + ' droit(s) à renouveler' : '')
             : t.raison || 'non connecté',
           etat: !t.pret ? (appTwitch.clientId ? 'ko' : 'inactif') : manquants.length ? 'attention' : 'ok',
@@ -424,7 +433,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
           id: 'twitch',
           nom: 'Twitch',
           etat: t.chatConnecte ? 'ok' : 'attention',
-          detail: t.channel + (t.chatConnecte ? ' — chat et EventSub' : ' — chat en reconnexion'),
+          detail: t.channel + ' — ' + canauxTwitch(t),
         });
       }
 
@@ -595,12 +604,22 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
       const m = registre.get(id);
       const action = m?.manifeste.actions?.[nom];
       if (!action) return { ok: false, erreur: 'action inconnue' };
+      // Un module ARRETE n'a pas de contexte. Lui en fabriquer un via
+      // fabriquerContexte l'enregistrerait dans `contextes` : au demarrage
+      // suivant, contextes.set l'ecraserait sans jamais appeler son
+      // _nettoyer(). Aucune action ne pose de minuteur aujourd'hui, mais la
+      // premiere qui le ferait laisserait un minuteur orphelin -- exactement le
+      // genre de fuite qu'on ne retrouve pas. D'ou ce contexte jetable.
+      const ctx = contextes.get(id);
+      const jetable = ctx ? null : contextePour(m);
       try {
-        const res = await action(contextes.get(id) ?? fabriquerContexte(m), corps);
+        const res = await action(ctx ?? jetable, corps);
         return { ok: true, ...(res ?? {}) };
       } catch (e) {
         journal.pour(id).err('action « ' + nom + ' » : ' + (e?.message || e));
         return { ok: false, erreur: e?.message || String(e) };
+      } finally {
+        jetable?._nettoyer();
       }
     },
 
@@ -679,12 +698,17 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
       if (!gestionnaire) {
         resultat = { ok: false, message: "Ce module n'attend aucune autorisation." };
       } else {
+        // Meme precaution que dans executerAction : un module arrete recoit un
+        // contexte jetable, jamais une entree fantome dans `contextes`.
+        const ctx = contextes.get(id);
+        const jetable = ctx ? null : contextePour(m);
         try {
-          const ctx = contextes.get(id) ?? fabriquerContexte(m);
-          resultat = (await gestionnaire(ctx, url)) ?? { ok: true, message: "C'est bon !" };
+          resultat = (await gestionnaire(ctx ?? jetable, url)) ?? { ok: true, message: "C'est bon !" };
         } catch (e) {
           journal.pour(id).err('retour OAuth : ' + (e?.message || e));
           resultat = { ok: false, message: e?.message || 'erreur inattendue' };
+        } finally {
+          jetable?._nettoyer();
         }
       }
 
@@ -697,13 +721,13 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
 
     // --- Reglages generaux ---
 
-    async definirReglagesGeneraux({ depotMaj, demarrageAuto: auto }) {
-      const c = store.getConfig();
-      c.maj ??= {};
-      if (depotMaj !== undefined) c.maj.depot = String(depotMaj).trim();
-      store.sauverConfig(c);
-      log.info('Depot de mise a jour : ' + (c.maj.depot || 'aucun'));
-
+    // Le depot des mises a jour n'est PLUS un reglage : sous Electron il est
+    // fige a la compilation (build.publish de package.json), et le champ du
+    // dashboard n'avait aucun effet -- il ne restait qu'a le faire croire au
+    // streamer, qui l'avait deja retire de ce qu'il envoie. config.maj.depot
+    // survit pour maj.js en ligne de commande, mais ne passe plus ni par l'etat
+    // general ni par cette API.
+    async definirReglagesGeneraux({ demarrageAuto: auto }) {
       if (auto !== undefined && demarrageAuto.disponible) {
         demarrageAuto.ecrire(!!auto);
         log.info('Demarrage avec Windows : ' + (auto ? 'active' : 'desactive'));
@@ -711,7 +735,6 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
 
       return {
         ok: true,
-        depotMaj: c.maj.depot,
         demarrageAuto: { disponible: !!demarrageAuto.disponible, actif: !!demarrageAuto.lire() },
       };
     },

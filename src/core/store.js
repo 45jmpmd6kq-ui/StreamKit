@@ -20,8 +20,12 @@ const CONFIG_DEFAUT = {
   twitch: { channel: '', broadcasterId: '', utilisateurId: '' },
   reseau: { port: 4455 },
   // Depot GitHub des mises a jour, au format "utilisateur/projet".
-  // Pre-rempli : un streamer n'a rien a saisir pour recevoir les nouvelles
-  // versions. Modifiable dans les reglages du dashboard (fork, test, rename).
+  //
+  // LIGNE DE COMMANDE UNIQUEMENT (maj.js, npm run dev). Chez le streamer,
+  // StreamKit tourne sous Electron : le depot y vient de build.publish, fige a
+  // la compilation, et ce champ n'a aucun effet. Il n'est donc plus expose dans
+  // l'etat general ni modifiable par /api/reglages -- le dashboard avait deja
+  // cesse de l'envoyer, il ne restait qu'un reglage qui faisait semblant.
   maj: { auto: true, depot: '45jmpmd6kq-ui/StreamKit' },
   modules: {}, // { <id>: { actif, schemaVersion, reglages } }
 };
