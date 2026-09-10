@@ -12,6 +12,7 @@
 import { readFileSync, writeFileSync, renameSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_PATH, TOKENS_PATH, ETAT_DIR } from './paths.js';
+import * as coffre from './coffre.js';
 
 const CONFIG_DEFAUT = {
   // 1 -> 2 : les modules de developpement laisses actifs sont eteints une fois
@@ -114,6 +115,82 @@ export function sauverModule(id, patch) {
 
 // --- Secrets ----------------------------------------------------------------
 
+// Ce qui est chiffre dans tokens.json, et ce qui ne l'est pas.
+//
+//   clientSecret, accessToken, refreshToken   chiffres : ce sont LES secrets.
+//   tout ce qu'un module range via ctx.secrets chiffre aussi -- c'est le sens
+//                                             meme de ce rangement (cle d'API
+//                                             Riot, jeton Spotify d'un module).
+//   clientId                                  en clair : il circule deja dans
+//                                             l'URL d'autorisation, et le lire
+//                                             aide enormement au support.
+//   compte, scope, expiresIn, connecteA       en clair : ce ne sont pas des
+//                                             secrets, et un tokens.json
+//                                             totalement opaque serait
+//                                             indiagnostiquable.
+const CLES_SECRETES = new Set(['clientSecret', 'accessToken', 'refreshToken']);
+
+// Applique `fn` a chaque valeur sensible et renvoie une COPIE.
+//
+// La copie n'est pas du zele : le cache memoire garde la version en clair (le
+// reste du code lit des jetons utilisables), et seul ce qui part sur le disque
+// est chiffre. Transformer sur place chiffrerait le cache au premier
+// enregistrement, et tout casserait au deuxieme.
+function transformerSecrets(t, fn) {
+  const bloc = (o) => {
+    if (!estObjet(o)) return o;
+    const copie = { ...o };
+    for (const [cle, valeur] of Object.entries(copie)) {
+      if (CLES_SECRETES.has(cle) && typeof valeur === 'string') copie[cle] = fn(valeur);
+    }
+    return copie;
+  };
+
+  const parId = (o, traiter) =>
+    estObjet(o) ? Object.fromEntries(Object.entries(o).map(([id, v]) => [id, traiter(v)])) : o;
+
+  const sortie = { ...t };
+  if (sortie.twitchApp) sortie.twitchApp = bloc(sortie.twitchApp);
+  if (sortie.twitch) sortie.twitch = bloc(sortie.twitch);
+  if (sortie.connecteurs) sortie.connecteurs = parId(sortie.connecteurs, bloc);
+  if (sortie.modules) {
+    sortie.modules = parId(sortie.modules, (m) =>
+      estObjet(m)
+        ? Object.fromEntries(Object.entries(m).map(([cle, v]) => [cle, typeof v === 'string' ? fn(v) : v]))
+        : m
+    );
+  }
+  return sortie;
+}
+
+// Reste-t-il un secret en clair sur le disque ?
+function contientDuClair(t) {
+  let clair = false;
+  transformerSecrets(t, (v) => {
+    if (v && !coffre.estChiffre(v)) clair = true;
+    return v;
+  });
+  return clair;
+}
+
+// Migration : chiffre une bonne fois ce qui trainait en clair.
+//
+// L'audit proposait d'attendre la premiere ecriture naturelle. Mais elle peut
+// ne jamais venir : un streamer qui ne retouche ni Twitch ni Spotify garderait
+// ses jetons en clair pour toujours. On reecrit donc le fichier au demarrage,
+// une seule fois, et seulement s'il y a vraiment quelque chose a chiffrer.
+export function chiffrerSecretsAuRepos() {
+  if (!coffre.disponible()) return false;
+
+  // On interroge le fichier BRUT, pas lireTokens() : celui-ci rend des valeurs
+  // deja dechiffrees, qui paraissent donc en clair a tous les coups -- on
+  // reecrirait le fichier a chaque demarrage sans jamais rien migrer.
+  if (!contientDuClair(lire(TOKENS_PATH, {}))) return false;
+
+  sauverTokens(lireTokens());
+  return true;
+}
+
 // tokens.json etait relu et reanalyse a CHAQUE appel -- et il y en a beaucoup :
 // l'etat general du dashboard en fait deux, l'icone pres de l'horloge le
 // redemande toutes les 5 secondes, et chaque ctx.secrets.lire() d'un module en
@@ -139,13 +216,14 @@ function dateTokens() {
 export function lireTokens() {
   const mtime = dateTokens();
   if (tokensCache && mtime === tokensMtime) return tokensCache;
-  tokensCache = lire(TOKENS_PATH, {});
+  tokensCache = transformerSecrets(lire(TOKENS_PATH, {}), coffre.dechiffrer);
   tokensMtime = mtime;
   return tokensCache;
 }
 
 export function sauverTokens(t) {
-  ecrireAtomique(TOKENS_PATH, JSON.stringify(t, null, 2));
+  ecrireAtomique(TOKENS_PATH, JSON.stringify(transformerSecrets(t, coffre.chiffrer), null, 2));
+  // Le cache reste en CLAIR : c'est ce que tout le reste du code attend.
   tokensCache = t;
   tokensMtime = dateTokens();
   return t;

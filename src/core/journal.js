@@ -58,14 +58,44 @@ const jour = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate
 // inventee. (JSON.stringify, lui, echappe deja les retours a la ligne.)
 const uneLigne = (s) => s.replace(/[\r\n]+/g, ' ');
 
+// Un secret ne doit jamais atterrir dans le journal.
+//
+// Ce n'est pas theorique : Twurple met l'URL COMPLETE de la requete dans le
+// message de ses erreurs HTTP. Un simple « invalid client » au demarrage
+// ecrivait donc
+//
+//   token?grant_type=refresh_token&client_id=...&client_secret=...&refresh_token=...
+//
+// en clair dans le fichier du jour — celui qu'on demande au streamer d'envoyer
+// pour du support, et qui reste 14 jours sur son disque. Chiffrer tokens.json
+// pendant qu'on laisse fuiter les memes valeurs a cote n'aurait servi a rien.
+//
+// On masque a la source, dans texte() : la console, le tampon du dashboard et
+// le fichier passent tous par la.
+const MOTIFS_SECRETS = [
+  // Parametres d'URL ou de corps de formulaire.
+  /((?:client_secret|refresh_token|access_token|id_token)=)[^&\s"']+/gi,
+  // En-tete d'autorisation.
+  /((?:Bearer|Basic|OAuth)[ ])[A-Za-z0-9._~+/=-]{8,}/gi,
+  // Les memes valeurs, telles qu'elles apparaissent dans un JSON recopie.
+  /(["']?(?:clientSecret|client_secret|refreshToken|refresh_token|accessToken|access_token)["']?[ ]*[:=][ ]*["'])[^"']+/gi,
+];
+
+function masquer(s) {
+  let out = s;
+  for (const motif of MOTIFS_SECRETS) out = out.replace(motif, '$1<masque>');
+  return out;
+}
+
 // Une erreur transmise telle quelle donne "[object Object]" dans le dashboard.
 function texte(v) {
-  if (v instanceof Error) return uneLigne(v.message || String(v));
-  if (typeof v === 'string') return uneLigne(v);
+  const propre = (s) => masquer(uneLigne(s));
+  if (v instanceof Error) return propre(v.message || String(v));
+  if (typeof v === 'string') return propre(v);
   try {
-    return JSON.stringify(v);
+    return propre(JSON.stringify(v));
   } catch {
-    return uneLigne(String(v));
+    return propre(String(v));
   }
 }
 

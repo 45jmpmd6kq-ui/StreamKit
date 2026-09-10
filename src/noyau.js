@@ -27,6 +27,7 @@ import * as maj from './core/maj.js';
 import * as diffusion from './core/diffusion.js';
 import * as compteurs from './core/compteurs.js';
 import * as connecteurs from './core/connecteurs.js';
+import * as coffre from './core/coffre.js';
 import { creerServeur, ecouter, ENTETES_PAGE_OAUTH } from './core/serveur.js';
 
 const log = journal.pour('noyau');
@@ -58,10 +59,20 @@ function canauxTwitch(t) {
 export async function demarrerNoyau({
   updater = UPDATER_PAR_DEFAUT,
   demarrageAuto = DEMARRAGE_AUTO_ABSENT,
+  // safeStorage d'Electron, injecte comme l'updater : le noyau ne sait pas qui
+  // l'implemente, et en ligne de commande il n'y a simplement personne.
+  coffreSysteme = null,
 } = {}) {
   preparerDossiers();
   journal.purger();
   compteurs.charger();
+
+  // AVANT la premiere lecture de tokens.json : sans coffre branche, les
+  // secrets deja chiffres reviendraient vides.
+  coffre.brancher(coffreSysteme);
+  if (store.chiffrerSecretsAuRepos()) {
+    log.ok('Secrets chiffres sur le disque (cle liee a ta session Windows).');
+  }
 
   const config = store.chargerConfig();
   const PORT = config.reseau?.port ?? 4455;

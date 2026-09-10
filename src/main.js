@@ -10,7 +10,7 @@
 // Ce qui NE change pas : le serveur HTTP local reste, parce qu'OBS a besoin
 // d'URLs pour ses sources Navigateur. La fenetre affiche simplement ce serveur.
 
-import { app, BrowserWindow, Tray, Menu, shell, dialog, nativeImage } from 'electron';
+import { app, BrowserWindow, Tray, Menu, shell, dialog, nativeImage, safeStorage } from 'electron';
 import pkg from 'electron-updater';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -399,7 +399,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(async () => {
     try {
-      noyau = await demarrerNoyau({ updater, demarrageAuto });
+      noyau = await demarrerNoyau({ updater, demarrageAuto, coffreSysteme: safeStorage });
     } catch (e) {
       // Typiquement : le port est deja pris. Sans fenetre ni icone, le streamer
       // n'aurait aucun moyen de comprendre pourquoi rien ne se passe.
