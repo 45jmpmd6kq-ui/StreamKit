@@ -14,6 +14,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { existsSync, readdirSync, createReadStream, statSync } from 'node:fs';
 import { join, normalize, extname, sep } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { DASHBOARD_DIR, MODULES_DIR, JOURNAUX_DIR } from './paths.js';
 import * as journal from './journal.js';
 import * as diffusion from './diffusion.js';
@@ -92,6 +93,82 @@ async function corpsJson(req, limite = 512 * 1024) {
   });
 }
 
+// --- Content-Security-Policy -----------------------------------------------
+//
+// Le dashboard, les overlays et l'API partagent la MEME origine, et les jetons
+// du streamer sont derriere. Un script qui arriverait a s'executer dans une de
+// ces pages (un pseudo de viewer mal echappe, une regression dans un esc())
+// aurait donc acces a tout. La CSP est la seconde barriere : meme dans ce cas,
+// il ne peut ni charger du code d'ailleurs, ni ressortir quoi que ce soit.
+//
+// script-src par NONCE plutot que 'unsafe-inline' : chaque overlay porte son
+// <script> inline, et c'est justement ce qui le rend autonome -- un dossier de
+// module se copie tel quel. On lui donne donc un jeton, different a chaque
+// reponse. Cela ne tient que parce qu'aucune page n'utilise onclick= ni
+// javascript: : ces deux formes-la, le nonce ne les couvre pas.
+//
+// style-src reste 'unsafe-inline'. Le dashboard pose des attributs style=, que
+// le nonce ne couvre pas non plus ; il faudrait style-src-attr, que Firefox ne
+// connait pas -- et « Ouvrir dans le navigateur » y enverrait un dashboard sans
+// mise en page. Un style injecte n'execute pas de code : le risque n'a rien de
+// comparable a celui d'un script.
+function csp(nonce) {
+  return [
+    "default-src 'self'",
+    nonce ? "script-src 'self' 'nonce-" + nonce + "'" : "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    // data: pour le favicon SVG du dashboard ; media.valorant-api.com pour les
+    // icones de rang du bandeau Valorant, servies par l'editeur du jeu.
+    "img-src 'self' data: https://media.valorant-api.com",
+    // fetch et EventSource des overlays : tout est local, rien ne sort.
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'none'",
+  ].join('; ');
+}
+
+// Entetes de la page de retour OAuth (voir auth.pageRetour). Elle recopie un
+// message venu de Twitch ou de Spotify (?error=...) : c'est le seul HTML de
+// StreamKit dont le contenu vient de l'exterieur. Il est echappe, mais ici on
+// peut aller jusqu'a script-src 'none' -- cette page n'a aucun script.
+export const ENTETES_PAGE_OAUTH = {
+  'Content-Type': 'text/html; charset=utf-8',
+  'Cache-Control': 'no-store',
+  'Content-Security-Policy':
+    "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; " +
+    "form-action 'none'; frame-ancestors 'none'",
+  'X-Content-Type-Options': 'nosniff',
+};
+
+// Sert une page HTML en y posant le nonce de ses scripts.
+//
+// On lit le fichier au lieu de le diffuser en flux : il faut le reecrire. Ce
+// sont quelques kilo-octets, et ces pages ne sont de toute facon jamais mises
+// en cache -- contrairement a leurs images, qui passent par servirFichier.
+async function servirHtml(res, chemin) {
+  let html;
+  try {
+    html = await readFile(chemin, 'utf8');
+  } catch {
+    return texte(res, 404, 'Introuvable');
+  }
+
+  const nonce = randomBytes(16).toString('base64');
+  // « <script> » et « <script src=... > », jamais « </script> » : le lookahead
+  // impose une espace ou le chevron fermant juste apres le nom de la balise.
+  html = html.replace(/<script(?=[\s>])/gi, '<script nonce="' + nonce + '"');
+
+  res.writeHead(200, {
+    'Content-Type': MIME['.html'],
+    'Cache-Control': 'no-cache',
+    'Content-Security-Policy': csp(nonce),
+    'X-Content-Type-Options': 'nosniff',
+  });
+  res.end(html);
+}
+
 // Resout `relatif` DANS `base`, ou renvoie null si on en sort.
 //
 // normalize() reduit les « .. » : il suffit ensuite de verifier que le resultat
@@ -128,6 +205,12 @@ function servirFichier(res, base, relatif, { cache = false } = {}) {
     res.writeHead(200, {
       'Content-Type': MIME[extname(cible).toLowerCase()] ?? 'application/octet-stream',
       'Cache-Control': cache ? 'public, max-age=3600' : 'no-cache',
+      // Plancher : ces reponses-la sont des images, des scripts et des feuilles
+      // de style, jamais du HTML a nonce (les pages passent par servirHtml).
+      'Content-Security-Policy': csp(null),
+      // Sans nosniff, un fichier de type inconnu tombe en octet-stream et le
+      // navigateur devine -- il peut donc decider d'executer ce qu'on lui sert.
+      'X-Content-Type-Options': 'nosniff',
     });
     flux.pipe(res);
   });
@@ -237,7 +320,9 @@ export function creerServeur(app) {
 
         const def = (m.manifeste.overlays ?? []).find((o) => o.chemin === vue);
         if (!def) return texte(res, 404, 'Overlay inconnu');
-        return servirFichier(res, dossierOverlay, def.fichier);
+        const page = cheminSous(dossierOverlay, def.fichier);
+        if (!page) return texte(res, 403, 'Interdit');
+        return servirHtml(res, page);
       }
 
       // --- Pages d'un module -----------------------------------------------
@@ -271,7 +356,9 @@ export function creerServeur(app) {
 
         const def = (m.manifeste.pages ?? []).find((p) => p.chemin === page);
         if (!def) return texte(res, 404, 'Page inconnue');
-        return servirFichier(res, dossierPages, def.fichier);
+        const fichier = cheminSous(dossierPages, def.fichier);
+        if (!fichier) return texte(res, 403, 'Interdit');
+        return servirHtml(res, fichier);
       }
 
       // --- API -------------------------------------------------------------
@@ -455,8 +542,7 @@ export function creerServeur(app) {
       if (chemin === '/' || chemin === '/index.html') {
         const page = join(DASHBOARD_DIR, 'index.html');
         if (!existsSync(page)) return texte(res, 200, 'StreamKit demarre. Dashboard non installe.');
-        res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
-        return res.end(await readFile(page));
+        return servirHtml(res, page);
       }
 
       return servirFichier(res, DASHBOARD_DIR, chemin.slice(1));

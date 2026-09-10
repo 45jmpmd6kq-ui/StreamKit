@@ -27,7 +27,7 @@ import * as maj from './core/maj.js';
 import * as diffusion from './core/diffusion.js';
 import * as compteurs from './core/compteurs.js';
 import * as connecteurs from './core/connecteurs.js';
-import { creerServeur, ecouter } from './core/serveur.js';
+import { creerServeur, ecouter, ENTETES_PAGE_OAUTH } from './core/serveur.js';
 
 const log = journal.pour('noyau');
 
@@ -387,7 +387,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
 
     async callbackConnecteur(id, url, res) {
       const r = await connecteurs.traiterRetour(id, url, PORT);
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, ENTETES_PAGE_OAUTH);
       res.end(auth.pageRetour(r));
       if (r.ok) await app.rechargerModulesDeConnecteur(id);
     },
@@ -683,7 +683,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
 
     async callbackTwitch(url, res) {
       const r = await auth.traiterRetour(url, PORT);
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, ENTETES_PAGE_OAUTH);
       res.end(auth.pageRetour(r));
     },
 
@@ -712,7 +712,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
         }
       }
 
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, ENTETES_PAGE_OAUTH);
       res.end(auth.pageRetour(resultat));
 
       // L'autorisation change ce que le module peut faire : on le relance.

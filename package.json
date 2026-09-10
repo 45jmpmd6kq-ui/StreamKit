@@ -34,7 +34,14 @@
     "directories": {
       "output": "livraison"
     },
-    "asar": false,
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
     "files": [
       "src/**/*",
       "package.json",

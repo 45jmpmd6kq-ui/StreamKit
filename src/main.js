@@ -188,6 +188,29 @@ const demarrageAuto = {
 // Lance-t-on depuis le demarrage de session ? Si oui, on n'ouvre pas la fenetre.
 const lanceAuDemarrage = process.argv.includes('--cache');
 
+// --- Liens exterieurs -------------------------------------------------------
+//
+// shell.openExternal ne se contente pas d'ouvrir un navigateur : il remet l'URL
+// au SYSTEME, qui la confie au gestionnaire du protocole. « file: » ouvre
+// l'explorateur, et n'importe quel logiciel installe enregistre le sien --
+// « steam: », « ms-settings: », « vscode: »... StreamKit n'emet que des liens
+// web (console Twitch, tableau de bord Spotify, un clip) : on n'accepte donc
+// que des liens web, et on jette le reste avec une ligne de journal.
+function ouvrirDehors(url) {
+  let schema;
+  try {
+    schema = new URL(url).protocol;
+  } catch {
+    log.warn('Lien exterieur ignore (URL illisible) : ' + url);
+    return;
+  }
+  if (schema !== 'http:' && schema !== 'https:') {
+    log.warn('Lien exterieur refuse (schema « ' + schema + ' ») : ' + url);
+    return;
+  }
+  shell.openExternal(url);
+}
+
 // --- Fenetre ----------------------------------------------------------------
 
 function creerFenetre() {
@@ -233,8 +256,23 @@ function creerFenetre() {
   // Les liens externes (console Twitch, tableau de bord Spotify, clips) partent
   // dans le vrai navigateur : le streamer y est deja connecte.
   fenetre.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    ouvrirDehors(url);
     return { action: 'deny' };
+  });
+
+  // Cette fenetre ne doit JAMAIS quitter le dashboard local.
+  //
+  // Sans cette garde, un lien sans target=_blank, une redirection ou un
+  // window.location suffisait a lui faire charger un site exterieur -- dans une
+  // fenetre qui, elle, a le droit de parler a l'API locale et donc aux jetons.
+  // On bloque ; si c'etait un lien web, il part dans le vrai navigateur, et le
+  // streamer voit exactement ce qu'il aurait vu avec un clic normal.
+  const base = 'http://127.0.0.1:' + noyau.port + '/';
+  fenetre.webContents.on('will-navigate', (e, url) => {
+    if (url.startsWith(base)) return;
+    e.preventDefault();
+    log.warn('Navigation hors du dashboard bloquee : ' + url);
+    ouvrirDehors(url);
   });
 
   // Fermer la fenetre ne quitte pas : le bot doit continuer pendant le live.
@@ -283,7 +321,7 @@ function majMenuIcone() {
     { label: 'Ouvrir le dashboard', click: () => creerFenetre() },
     {
       label: 'Ouvrir dans le navigateur',
-      click: () => shell.openExternal('http://127.0.0.1:' + noyau.port + '/'),
+      click: () => ouvrirDehors('http://127.0.0.1:' + noyau.port + '/'),
     },
     { type: 'separator' },
     {

@@ -30,8 +30,13 @@ const app = {
     // quelque part : sans vrai dossier sur le disque, ni la traversee ni le
     // dossier-servi-comme-fichier ne voudraient dire quoi que ce soit.
     // roue-rl porte overlay/cars/, le dossier des 137 icones de voitures.
-    get: (id) =>
-      ['musique', 'roue-rl'].includes(id) ? { id, dossier: id, manifeste: { overlays: [] } } : undefined,
+    get: (id) => {
+      if (!['musique', 'roue-rl'].includes(id)) return undefined;
+      // roue-rl declare son vrai overlay : c'est lui qui porte un <script>
+      // inline, donc lui qui a besoin d'un nonce.
+      const overlays = id === 'roue-rl' ? [{ chemin: 'roue', fichier: 'roue.html' }] : [];
+      return { id, dossier: id, manifeste: { overlays } };
+    },
     vue: () => null,
     vues: () => [],
   },
@@ -60,7 +65,7 @@ function requete({ methode = 'GET', chemin = '/', entetes = {}, corps, hote = '1
       (res) => {
         let b = '';
         res.on('data', (c) => (b += c));
-        res.on('end', () => resolve({ code: res.statusCode, corps: b }));
+        res.on('end', () => resolve({ code: res.statusCode, corps: b, entetes: res.headers }));
       }
     );
     r.on('error', reject);
@@ -190,6 +195,49 @@ test('une URL mal encodee repond 400 au lieu de rester pendue', { timeout: 5000 
   // ouverte jusqu'au delai du navigateur.
   const r = await requete({ chemin: '/overlay/%E0%A4%A' });
   assert.equal(r.code, 400);
+});
+
+// --- Content-Security-Policy ----------------------------------------------
+// Seconde barriere : le dashboard, les overlays et l'API partagent une origine,
+// et les jetons du streamer sont derriere.
+
+test('le dashboard est servi avec une CSP et un nonce de script', async () => {
+  const r = await requete({ chemin: '/' });
+  const politique = r.entetes['content-security-policy'] ?? '';
+
+  assert.match(politique, /script-src 'self' 'nonce-[^']+'/, 'script-src doit porter un nonce');
+  assert.doesNotMatch(politique, /script-src[^;]*unsafe-inline/, "script-src ne doit pas etre 'unsafe-inline'");
+  assert.match(politique, /object-src 'none'/);
+  assert.match(politique, /frame-ancestors 'none'/);
+  assert.match(politique, /base-uri 'none'/);
+  assert.equal(r.entetes['x-content-type-options'], 'nosniff');
+
+  // Le nonce doit REELLEMENT etre pose sur la balise, sinon la CSP bloquerait
+  // le dashboard au lieu de le proteger.
+  const [, nonce] = politique.match(/'nonce-([^']+)'/);
+  assert.ok(r.corps.includes('nonce="' + nonce + '"'), 'la balise script doit porter le meme nonce');
+});
+
+test('un overlay recoit un nonce, different a chaque chargement', async () => {
+  // Un nonce rejoue serait un nonce inutile : une page qui a vu le precedent
+  // pourrait s'en servir au chargement suivant.
+  const premier = await requete({ chemin: '/overlay/roue-rl/roue' });
+  const second = await requete({ chemin: '/overlay/roue-rl/roue' });
+
+  assert.equal(premier.code, 200);
+  const n1 = premier.entetes['content-security-policy'].match(/'nonce-([^']+)'/)[1];
+  const n2 = second.entetes['content-security-policy'].match(/'nonce-([^']+)'/)[1];
+
+  assert.notEqual(n1, n2, 'deux chargements ne doivent pas partager le meme nonce');
+  assert.ok(premier.corps.includes('<script nonce="' + n1 + '">'), 'le script inline doit etre autorise');
+});
+
+test('un fichier statique porte une CSP sans nonce et nosniff', async () => {
+  const r = await requete({ chemin: '/style.css' });
+  assert.equal(r.code, 200);
+  assert.match(r.entetes['content-security-policy'], /script-src 'self'/);
+  assert.doesNotMatch(r.entetes['content-security-policy'], /nonce-/);
+  assert.equal(r.entetes['x-content-type-options'], 'nosniff');
 });
 
 // --- Page de retour OAuth : pas de script injecte -------------------------
