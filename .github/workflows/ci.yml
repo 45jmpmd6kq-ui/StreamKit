@@ -1,0 +1,69 @@
+# Verification automatique de chaque changement.
+#
+# StreamKit se met a jour tout seul chez le streamer : une release fautive
+# n'est pas un bug qu'on corrige tranquillement, c'est un bug qu'on POUSSE.
+# D'ou deux garde-fous distincts :
+#
+#   tests       rapides, sur chaque poussee et chaque proposition de fusion ;
+#   installeur  plus lent, uniquement sur main : il verifie qu'on sait encore
+#               FABRIQUER le paquet, ce que les tests ne disent pas.
+#
+# Windows uniquement : c'est la seule plateforme que StreamKit supporte, et
+# une partie du code en depend (dossier %APPDATA%, demarrage de session,
+# page de code de la console). Verifier sous Linux validerait une
+# configuration qui n'existe chez personne.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: # pour relancer a la main depuis l'onglet Actions
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # doit rester >= au "engines" de package.json
+          cache: npm
+
+      # npm ci et pas npm install : on installe EXACTEMENT le package-lock,
+      # sinon la CI testerait d'autres versions que celles qu'on livre.
+      - run: npm ci
+
+      - run: npm test
+
+  installeur:
+    name: Construction de l'installeur
+    runs-on: windows-latest
+    if: github.ref == 'refs/heads/main'
+    needs: tests # inutile de construire si les tests sont rouges
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # --publish never, explicitement : electron-builder publie de lui-meme
+      # dans certains contextes d'integration continue. Une release ne part
+      # QUE quand on lance « npm run publier » a la main.
+      - run: npx electron-builder --win --publish never
+
+      # L'installeur reste telechargeable une semaine depuis l'onglet Actions :
+      # de quoi essayer un correctif sans rien publier.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StreamKit-Setup
+          path: livraison/*.exe
+          retention-days: 7
+          if-no-files-found: error

@@ -8,6 +8,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "node src/index.js",
+    "test": "node --test \"tests/*.test.js\"",
     "icone": "node scripts/faire-icone.mjs",
     "dist": "electron-builder --win",
     "publier": "electron-builder --win --publish always"

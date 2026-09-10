@@ -27,6 +27,7 @@ chacun le même socle (config, .bat, serveur web local, overlay OBS).
 npm install
 npm start          # application Electron
 npm run dev        # noyau seul, sans Electron (http://127.0.0.1:4455)
+npm test           # la suite de tests (~1 s, aucune dépendance)
 ```
 
 Ou double-clic sur `lancer-dev.bat`.
@@ -100,6 +101,37 @@ overlays et la persistance.
 Le manifeste décrit les réglages ; **le dashboard fabrique le formulaire**. On
 n'écrit jamais d'écran de réglages à la main — c'est ce qui rend le 7ᵉ module
 aussi bon marché que le 2ᵉ.
+
+## Tests
+
+```bash
+npm test
+```
+
+`node --test` intégré, aucune dépendance, une seconde. Les tests vivent dans
+`tests\` et pas dans `src\` : l'installeur n'embarque que `src\**`, ils ne
+partent donc pas chez le streamer.
+
+Ce n'est pas une suite exhaustive, et ce n'est pas le but. Elle tient les
+endroits où une régression se paie cher :
+
+| Fichier | Ce qu'il protège |
+|---|---|
+| `serveur.test.js` | Le garde-fou de l'API locale — trois failles réellement exploitables autrefois : CSRF depuis un onglet ouvert, rebinding DNS, script injecté dans la page de retour OAuth. |
+| `store.test.js` | Les deux promesses du stockage : une mise à jour ne perd jamais les réglages, un fichier abîmé n'empêche jamais de démarrer. |
+| `schema.test.js` | La frontière de confiance des réglages, dont l'aller-retour qui doit laisser les secrets intacts. |
+| `registre.test.js` | Le contrat des modules livrés : manifestes valides, overlays qui existent, boutons qui font quelque chose, aucun secret vers le dashboard. |
+| `maj.test.js` | La comparaison de versions — celle qui décide si une release est proposée ou non. |
+
+Un test qui touche au disque pose `STREAMKIT_DATA` sur un dossier jetable
+**avant** d'importer le code : `paths.js` lit cette variable au chargement, pas
+à l'appel. Sans cette précaution, la suite écrirait dans le vrai
+`%APPDATA%\StreamKit` — donc sur la configuration et les jetons de qui la
+lance. C'est le rôle de `tests\aide.js`.
+
+La CI (`.github\workflows\ci.yml`) rejoue tout ça sous Windows à chaque
+poussée, et reconstruit l'installeur sur `main`. Elle ne publie jamais :
+`--publish never` est explicite, une release ne part qu'à la main.
 
 ## Publier une mise à jour
 
