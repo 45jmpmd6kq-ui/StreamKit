@@ -175,6 +175,17 @@ Les abonnements pris via `ctx.twitch.*` et les minuteurs pris via
 `ctx.minuteur.*` sont **retirés automatiquement** quand le module s'arrête.
 `arreter()` ne sert qu'à sauver un état ou fermer une ressource externe.
 
+`ctx.minuteur.intervalle` ne **double jamais un tour** : si ta fonction est
+encore en train de travailler quand le tic suivant arrive, ce tic est sauté.
+Tu peux donc y mettre des appels réseau sans compter les millisecondes — un
+tour qui dure 40 s sur un rythme de 2 s ne produira pas vingt tours en
+parallèle. Une exception levée dans un tour est journalisée sous le nom de ton
+module au lieu de remonter en erreur anonyme.
+
+En contrepartie, prends tes minuteurs **par le contexte** : un `setInterval`
+ou un `setTimeout` posé directement échappe à tout ça — il n'est ni protégé,
+ni coupé à l'arrêt du module.
+
 ## Les overlays
 
 Une page HTML par vue, dans `overlay/`. Elle s'abonne au flux du module :

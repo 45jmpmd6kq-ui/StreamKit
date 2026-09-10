@@ -57,6 +57,18 @@ function texte(res, code, msg) {
 // Invisible sur un petit formulaire, systematique sur une longue blocklist.
 async function corpsJson(req, limite = 512 * 1024) {
   return new Promise((resolve, reject) => {
+    // Seconde barriere anti-CSRF, independante du controle d'origine.
+    //
+    // Une page web ne peut envoyer QUE trois types de contenu sans declencher
+    // un preflight CORS : text/plain, multipart/form-data et
+    // application/x-www-form-urlencoded. En n'acceptant que application/json,
+    // on sort du lot des requetes « simples » : le navigateur devra demander
+    // l'autorisation avant d'envoyer quoi que ce soit, et ne l'obtiendra pas.
+    const type = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
+    if (type && type !== 'application/json') {
+      return reject(new Error('format attendu : application/json'));
+    }
+
     const morceaux = [];
     let taille = 0;
     req.on('data', (c) => {
@@ -93,6 +105,49 @@ function servirFichier(res, base, relatif, { cache = false } = {}) {
   createReadStream(cible).pipe(res);
 }
 
+// --- Qui a le droit de nous parler ? ---------------------------------------
+//
+// N'ecouter que sur la boucle locale protege du RESEAU, pas du NAVIGATEUR du
+// streamer -- et c'est par la que passent les deux attaques qui nous concernent :
+//
+//   CSRF : n'importe quelle page ouverte dans un onglet peut envoyer un POST
+//   vers 127.0.0.1:4455. Sans controle, elle reecrit les identifiants Twitch,
+//   declenche une action de module ou force une mise a jour. Le navigateur
+//   joint TOUJOURS un en-tete Origin a une requete qui change quelque chose :
+//   il suffit de le lire.
+//
+//   Rebinding DNS : un domaine attaquant qui resout vers 127.0.0.1 devient
+//   MEME ORIGINE que le dashboard -- Origin devient legitime, et la page lit
+//   alors tout ce que l'API renvoie. La parade est ailleurs : ce domaine reste
+//   dans l'en-tete Host, et nous ne repondons qu'a des noms qu'on reconnait.
+//
+// Les deux controles sont donc complementaires, aucun ne remplace l'autre.
+
+const HOTES_LOCAUX = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+
+// « 127.0.0.1:4455 », « localhost », « [::1]:4455 » -> autorise ou non.
+function hoteLocal(valeur, port) {
+  if (!valeur) return false; // HTTP/1.1 impose Host : son absence est louche
+  // On coupe au DERNIER deux-points, et seulement s'il suit le crochet
+  // fermant : sans ca, « [::1]:4455 » serait decoupe au milieu de l'adresse.
+  const i = valeur.lastIndexOf(':');
+  const avecPort = i > valeur.lastIndexOf(']');
+  const nom = (avecPort ? valeur.slice(0, i) : valeur).toLowerCase();
+  const p = avecPort ? valeur.slice(i + 1) : '';
+  if (!HOTES_LOCAUX.has(nom)) return false;
+  return !p || p === String(port);
+}
+
+function origineLocale(origine, port) {
+  if (!origine) return true; // pas d'Origin : navigation directe, retour OAuth
+  try {
+    // « null » (iframe bac a sable) fait echouer le parsing : c'est voulu.
+    return hoteLocal(new URL(origine).host, port);
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 export function creerServeur(app) {
@@ -103,6 +158,17 @@ export function creerServeur(app) {
     const url = new URL(req.url, 'http://127.0.0.1');
     const chemin = decodeURIComponent(url.pathname);
     const methode = req.method ?? 'GET';
+
+    if (!hoteLocal(req.headers.host, app.port) || !origineLocale(req.headers.origin, app.port)) {
+      // On ne dit pas pourquoi : une page qui sonde n'a pas a savoir si elle
+      // s'est trompee d'hote ou d'origine. Le journal, lui, le dit.
+      log.warn(
+        'Requete refusee (hote « ' + (req.headers.host ?? '?') + ' »' +
+          (req.headers.origin ? ', origine « ' + req.headers.origin + ' »' : '') +
+          ') : ' + methode + ' ' + chemin
+      );
+      return texte(res, 403, 'Interdit');
+    }
 
     try {
       // --- Overlays OBS ----------------------------------------------------

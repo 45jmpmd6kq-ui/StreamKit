@@ -9,7 +9,7 @@
 // l'ancien fichier reste intact au lieu d'etre tronque. Un tokens.json corrompu
 // = tout reinstaller, on ne prend pas ce risque.
 
-import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_PATH, TOKENS_PATH, ETAT_DIR } from './paths.js';
 
@@ -110,12 +110,40 @@ export function sauverModule(id, patch) {
 
 // --- Secrets ----------------------------------------------------------------
 
+// tokens.json etait relu et reanalyse a CHAQUE appel -- et il y en a beaucoup :
+// l'etat general du dashboard en fait deux, l'icone pres de l'horloge le
+// redemande toutes les 5 secondes, et chaque ctx.secrets.lire() d'un module en
+// declenche un. Soit 0,25 ms de disque bloquant a chaque fois, sur la boucle
+// d'evenements qui sert aussi le chat.
+//
+// On garde donc le contenu en memoire, en relisant seulement si le fichier a
+// change (meme methode que le catalogue de voitures) : une edition a la main
+// reste prise en compte, mais l'appel courant ne coute plus qu'un statSync.
+let tokensCache = null;
+let tokensMtime = -1;
+
+function dateTokens() {
+  try {
+    return statSync(TOKENS_PATH).mtimeMs;
+  } catch {
+    return 0; // fichier absent : premier lancement
+  }
+}
+
+// ATTENTION : l'objet renvoye est PARTAGE, il est en lecture seule.
+// Pour modifier quoi que ce soit, passer par majTokens().
 export function lireTokens() {
-  return lire(TOKENS_PATH, {});
+  const mtime = dateTokens();
+  if (tokensCache && mtime === tokensMtime) return tokensCache;
+  tokensCache = lire(TOKENS_PATH, {});
+  tokensMtime = mtime;
+  return tokensCache;
 }
 
 export function sauverTokens(t) {
   ecrireAtomique(TOKENS_PATH, JSON.stringify(t, null, 2));
+  tokensCache = t;
+  tokensMtime = dateTokens();
   return t;
 }
 

@@ -44,7 +44,7 @@ const ICONE = { debug: '·', info: 'i', succes: '✅', avert: '⚠️', erreur: 
 const tampon = [];
 const abonnes = new Set();
 let compteur = 0;
-let niveauConsole = 'info'; // le debug ne pollue pas la console, mais reste dans le dashboard
+const NIVEAU_CONSOLE = 'info'; // le debug ne pollue pas la console, mais reste dans le dashboard
 
 const pad = (n) => String(n).padStart(2, '0');
 const heure = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -85,7 +85,7 @@ function ajouter(niveau, source, ...morceaux) {
   tampon.push(entree);
   if (tampon.length > TAILLE_TAMPON) tampon.shift();
 
-  if (RANG[niveau] >= RANG[niveauConsole]) {
+  if (RANG[niveau] >= RANG[NIVEAU_CONSOLE]) {
     console.log(`[${entree.h}] ${ICONE[niveau]} [${source}] ${entree.message}`);
   }
 
@@ -136,10 +136,6 @@ export function sources() {
 export function abonner(fn) {
   abonnes.add(fn);
   return () => abonnes.delete(fn);
-}
-
-export function niveauDeConsole(n) {
-  if (RANG[n] !== undefined) niveauConsole = n;
 }
 
 // Efface les journaux trop vieux. Appele une fois au demarrage : un streamer ne

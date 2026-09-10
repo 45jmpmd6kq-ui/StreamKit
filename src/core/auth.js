@@ -178,6 +178,17 @@ export async function traiterRetour(url, port) {
 }
 
 // Petite page HTML de retour : le streamer voit un resultat clair, pas du JSON.
+//
+// Le message n'est PAS forcement de nous : Spotify et Twitch renvoient leur
+// refus dans l'URL (?error=...), et on le recopie pour que le streamer sache
+// ce qu'on lui reproche. Sans echappement, il suffisait d'envoyer le streamer
+// sur /callback/connecteur/spotify?error=<script>... pour executer du code sur
+// notre propre origine -- donc avec un acces complet a l'API locale, jetons
+// compris. Tout ce qui vient de l'exterieur passe par echapper().
+function echapper(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+}
+
 export function pageRetour({ ok, message }) {
   const couleur = ok ? '#22c55e' : '#f43f5e';
   const titre = ok ? 'Autorisation reussie' : 'Autorisation echouee';
@@ -189,6 +200,6 @@ export function pageRetour({ ok, message }) {
     '.c{max-width:32rem;padding:2.5rem;text-align:center}' +
     'h1{font-size:1.4rem;margin:0 0 .75rem;color:' + couleur + '}' +
     'p{margin:0;color:#9a9aae}</style></head><body><div class="c">' +
-    '<h1>' + titre + '</h1><p>' + message + '</p></div></body></html>'
+    '<h1>' + titre + '</h1><p>' + echapper(message ?? '') + '</p></div></body></html>'
   );
 }

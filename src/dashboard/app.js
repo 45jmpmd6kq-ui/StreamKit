@@ -1202,17 +1202,42 @@ verifierMaj();
 
 // L'état général bouge sans qu'on y touche (chat qui se reconnecte, module qui
 // tombe) : on le rafraîchit régulièrement, c'est peu coûteux en local.
-setInterval(async () => {
-  await rafraichirEtat();
-  const avant = JSON.stringify(etat.modules.map((m) => [m.id, m.etat, m.actif]));
-  etat.modules = await api('/api/modules');
-  if (JSON.stringify(etat.modules.map((m) => [m.id, m.etat, m.actif])) !== avant) {
-    dessinerRail();
-    dessinerDetail();
+let cycleEnCours = false;
+
+async function cycleRafraichissement() {
+  if (cycleEnCours) return; // un tour lent ne doit pas être doublé par le suivant
+  cycleEnCours = true;
+  try {
+    await rafraichirEtat();
+    const avant = JSON.stringify(etat.modules.map((m) => [m.id, m.etat, m.actif]));
+    etat.modules = await api('/api/modules');
+    if (JSON.stringify(etat.modules.map((m) => [m.id, m.etat, m.actif])) !== avant) {
+      dessinerRail();
+      dessinerDetail();
+    }
+    await chargerSante();
+    await chargerConnecteurs();
+  } catch {
+    /* StreamKit ne répond pas : rafraichirEtat l'affiche déjà, on réessaiera */
+  } finally {
+    cycleEnCours = false;
   }
-  await chargerSante();
-  await chargerConnecteurs();
+}
+
+setInterval(() => {
+  // Fermer la fenêtre ne quitte pas StreamKit : elle est simplement masquée, et
+  // la page continue de tourner. Interroger Spotify et Riot pour un écran que
+  // personne n'a sous les yeux n'a aucun intérêt — le streamer, lui, est en
+  // train de jouer.
+  if (document.hidden) return;
+  cycleRafraichissement();
 }, 5000);
+
+// De retour sur la fenêtre : on remet tout à jour immédiatement, sans attendre
+// le prochain tour.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) cycleRafraichissement();
+});
 
 // StreamKit reste ouvert des jours d'affilée chez un streamer. Sans cette
 // revérification, une nouvelle version ne serait vue qu'au prochain démarrage

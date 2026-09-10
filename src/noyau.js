@@ -130,13 +130,64 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
       // Sans ca, desactiver un module laisserait ses setInterval tourner
       // jusqu'au redemarrage.
       minuteur: {
+        // Un tour n'est JAMAIS double par le suivant.
+        //
+        // setInterval ne demande pas la permission : il relance toutes les
+        // `ms`, que le tour precedent soit fini ou non. Or nos tours font des
+        // appels reseau -- l'overlay Valorant tourne toutes les 2 s et peut
+        // aller chercher un detail de match de plusieurs Mo, avec 45 s de
+        // patience. Les tours s'empilaient alors par dizaines : appels
+        // dupliques chez Riot (jusqu'au 429), et deux tours qui ecrivent en
+        // meme temps dans la meme liste de matchs.
+        //
+        // Un module n'a pas a s'en occuper : on saute simplement le tic tant
+        // que le precedent travaille.
         intervalle(fn, ms) {
-          const t = setInterval(fn, ms);
+          let enCours = false;
+          let sautes = 0;
+
+          const t = setInterval(async () => {
+            if (enCours) {
+              sautes++;
+              return;
+            }
+            enCours = true;
+            const debut = Date.now();
+            try {
+              await fn();
+            } catch (e) {
+              // Sans ce filet, une exception dans un tour async remonterait en
+              // « unhandledRejection » loin de son module d'origine.
+              logModule.err('minuteur : ' + (e?.message || e));
+            } finally {
+              enCours = false;
+              // Une seule ligne par tour trop long, pas une par tic saute :
+              // c'est exactement ce qu'on veut lire quand un module rame.
+              if (sautes) {
+                logModule.debug(
+                  'tour de ' + (Date.now() - debut) + ' ms — ' + sautes + ' tic(s) sautes'
+                );
+                sautes = 0;
+              }
+            }
+          }, ms);
+
           minuteurs.add(t);
           return t;
         },
+
         delai(fn, ms) {
-          const t = setTimeout(fn, ms);
+          // On retire le minuteur du suivi une fois qu'il a servi : la roue en
+          // pose un a chaque tirage, et l'ensemble grossirait toute la soiree
+          // pour des minuteurs deja eteints.
+          const t = setTimeout(async () => {
+            minuteurs.delete(t);
+            try {
+              await fn();
+            } catch (e) {
+              logModule.err('minuteur : ' + (e?.message || e));
+            }
+          }, ms);
           minuteurs.add(t);
           return t;
         },
@@ -163,7 +214,12 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
     await registre.arreter(id);
     contextes.get(id)?._nettoyer();
     contextes.delete(id);
+    santeModules.delete(id); // ce qu'on savait de lui ne vaut plus rien
   }
+
+  // Derniere sante connue de chaque module (voir app.sante).
+  const santeModules = new Map(); // id -> { a: horodatage, cartes: [...] }
+  const FRAICHEUR_SANTE_MS = 20000;
 
   // --- Suivi du live --------------------------------------------------------
   // Les compteurs se rattachent au LIVE, pas a la duree de vie de StreamKit.
@@ -425,30 +481,49 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
       }
 
       // --- Modules : chacun declare ses propres connexions ---
+      //
+      // Ces sante() parlent au RESEAU : celle du bot musique demande a Spotify
+      // quel appareil joue. Le dashboard, lui, rafraichit toutes les 5 s --
+      // dashboard ouvert, ca faisait douze appels Spotify par minute pour une
+      // information qui ne bouge pas si vite, et qui compte surtout au moment
+      // ou on verifie son installation avant un live. On garde donc la
+      // derniere reponse quelques secondes.
       for (const m of registre.liste()) {
         if (typeof m.manifeste.sante !== 'function') continue;
         // Un module arrete n'a pas de contexte : inutile de l'interroger.
         if (m.etat !== 'demarre') continue;
-        try {
-          const r = (await m.manifeste.sante(contextes.get(m.id))) ?? [];
-          for (const c of r) {
-            const enrichi = { ...c, module: m.manifeste.nom };
-            // Un module qui tourne en sait plus que le socle sur son connecteur
-            // — l'appareil Spotify actif, par exemple. Sa version remplace la
-            // carte generique, a la meme place, au lieu de doubler avec elle.
-            const i = connexions.findIndex((x) => x.id === enrichi.id);
-            if (i >= 0) connexions[i] = enrichi;
-            else connexions.push(enrichi);
+
+        const connu = santeModules.get(m.id);
+        let cartes;
+        if (connu && Date.now() - connu.a < FRAICHEUR_SANTE_MS) {
+          cartes = connu.cartes;
+        } else {
+          try {
+            cartes = (await m.manifeste.sante(contextes.get(m.id))) ?? [];
+          } catch (e) {
+            // Un module qui repond mal ne doit pas etre reinterroge en boucle :
+            // on met son echec en cache comme le reste.
+            cartes = [
+              {
+                id: m.id + ':sante',
+                nom: m.manifeste.nom,
+                etat: 'ko',
+                detail: 'état illisible',
+                aide: e?.message || String(e),
+              },
+            ];
           }
-        } catch (e) {
-          connexions.push({
-            id: m.id + ':sante',
-            nom: m.manifeste.nom,
-            module: m.manifeste.nom,
-            etat: 'ko',
-            detail: 'état illisible',
-            aide: e?.message || String(e),
-          });
+          santeModules.set(m.id, { a: Date.now(), cartes });
+        }
+
+        for (const c of cartes) {
+          const enrichi = { ...c, module: m.manifeste.nom };
+          // Un module qui tourne en sait plus que le socle sur son connecteur
+          // — l'appareil Spotify actif, par exemple. Sa version remplace la
+          // carte generique, a la meme place, au lieu de doubler avec elle.
+          const i = connexions.findIndex((x) => x.id === enrichi.id);
+          if (i >= 0) connexions[i] = enrichi;
+          else connexions.push(enrichi);
         }
       }
 

@@ -34,6 +34,11 @@ export const CATALOGUE = [
     profil: 'https://api.spotify.com/v1/me',
     // Le strict nécessaire : lire ce qui joue, et agir sur la lecture.
     scopes: ['user-modify-playback-state', 'user-read-playback-state', 'user-read-currently-playing'],
+    // Spotify INTERDIT « localhost » et impose l'IP de bouclage explicite
+    // (doc officielle : « localhost is not allowed as redirect URI »).
+    // Twitch, lui, impose l'inverse : « localhost » et jamais une IP.
+    // Les deux regles sont opposees, d'ou cet hote declare par connecteur.
+    hoteRetour: '127.0.0.1',
     etapes: [
       'Ouvre le tableau de bord développeur Spotify et connecte-toi.',
       'Create app — nom et description libres.',
@@ -107,8 +112,10 @@ export function estConnecte(id) {
 // --- Autorisation -----------------------------------------------------------
 
 export function urlDeRetour(id, port) {
-  // « localhost » et pas 127.0.0.1 : Spotify refuse une IP, comme Twitch.
-  return 'http://localhost:' + port + '/callback/connecteur/' + id;
+  // Chaque service a sa propre exigence (voir hoteRetour dans le catalogue) :
+  // Spotify veut 127.0.0.1, Twitch veut localhost. Defaut : localhost.
+  const hote = trouver(id)?.hoteRetour ?? 'localhost';
+  return 'http://' + hote + ':' + port + '/callback/connecteur/' + id;
 }
 
 // Une autorisation en cours à la fois : { id, state }

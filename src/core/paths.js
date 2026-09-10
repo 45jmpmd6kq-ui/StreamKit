@@ -30,7 +30,6 @@ export const CONFIG_PATH = join(DONNEES, 'config.json');
 export const TOKENS_PATH = join(DONNEES, 'tokens.json');
 export const JOURNAUX_DIR = join(DONNEES, 'journaux');
 export const ETAT_DIR = join(DONNEES, 'etat');
-export const MAJ_DIR = join(DONNEES, 'maj');
 
 export function preparerDossiers() {
   for (const d of [DONNEES, JOURNAUX_DIR, ETAT_DIR]) mkdirSync(d, { recursive: true });

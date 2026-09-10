@@ -71,16 +71,3 @@ export function diffuser(nom, type, data) {
 export function nbClients(nom) {
   return canal(nom).clients.size;
 }
-
-export function fermerCanal(nom) {
-  const c = canaux.get(nom);
-  if (!c) return;
-  for (const client of c.clients) {
-    try {
-      client.res.end();
-    } catch {
-      /* deja ferme */
-    }
-  }
-  canaux.delete(nom);
-}

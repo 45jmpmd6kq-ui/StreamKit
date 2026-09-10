@@ -110,7 +110,7 @@ function inscrire(manifeste, dossier) {
     dossier,
     manifeste,
     champs,
-    etat: entree.actif ? 'arrete' : 'arrete',
+    etat: 'arrete', // rien n'est demarre avant que le noyau ne le demande
     actif: !!entree.actif,
     erreur: null,
     manque: [],
@@ -204,27 +204,12 @@ export async function arreter(id) {
   return m;
 }
 
-// Activer/desactiver depuis le dashboard : on persiste le choix ET on applique
-// tout de suite, sans redemarrer StreamKit.
-export async function definirActif(id, actif, contexteFactory) {
-  const m = modules.get(id);
-  if (!m) throw new Error('module inconnu : ' + id);
-  m.actif = !!actif;
-  store.sauverModule(id, { actif: m.actif });
-  if (m.actif) await demarrer(id, contexteFactory);
-  else await arreter(id);
-  return m;
-}
-
-// Redemarrage a chaud apres un changement de reglages.
-export async function recharger(id, contexteFactory) {
-  const m = modules.get(id);
-  if (!m) return null;
-  const etait = !!m.instance;
-  await arreter(id);
-  if (etait || m.actif) await demarrer(id, contexteFactory);
-  return m;
-}
+// Activer/desactiver et recharger un module se pilotent depuis le NOYAU
+// (app.definirActif, app.recharger), pas d'ici. Ce fichier en a longtemps eu
+// ses propres versions, jamais appelees et surtout incompletes : elles
+// arretaient bien le module, mais laissaient derriere elles son contexte,
+// donc ses minuteurs et ses abonnements Twitch. Les garder revenait a poser un
+// piege pour le prochain module.
 
 export async function demarrerActifs(contexteFactory) {
   for (const m of modules.values()) {

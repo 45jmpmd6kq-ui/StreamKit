@@ -1,36 +1,50 @@
-// Mise a jour automatique depuis les releases GitHub.
+// Mise a jour : savoir OU on en est.
 //
 // C'est la raison d'etre de StreamKit : corriger un bug une fois, et que les
-// streamers l'aient sans rien reinstaller. Le mecanisme est volontairement
-// simple et inspectable :
+// streamers l'aient sans rien reinstaller. Ce fichier ne fait plus qu'une
+// moitie du travail -- il REGARDE (version installee, derniere release
+// publiee) ; c'est electron-updater, cable dans src/main.js, qui TELECHARGE et
+// INSTALLE.
 //
-//   1. on demande a GitHub la derniere release du depot configure ;
-//   2. si sa version est plus recente que celle de package.json, on telecharge
-//      l'archive dans %APPDATA%\StreamKit\maj\ ;
-//   3. on la decompresse (Expand-Archive, present sur tout Windows) ;
-//   4. on ecrit un petit .bat qui : attend la fin du processus, recopie les
-//      fichiers par-dessus l'installation, puis relance StreamKit ;
-//   5. StreamKit se ferme et laisse le .bat travailler.
+// Le partage n'a pas toujours ete la. Jusqu'a la 0.7, StreamKit se lancait avec
+// Node en ligne de commande, et se mettait a jour lui-meme : telechargement du
+// zip, Expand-Archive, puis un .bat externe qui recopiait les fichiers par-
+// dessus l'installation (Windows refuse de remplacer les fichiers d'un
+// programme qui tourne) avant de relancer start.bat. Ce code est parti :
+//   - il relancait start.bat, supprime avec le passage a Electron -- une mise
+//     a jour par cette voie ne serait donc jamais revenue ;
+//   - il ne verifiait aucune empreinte, la ou electron-updater controle le
+//     sha512 annonce par latest.yml ;
+//   - il appelait process.exit() depuis le noyau, qui promet exactement
+//     l'inverse (voir l'en-tete de noyau.js).
 //
-// Windows ne permet pas de remplacer les fichiers d'un programme qui tourne :
-// d'ou l'etape 4, faite de l'exterieur. Les DONNEES ne sont jamais touchees,
-// elles sont dans un autre dossier (voir paths.js).
+// Reste ici ce qui sert aux DEUX : la version installee et la consultation des
+// releases GitHub. Les DONNEES ne sont jamais touchees par une mise a jour,
+// elles vivent dans un autre dossier (voir paths.js).
 
-import { spawn } from 'node:child_process';
-import { readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { RACINE, MAJ_DIR } from './paths.js';
+import { RACINE } from './paths.js';
 import * as journal from './journal.js';
 import * as store from './store.js';
 
 const log = journal.pour('maj');
 
+// La version est lue une fois pour toutes : package.json fait partie du CODE,
+// et le code ne change pas pendant qu'on tourne -- une mise a jour relance
+// l'application. Or versionActuelle() est appelee par l'etat general, par la
+// sante et par l'icone pres de l'horloge toutes les 5 secondes : autant de
+// lectures de disque bloquantes pour une chaine de six caracteres.
+let version = null;
+
 export function versionActuelle() {
+  if (version) return version;
   try {
-    return JSON.parse(readFileSync(join(RACINE, 'package.json'), 'utf8')).version ?? '0.0.0';
+    version = JSON.parse(readFileSync(join(RACINE, 'package.json'), 'utf8')).version ?? '0.0.0';
   } catch {
-    return '0.0.0';
+    version = '0.0.0';
   }
+  return version;
 }
 
 // Comparaison de versions « x.y.z ». Renvoie 1 si a > b, -1 si a < b, 0 si egal.
@@ -61,107 +75,34 @@ export async function verifier() {
 
     const release = await r.json();
     const derniere = String(release.tag_name || '').replace(/^v/, '');
-    // On privilegie une archive .zip jointe a la release (elle contient
-    // node_modules) ; a defaut, l'archive du code source.
-    const asset = (release.assets ?? []).find((a) => a.name.endsWith('.zip'));
 
-    const dispo = comparer(derniere, actuelle) > 0;
+    // On ne renvoie plus l'adresse de l'archive : personne ne la telecharge
+    // ici, c'est electron-updater qui s'en occupe a partir de latest.yml.
     return {
       ok: true,
       actuelle,
       derniere,
-      dispo,
+      dispo: comparer(derniere, actuelle) > 0,
       notes: release.body || '',
       publieeLe: release.published_at,
-      url: asset?.browser_download_url || release.zipball_url,
-      nomArchive: asset?.name || 'streamkit-' + derniere + '.zip',
     };
   } catch (e) {
     return { ok: false, raison: 'reseau indisponible (' + (e?.message || e) + ')', actuelle };
   }
 }
 
-async function telecharger(url, destination) {
-  const r = await fetch(url, { headers: { 'User-Agent': 'StreamKit' }, redirect: 'follow' });
-  if (!r.ok) throw new Error('telechargement impossible (HTTP ' + r.status + ')');
-  const buf = Buffer.from(await r.arrayBuffer());
-  writeFileSync(destination, buf);
-  return buf.length;
-}
-
-function powershell(commande) {
-  return new Promise((resolve, reject) => {
-    const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', commande], {
-      windowsHide: true,
-    });
-    let err = '';
-    p.stderr.on('data', (d) => (err += d));
-    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err || 'code ' + code))));
-    p.on('error', reject);
-  });
-}
-
-export async function appliquer({ redemarrer = true } = {}) {
-  const info = await verifier();
-  if (!info.ok) return { ok: false, raison: info.raison };
-  if (!info.dispo) return { ok: false, raison: 'deja a jour (' + info.actuelle + ')' };
-
-  if (process.platform !== 'win32') {
-    return { ok: false, raison: 'mise a jour automatique prevue pour Windows uniquement' };
-  }
-
-  log.info('Mise a jour ' + info.actuelle + ' -> ' + info.derniere + ' : telechargement...');
-
-  rmSync(MAJ_DIR, { recursive: true, force: true });
-  mkdirSync(MAJ_DIR, { recursive: true });
-
-  const archive = join(MAJ_DIR, info.nomArchive);
-  const taille = await telecharger(info.url, archive);
-  log.info('Archive recuperee (' + Math.round(taille / 1024) + ' Ko), decompression...');
-
-  const extrait = join(MAJ_DIR, 'contenu');
-  await powershell("Expand-Archive -LiteralPath '" + archive + "' -DestinationPath '" + extrait + "' -Force");
-
-  // Une archive GitHub « source » range tout dans un sous-dossier unique
-  // (projet-abc1234) ; une archive qu'on a fabriquee, non. On detecte.
-  let source = extrait;
-  const entrees = readdirSync(extrait);
-  if (entrees.length === 1 && !existsSync(join(extrait, 'package.json'))) {
-    source = join(extrait, entrees[0]);
-  }
-  if (!existsSync(join(source, 'package.json'))) {
-    return { ok: false, raison: "l'archive ne ressemble pas a une installation StreamKit" };
-  }
-
-  const script = join(MAJ_DIR, 'appliquer-maj.bat');
-  writeFileSync(
-    script,
-    [
-      '@echo off',
-      'chcp 65001 >nul',
-      'title Mise a jour de StreamKit',
-      'echo Mise a jour de StreamKit vers ' + info.derniere + '...',
-      // On laisse le temps au processus de liberer ses fichiers.
-      'timeout /t 3 /nobreak >nul',
-      // /E sous-dossiers, /IS on remplace meme si identique, /NFL /NDL /NJH /NJS
-      // silencieux. On ne supprime rien : robocopy ecrase et complete.
-      'robocopy "' + source + '" "' + RACINE + '" /E /IS /NFL /NDL /NJH /NJS /R:2 /W:2',
-      'echo Termine.',
-      redemarrer ? 'start "" /D "' + RACINE + '" cmd /c "start.bat"' : 'pause',
-      'exit',
-    ].join('\r\n'),
-    'utf8'
-  );
-
-  log.ok('Mise a jour prete. StreamKit va se fermer et redemarrer tout seul.');
-
-  // detached + unref : le .bat survit a la fermeture de StreamKit, c'est tout
-  // l'interet (il ne peut pas se remplacer lui-meme en cours d'execution).
-  const enfant = spawn('cmd.exe', ['/c', script], { detached: true, stdio: 'ignore', windowsHide: false });
-  enfant.unref();
-
-  setTimeout(() => process.exit(0), 500);
-  return { ok: true, actuelle: info.actuelle, derniere: info.derniere };
+// L'installation elle-meme appartient a electron-updater (voir src/main.js),
+// qui sait remplacer une application en cours d'execution et verifie
+// l'empreinte de ce qu'il telecharge. En ligne de commande (npm run dev), il
+// n'y a pas d'installation a faire : on travaille dans le depot.
+export async function appliquer() {
+  return {
+    ok: false,
+    raison:
+      'la mise a jour passe par l application StreamKit ; ' +
+      'en ligne de commande, fais un git pull',
+    actuelle: versionActuelle(),
+  };
 }
 
 // Verification silencieuse au demarrage : on informe, on n'impose rien.
