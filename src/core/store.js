@@ -37,7 +37,7 @@ function lire(chemin, defaut) {
     // streamer qui ouvre config.json dans le Bloc-notes pour jeter un oeil et
     // l'enregistre y ajoute un BOM. JSON.parse echouerait, et il perdrait TOUS
     // ses reglages sans le moindre message.
-    return JSON.parse(readFileSync(chemin, 'utf8').replace(/^﻿/, ''));
+    return JSON.parse(readFileSync(chemin, 'utf8').replace(/^\uFEFF/, ''));
   } catch {
     // Fichier illisible : on repart du defaut plutot que de refuser de demarrer
     // en plein live. Le fichier fautif est conserve a cote, au cas ou.

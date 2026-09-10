@@ -48,7 +48,7 @@ function dossiersDeModules() {
 
 function validerManifeste(m, dossier) {
   const erreurs = [];
-  if (!m || typeof m !== 'object') return ['le module n\'exporte pas de manifeste'];
+  if (!m || typeof m !== 'object') return ["le module n'exporte pas de manifeste"];
   if (!m.id) erreurs.push('"id" manquant');
   if (m.id && m.id !== dossier) erreurs.push('"id" (' + m.id + ') different du dossier (' + dossier + ')');
   if (!m.nom) erreurs.push('"nom" manquant');
@@ -80,7 +80,7 @@ export async function charger() {
 
       const erreurs = validerManifeste(manifeste, dossier);
       if (erreurs.length) {
-        log.err('Module « ' + dossier +' » ignore : ' + erreurs.join(' ; '));
+        log.err('Module « ' + dossier + ' » ignore : ' + erreurs.join(' ; '));
         continue;
       }
 
@@ -106,7 +106,8 @@ function inscrire(manifeste, dossier) {
     reglages = schema.migrer(reglages, avant, versionSchema, manifeste.migrations);
     reglages = { ...schema.valeursParDefaut(champs), ...reglages };
     store.sauverModule(manifeste.id, { schemaVersion: versionSchema, reglages });
-    if (avant > 0) log.info('Reglages de « ' + manifeste.nom + ' » migres (v' + avant + ' -> v' + versionSchema + ')');
+    if (avant > 0)
+      log.info('Reglages de « ' + manifeste.nom + ' » migres (v' + avant + ' -> v' + versionSchema + ')');
   }
 
   modules.set(manifeste.id, {
@@ -188,7 +189,7 @@ export async function demarrer(id, contexteFactory) {
     m.instance = null;
     m.etat = 'erreur';
     m.erreur = e?.message || String(e);
-    log.err('« ' + m.manifeste.nom + ' » n\'a pas demarre : ' + m.erreur);
+    log.err('« ' + m.manifeste.nom + " » n'a pas demarre : " + m.erreur);
   }
   return m;
 }

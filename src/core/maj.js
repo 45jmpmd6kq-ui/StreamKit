@@ -99,9 +99,7 @@ export async function verifier() {
 export async function appliquer() {
   return {
     ok: false,
-    raison:
-      'la mise a jour passe par l application StreamKit ; ' +
-      'en ligne de commande, fais un git pull',
+    raison: 'la mise a jour passe par l application StreamKit ; ' + 'en ligne de commande, fais un git pull',
     actuelle: versionActuelle(),
   };
 }
@@ -114,7 +112,13 @@ export async function verifierAuDemarrage() {
   if (!config.maj?.auto || !config.maj?.depot) return null;
   const info = await verifier();
   if (info.ok && info.dispo) {
-    log.info('Version ' + info.derniere + ' disponible (tu es en ' + info.actuelle + '). Bouton « Mettre a jour » dans le dashboard.');
+    log.info(
+      'Version ' +
+        info.derniere +
+        ' disponible (tu es en ' +
+        info.actuelle +
+        '). Bouton « Mettre a jour » dans le dashboard.'
+    );
   }
   return info;
 }

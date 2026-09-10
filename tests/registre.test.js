@@ -25,7 +25,10 @@ before(async () => {
 after(() => nettoyer(DONNEES));
 
 test('les modules du depot sont tous decouverts', () => {
-  const ids = registre.liste().map((m) => m.id).sort();
+  const ids = registre
+    .liste()
+    .map((m) => m.id)
+    .sort();
   // Si un module disparait de cette liste, c'est qu'il a ete ecarte au
   // chargement : manifeste invalide, ou fichier illisible.
   assert.deepEqual(ids, ['clips', 'exemple', 'musique', 'roue-rl', 'valorant']);

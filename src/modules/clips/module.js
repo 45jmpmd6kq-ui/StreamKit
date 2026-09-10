@@ -143,8 +143,12 @@ export default {
         id: 'clips',
         nom: 'Clips Twitch',
         etat: peutNommer ? 'ok' : 'attention',
-        detail: peutNommer ? ctx.config.commande + ' — nommage actif' : ctx.config.commande + ' — sans nommage',
-        aide: peutNommer ? '' : 'Reconnecte ta chaîne pour que « ' + ctx.config.commande + ' <nom> » puisse nommer le clip.',
+        detail: peutNommer
+          ? ctx.config.commande + ' — nommage actif'
+          : ctx.config.commande + ' — sans nommage',
+        aide: peutNommer
+          ? ''
+          : 'Reconnecte ta chaîne pour que « ' + ctx.config.commande + ' <nom> » puisse nommer le clip.',
       },
     ];
   },
@@ -177,7 +181,9 @@ export default {
       );
     } else if (c.nommage && !peutNommer) {
       ctx.log.warn(
-        '« ' + c.commande + ' <nom> » ne pourra pas nommer le clip : droit « channel:manage:broadcast » manquant.'
+        '« ' +
+          c.commande +
+          ' <nom> » ne pourra pas nommer le clip : droit « channel:manage:broadcast » manquant.'
       );
     }
 
@@ -188,7 +194,11 @@ export default {
       c.commande,
       async ({ user, argument }) => {
         if (!peutClipper) {
-          ctx.twitch.dire('@' + user + ' le bot n’a pas le droit de créer des clips — reconnecte la chaîne dans StreamKit 🔑');
+          ctx.twitch.dire(
+            '@' +
+              user +
+              ' le bot n’a pas le droit de créer des clips — reconnecte la chaîne dans StreamKit 🔑'
+          );
           return;
         }
         // Un clip est deja en cours de creation : deux appels simultanes
@@ -197,7 +207,9 @@ export default {
 
         const restant = delaiMs - (Date.now() - dernierClip);
         if (restant > 0) {
-          ctx.twitch.dire('@' + user + ' encore ' + Math.ceil(restant / 1000) + ' s avant le prochain clip ⏳');
+          ctx.twitch.dire(
+            '@' + user + ' encore ' + Math.ceil(restant / 1000) + ' s avant le prochain clip ⏳'
+          );
           ctx.compteur.incr('refuses');
           return;
         }
@@ -233,7 +245,9 @@ export default {
           } else if (err.reason === 'RATE_LIMIT') {
             ctx.twitch.dire('@' + user + ' trop de clips d’un coup, laisse souffler Twitch ⏳');
           } else if (err.reason === 'NO_SCOPE') {
-            ctx.twitch.dire('@' + user + ' le bot n’a pas le droit de créer des clips — reconnecte la chaîne 🔑');
+            ctx.twitch.dire(
+              '@' + user + ' le bot n’a pas le droit de créer des clips — reconnecte la chaîne 🔑'
+            );
             ctx.log.warn('Droit « clips:edit » manquant.');
           } else {
             ctx.twitch.dire('@' + user + ' le clip n’a pas pu être créé 🙏');

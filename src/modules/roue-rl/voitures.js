@@ -40,8 +40,8 @@ let cacheMtime = 0;
 export function catalogue() {
   if (!existsSync(MANIFESTE)) {
     throw new Error(
-      "le catalogue des voitures est introuvable (overlay/cars/manifest.json). " +
-        "Le dossier a du etre supprime : reinstalle StreamKit."
+      'le catalogue des voitures est introuvable (overlay/cars/manifest.json). ' +
+        'Le dossier a du etre supprime : reinstalle StreamKit.'
     );
   }
   const mtime = statSync(MANIFESTE).mtimeMs;

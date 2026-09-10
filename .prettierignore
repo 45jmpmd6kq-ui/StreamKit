@@ -1,0 +1,23 @@
+node_modules/
+livraison/
+doc/
+package-lock.json
+src/modules/roue-rl/overlay/cars/manifest.json
+
+# Prettier ne s'occupe QUE du JavaScript ici.
+#
+# Sur le JS il ne discute presque rien : deux lignes sur journal.js, le style
+# maison lui convenait deja. Sur le reste, il reecrit sans rien apporter --
+# c'est du contenu compose a la main, pas du code genere :
+#
+#   *.html   overlays et pages de module, un seul fichier autonome par vue,
+#            CSS compact et <script> inline aligne a la main. 699 lignes
+#            touchees sur les 287 de voitures.html.
+#   *.css    il eclate « .carte.ok { border-left-color: var(--succes);} » en
+#            trois lignes, et la police du body en cinq.
+#   *.md     il bourre les cellules des tableaux et passe *ceci* en _ceci_.
+#
+# ESLint, lui, continue de lire les scripts inline des HTML (eslint.config.js).
+*.html
+*.css
+*.md

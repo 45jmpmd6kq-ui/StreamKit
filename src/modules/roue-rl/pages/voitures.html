@@ -135,7 +135,10 @@ let voituresDeBase = [];
 const grid   = document.getElementById('grid');
 const q      = document.getElementById('q');
 const nEl    = document.getElementById('n');
-const status = document.getElementById('status');
+// `statutEl` et pas `status` : `window.status` est un global integre du
+// navigateur, le declarer ici le masque -- exactement le genre de collision
+// qu'on ne debusque jamais dans un overlay.
+const statutEl = document.getElementById('status');
 const save   = document.getElementById('save');
 const empty  = document.getElementById('empty');
 
@@ -167,8 +170,8 @@ function updateCount() {
 }
 
 function setDirty() {
-  status.textContent = 'Modifications non enregistrees';
-  status.className = 'status';
+  statutEl.textContent = 'Modifications non enregistrees';
+  statutEl.className = 'status';
 }
 
 grid.addEventListener('click', (e) => {
@@ -230,15 +233,15 @@ document.getElementById('base').addEventListener('click', () => {
 save.addEventListener('click', async () => {
   const names = catalog.filter((c) => selected.has(c.slug)).map((c) => c.name);
   save.disabled = true;
-  status.textContent = 'Enregistrement...';
-  status.className = 'status';
+  statutEl.textContent = 'Enregistrement...';
+  statutEl.className = 'status';
   try {
     const j = await action('enregistrer', { noms: names });
-    status.textContent = j.nombre + ' voiture(s) enregistrée(s). StreamKit en tient compte dès le tirage suivant.';
-    status.className = 'status ok';
+    statutEl.textContent = j.nombre + ' voiture(s) enregistrée(s). StreamKit en tient compte dès le tirage suivant.';
+    statutEl.className = 'status ok';
   } catch (err) {
-    status.textContent = 'Échec : ' + err.message;
-    status.className = 'status err';
+    statutEl.textContent = 'Échec : ' + err.message;
+    statutEl.className = 'status err';
   }
   save.disabled = false;
 });

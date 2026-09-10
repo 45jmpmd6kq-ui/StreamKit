@@ -81,8 +81,9 @@ export function normaliser(champs, brut = {}) {
     if (v === undefined || v === null || v === '') {
       // Un champ vide reprend son defaut, SAUF les textes ou le vide a un sens :
       // une commande vide veut dire "commande desactivee", c'est volontaire.
-      const videAutorise = c.type === 'texte' || c.type === 'commande' || c.type === 'texteLong' || c.type === 'secret';
-      out[c.cle] = videAutorise && v === '' ? '' : c.defaut ?? defautDeType(c.type);
+      const videAutorise =
+        c.type === 'texte' || c.type === 'commande' || c.type === 'texteLong' || c.type === 'secret';
+      out[c.cle] = videAutorise && v === '' ? '' : (c.defaut ?? defautDeType(c.type));
       continue;
     }
 

@@ -79,7 +79,10 @@ for (const b of barres) {
 const sortie = new Uint8Array(TAILLE * TAILLE * 4);
 for (let y = 0; y < TAILLE; y++) {
   for (let x = 0; x < TAILLE; x++) {
-    let r = 0, g = 0, b = 0, a = 0;
+    let r = 0,
+      g = 0,
+      b = 0,
+      a = 0;
     for (let sy = 0; sy < SUR; sy++) {
       for (let sx = 0; sx < SUR; sx++) {
         const i = ((y * SUR + sy) * W + (x * SUR + sx)) * 4;

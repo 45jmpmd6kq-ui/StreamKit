@@ -65,9 +65,13 @@ async function corpsJson(req, limite = 512 * 1024) {
     // application/x-www-form-urlencoded. En n'acceptant que application/json,
     // on sort du lot des requetes « simples » : le navigateur devra demander
     // l'autorisation avant d'envoyer quoi que ce soit, et ne l'obtiendra pas.
-    const type = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
+    const type = String(req.headers['content-type'] ?? '')
+      .split(';')[0]
+      .trim()
+      .toLowerCase();
     if (type && type !== 'application/json') {
-      return reject(new Error('format attendu : application/json'));
+      reject(new Error('format attendu : application/json'));
+      return;
     }
 
     const morceaux = [];
@@ -284,9 +288,14 @@ export function creerServeur(app) {
       // On ne dit pas pourquoi : une page qui sonde n'a pas a savoir si elle
       // s'est trompee d'hote ou d'origine. Le journal, lui, le dit.
       log.warn(
-        'Requete refusee (hote « ' + (req.headers.host ?? '?') + ' »' +
+        'Requete refusee (hote « ' +
+          (req.headers.host ?? '?') +
+          ' »' +
           (req.headers.origin ? ', origine « ' + req.headers.origin + ' »' : '') +
-          ') : ' + methode + ' ' + chemin
+          ') : ' +
+          methode +
+          ' ' +
+          chemin
       );
       return texte(res, 403, 'Interdit');
     }
@@ -574,7 +583,9 @@ export function ecouter(serveur, port) {
       if (e.code === 'EADDRINUSE') {
         reject(
           new Error(
-            'Le port ' + port + ' est deja utilise. StreamKit tourne peut-etre deja ' +
+            'Le port ' +
+              port +
+              ' est deja utilise. StreamKit tourne peut-etre deja ' +
               '(regarde dans la barre des taches), ou un ancien bot est reste ouvert.'
           )
         );

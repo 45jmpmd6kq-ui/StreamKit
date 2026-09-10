@@ -55,7 +55,10 @@ function canauxTwitch(t) {
   return t.chatConnecte ? 'chat connecté, EventSub en attente' : 'EventSub connecté, chat en reconnexion';
 }
 
-export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAuto = DEMARRAGE_AUTO_ABSENT } = {}) {
+export async function demarrerNoyau({
+  updater = UPDATER_PAR_DEFAUT,
+  demarrageAuto = DEMARRAGE_AUTO_ABSENT,
+} = {}) {
   preparerDossiers();
   journal.purger();
   compteurs.charger();
@@ -174,9 +177,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
               // Une seule ligne par tour trop long, pas une par tic saute :
               // c'est exactement ce qu'on veut lire quand un module rame.
               if (sautes) {
-                logModule.debug(
-                  'tour de ' + (Date.now() - debut) + ' ms — ' + sautes + ' tic(s) sautes'
-                );
+                logModule.debug('tour de ' + (Date.now() - debut) + ' ms — ' + sautes + ' tic(s) sautes');
                 sautes = 0;
               }
             }
@@ -317,8 +318,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
           connecte: t.pret,
           compte: t.channel || '',
           detail: t.pret
-            ? canauxTwitch(t) +
-              (manquants.length ? ' — ' + manquants.length + ' droit(s) à renouveler' : '')
+            ? canauxTwitch(t) + (manquants.length ? ' — ' + manquants.length + ' droit(s) à renouveler' : '')
             : t.raison || 'non connecté',
           etat: !t.pret ? (appTwitch.clientId ? 'ko' : 'inactif') : manquants.length ? 'attention' : 'ok',
           etapes: [
@@ -463,9 +463,7 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
       // branche ? » n'avait de reponse qu'une fois le bot musique allume —
       // exactement l'inverse de ce qu'on vient verifier avant un live.
       for (const c of connecteurs.catalogue()) {
-        const requis = registre
-          .liste()
-          .filter((m) => (m.manifeste.connecteurs ?? []).includes(c.id));
+        const requis = registre.liste().filter((m) => (m.manifeste.connecteurs ?? []).includes(c.id));
         // Personne ne s'en sert : pas la peine d'encombrer l'ecran.
         if (!requis.length) continue;
 
@@ -635,7 +633,9 @@ export async function demarrerNoyau({ updater = UPDATER_PAR_DEFAUT, demarrageAut
     },
 
     async definirChaine(channel) {
-      const nom = String(channel || '').trim().toLowerCase();
+      const nom = String(channel || '')
+        .trim()
+        .toLowerCase();
       if (!nom) return { ok: false, erreur: 'nom de chaine vide' };
       const c = store.getConfig();
       if (c.twitch.channel !== nom) {

@@ -123,7 +123,7 @@ export function pour(source) {
 // Historique pour le dashboard. `depuis` = dernier id deja recu, pour ne
 // renvoyer que la suite quand la page se reconnecte.
 export function historique({ source, niveau, recherche, depuis = 0, limite = 500 } = {}) {
-  const seuil = niveau ? RANG[niveau] ?? 0 : 0;
+  const seuil = niveau ? (RANG[niveau] ?? 0) : 0;
   const q = recherche ? recherche.toLowerCase() : null;
   const res = tampon.filter(
     (e) =>

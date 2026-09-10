@@ -19,9 +19,7 @@ import { join } from 'node:path';
 // package.json plutot que d'etre ecrits en dur — sinon la capture ment des la
 // version suivante.
 const VERSION = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).version;
-const PRECEDENTE =
-  process.env.SK_MAJ_AVANT ||
-  VERSION.replace(/(\d+)$/, (n) => Math.max(0, Number(n) - 1));
+const PRECEDENTE = process.env.SK_MAJ_AVANT || VERSION.replace(/(\d+)$/, (n) => Math.max(0, Number(n) - 1));
 
 const BASE = process.env.SK_URL || 'http://127.0.0.1:4466';
 const SORTIE = process.env.SK_OUT || join(process.cwd(), 'doc', 'captures');
@@ -32,7 +30,10 @@ const HAUTEUR = 900;
 // pour qu'une capture reste nette une fois posee sur une slide.
 app.commandLine.appendSwitch('force-device-scale-factor', '2');
 
-const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
+const attendre = (ms) =>
+  new Promise((r) => {
+    setTimeout(r, ms);
+  });
 
 // Chaque prise : un nom de fichier et le script qui amene la page dans l'etat
 // voulu. Retour a l'accueil entre deux prises, sinon l'etat fuit de l'une a

@@ -83,8 +83,7 @@ export function appliquerDetail(matchs, matchId, resultat) {
 
 export function blocRang(mmr, meta) {
   const acte = meta.act_id || '';
-  const parSaison =
-    mmr?.QueueSkills?.competitive?.SeasonalInfoBySeasonID || {};
+  const parSaison = mmr?.QueueSkills?.competitive?.SeasonalInfoBySeasonID || {};
   const courant = parSaison[acte] || {};
 
   let tier;

@@ -47,7 +47,8 @@ export class Roue {
         this.bag.push(this.last);
       }
     }
-    const idx = this.avoidRepeat && this.bag.length > 1 ? randomInt(this.bag.length - 1) : randomInt(this.bag.length);
+    const idx =
+      this.avoidRepeat && this.bag.length > 1 ? randomInt(this.bag.length - 1) : randomInt(this.bag.length);
     const [slug] = this.bag.splice(idx, 1);
     return cars.find((c) => c.slug === slug);
   }

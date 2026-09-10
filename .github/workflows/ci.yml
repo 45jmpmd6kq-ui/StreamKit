@@ -37,6 +37,11 @@ jobs:
       # sinon la CI testerait d'autres versions que celles qu'on livre.
       - run: npm ci
 
+      # Le lint passe AVANT les tests : il coute deux secondes et attrape ce
+      # qu'un test ne verra jamais -- une variable morte, un await oublie, un
+      # global implicite dans le script inline d'un overlay.
+      - run: npm run lint
+
       - run: npm test
 
   installeur:

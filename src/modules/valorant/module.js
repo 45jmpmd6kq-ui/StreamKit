@@ -305,26 +305,29 @@ export default {
       }
     }
 
-    ctx.minuteur.intervalle(async () => {
-      try {
-        await tour();
-        derniereErreur = '';
-      } catch (e) {
-        if (e instanceof ErreurClient) {
-          signaler('client_ferme', e.message);
-        } else if (e?.status === 403) {
-          signaler(
-            'erreur',
-            'accès refusé par Cloudflare (403) — clique sur « Rafraîchir les données de rangs »'
-          );
-        } else if (e?.status === 429) {
-          signaler('erreur', 'trop de requêtes (429) — reprise automatique dans quelques minutes');
-        } else {
-          signaler('erreur', e?.message || String(e));
+    ctx.minuteur.intervalle(
+      async () => {
+        try {
+          await tour();
+          derniereErreur = '';
+        } catch (e) {
+          if (e instanceof ErreurClient) {
+            signaler('client_ferme', e.message);
+          } else if (e?.status === 403) {
+            signaler(
+              'erreur',
+              'accès refusé par Cloudflare (403) — clique sur « Rafraîchir les données de rangs »'
+            );
+          } else if (e?.status === 429) {
+            signaler('erreur', 'trop de requêtes (429) — reprise automatique dans quelques minutes');
+          } else {
+            signaler('erreur', e?.message || String(e));
+          }
         }
-      }
-      pousser();
-    }, Math.max(1, c.pollPresenceSec) * 1000);
+        pousser();
+      },
+      Math.max(1, c.pollPresenceSec) * 1000
+    );
 
     ctx.log.ok('Prêt. Lance Valorant : le bandeau se remplit tout seul.');
     ctx.log.info('Overlay : ' + ctx.overlay.url('bandeau'));

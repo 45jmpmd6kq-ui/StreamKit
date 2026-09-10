@@ -37,10 +37,10 @@ export function expliquerErreurReseau(err) {
     conseil = "Le PC n'arrive pas a joindre id.twitch.tv (DNS). Coupe un eventuel VPN, puis reessaie.";
   } else if (/CERT|SELF_SIGNED|UNABLE_TO_VERIFY/i.test(code)) {
     conseil =
-      "Un antivirus ou un VPN inspecte le HTTPS et Node.js refuse son certificat. " +
-      "Ajoute une exception pour node.exe, puis reessaie.";
+      'Un antivirus ou un VPN inspecte le HTTPS et Node.js refuse son certificat. ' +
+      'Ajoute une exception pour node.exe, puis reessaie.';
   } else if (/ECONNREFUSED|ECONNRESET|EPIPE|EPROTO/i.test(code)) {
-    conseil = "La connexion a ete coupee (pare-feu, antivirus ou proxy). Autorise node.exe a sortir.";
+    conseil = 'La connexion a ete coupee (pare-feu, antivirus ou proxy). Autorise node.exe a sortir.';
   } else if (/TIMEOUT/i.test(code)) {
     conseil = 'Delai depasse en contactant Twitch. Reessaie dans un instant.';
   }
@@ -60,9 +60,16 @@ export function ouvrirNavigateur(url) {
   try {
     if (process.platform === 'win32') {
       // Le "" est le titre de fenetre : sans lui, start prend l'URL pour un titre.
-      spawn('cmd.exe', ['/c', 'start', '""', url], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+      spawn('cmd.exe', ['/c', 'start', '""', url], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+      }).unref();
     } else {
-      spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { detached: true, stdio: 'ignore' }).unref();
+      spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], {
+        detached: true,
+        stdio: 'ignore',
+      }).unref();
     }
     return true;
   } catch {
@@ -107,7 +114,7 @@ export function demarrerAutorisation({ port, scopes }) {
   });
 
   ouvrirNavigateur(url);
-  log.info('Page d\'autorisation Twitch ouverte. Droits demandes : ' + scopes.length + '.');
+  log.info("Page d'autorisation Twitch ouverte. Droits demandes : " + scopes.length + '.');
 
   return { ok: true, url, promesse };
 }
@@ -127,10 +134,16 @@ export async function traiterRetour(url, port) {
 
   if (refus) {
     annuler('autorisation refusee : ' + refus);
-    return { ok: false, message: "Autorisation refusee. Tu peux fermer cet onglet et reessayer depuis StreamKit." };
+    return {
+      ok: false,
+      message: 'Autorisation refusee. Tu peux fermer cet onglet et reessayer depuis StreamKit.',
+    };
   }
   if (!attente || state !== attente.state) {
-    return { ok: false, message: "Cette page d'autorisation n'est plus valide. Relance l'operation depuis StreamKit." };
+    return {
+      ok: false,
+      message: "Cette page d'autorisation n'est plus valide. Relance l'operation depuis StreamKit.",
+    };
   }
   if (!code) {
     return { ok: false, message: 'Reponse incomplete de Twitch. Reessaie.' };
@@ -201,12 +214,20 @@ export function pageRetour({ ok, message }) {
   const titre = ok ? 'Autorisation reussie' : 'Autorisation echouee';
   return (
     '<!doctype html><html lang="fr"><head><meta charset="utf-8">' +
-    '<title>StreamKit — ' + titre + '</title>' +
+    '<title>StreamKit — ' +
+    titre +
+    '</title>' +
     '<style>body{margin:0;height:100vh;display:grid;place-items:center;background:#0d0d12;' +
     'color:#e8e8f0;font:16px/1.6 system-ui,Segoe UI,sans-serif}' +
     '.c{max-width:32rem;padding:2.5rem;text-align:center}' +
-    'h1{font-size:1.4rem;margin:0 0 .75rem;color:' + couleur + '}' +
+    'h1{font-size:1.4rem;margin:0 0 .75rem;color:' +
+    couleur +
+    '}' +
     'p{margin:0;color:#9a9aae}</style></head><body><div class="c">' +
-    '<h1>' + titre + '</h1><p>' + echapper(message ?? '') + '</p></div></body></html>'
+    '<h1>' +
+    titre +
+    '</h1><p>' +
+    echapper(message ?? '') +
+    '</p></div></body></html>'
   );
 }

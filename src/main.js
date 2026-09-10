@@ -57,13 +57,14 @@ function resumerErreurMaj(e) {
   const premiere = brut.split('\n')[0];
 
   if (/latest\.yml/i.test(brut)) {
-    return "la derniere release publiee ne contient pas latest.yml (il faut le joindre a la release)";
+    return 'la derniere release publiee ne contient pas latest.yml (il faut le joindre a la release)';
   }
   if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(brut)) {
     return 'GitHub injoignable — connexion, VPN ou pare-feu';
   }
   if (/\b404\b/.test(brut)) return 'aucune release publiee sur le depot';
-  if (/sha512|checksum/i.test(brut)) return 'le fichier telecharge ne correspond pas a la release (empreinte invalide)';
+  if (/sha512|checksum/i.test(brut))
+    return 'le fichier telecharge ne correspond pas a la release (empreinte invalide)';
   return premiere.slice(0, 200);
 }
 
@@ -152,7 +153,10 @@ const updater = {
     const info = await updater.verifier();
     if (info.ok && info.dispo) {
       log.info(
-        'Version ' + info.derniere + ' disponible (tu es en ' + info.actuelle +
+        'Version ' +
+          info.derniere +
+          ' disponible (tu es en ' +
+          info.actuelle +
           '). Bouton « Mettre a jour » dans le dashboard.'
       );
       majMenuIcone();
@@ -308,7 +312,11 @@ function majMenuIcone() {
   const twitchOk = etat?.twitch?.pret && etat?.twitch?.chatConnecte;
   const resume = etat
     ? (twitchOk ? '● Connecte — ' + etat.chaine : '○ Twitch non connecte') +
-      '  (' + etat.modules.demarres + '/' + etat.modules.total + ' modules)'
+      '  (' +
+      etat.modules.demarres +
+      '/' +
+      etat.modules.total +
+      ' modules)'
     : 'Demarrage...';
 
   if (resume === dernierResumeIcone) return;

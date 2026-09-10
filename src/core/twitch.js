@@ -127,7 +127,8 @@ export async function demarrer() {
   if (typeof chat.onDisconnect === 'function') {
     chat.onDisconnect((manuel, raison) => {
       etat.chatConnecte = false;
-      if (!manuel) log.warn('Chat deconnecte (' + (raison?.message || 'raison inconnue') + '), reconnexion...');
+      if (!manuel)
+        log.warn('Chat deconnecte (' + (raison?.message || 'raison inconnue') + '), reconnexion...');
     });
   }
   chat.connect();
@@ -277,10 +278,7 @@ export function contextePour(moduleId, logModule) {
         if (t !== cmd && !t.startsWith(cmd + ' ')) return;
 
         const info = msg.userInfo;
-        const autorise =
-          qui === 'tous' ||
-          info.isBroadcaster ||
-          (qui === 'mods' && info.isMod);
+        const autorise = qui === 'tous' || info.isBroadcaster || (qui === 'mods' && info.isMod);
         if (!autorise) return; // on ignore en silence, pas de spam dans le chat
 
         const argument = texte.trim().slice(cmd.length).trim();
@@ -311,7 +309,8 @@ export function contextePour(moduleId, logModule) {
     async statutRedemption(e, statut) {
       try {
         if (typeof e.updateStatus === 'function') await e.updateStatus(statut);
-        else await api.channelPoints.updateRedemptionStatusByIds(etat.broadcasterId, e.rewardId, [e.id], statut);
+        else
+          await api.channelPoints.updateRedemptionStatusByIds(etat.broadcasterId, e.rewardId, [e.id], statut);
         return true;
       } catch (err) {
         logModule.warn('Statut de la redemption non mis a jour : ' + (err?.message || err));

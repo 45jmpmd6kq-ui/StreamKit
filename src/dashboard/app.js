@@ -159,20 +159,22 @@ function repousserMaj(version) {
 // dans le DOM de l'application.
 function notesEnTexte(html) {
   if (!html) return '';
-  return String(html)
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '• ')
-    .replace(/<[^>]+>/g, '')
-    // Entités que GitHub produit couramment dans les messages de commit.
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return (
+    String(html)
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '• ')
+      .replace(/<[^>]+>/g, '')
+      // Entités que GitHub produit couramment dans les messages de commit.
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  );
 }
 
 function ouvrirModaleMaj(info) {
@@ -349,8 +351,6 @@ function dessinerRail() {
 
 // --- Vue d'ensemble ---------------------------------------------------------
 
-const ICONE_ETAT = { ok: '●', attention: '▲', ko: '✕', inactif: '○' };
-
 function dessinerAccueil() {
   const s = etat.sante;
   const cible = $('#detail');
@@ -369,14 +369,21 @@ function dessinerAccueil() {
   const resume = soucis
     ? soucis + ' point' + (soucis > 1 ? 's' : '') + ' à regarder avant de lancer ton live.'
     : inactifs
-      ? 'Rien de cassé — ' + inactifs + ' connexion' + (inactifs > 1 ? 's' : '') +
-        ' pas encore configurée' + (inactifs > 1 ? 's' : '') + '.'
+      ? 'Rien de cassé — ' +
+        inactifs +
+        ' connexion' +
+        (inactifs > 1 ? 's' : '') +
+        ' pas encore configurée' +
+        (inactifs > 1 ? 's' : '') +
+        '.'
       : 'Tout est en ordre. Bon stream.';
 
   cible.innerHTML =
     '<div class="titre-module"><span style="font-size:1.6rem">📡</span>' +
     '<h1>Vue d’ensemble</h1></div>' +
-    '<p class="resume-accueil">' + echapper(resume) + '</p>' +
+    '<p class="resume-accueil">' +
+    echapper(resume) +
+    '</p>' +
     '<div class="cartes">' +
     s.connexions
       .map(
@@ -396,7 +403,9 @@ function dessinerAccueil() {
     dessinerKpis(s) +
     '<div class="section"><h3>Modules</h3>' +
     '<p style="color:var(--texte-doux);margin:0">' +
-    s.modules.demarres + ' démarré(s) sur ' + s.modules.total +
+    s.modules.demarres +
+    ' démarré(s) sur ' +
+    s.modules.total +
     (s.modules.enErreur ? ' — ' + s.modules.enErreur + ' à compléter ou en erreur' : '') +
     '</p></div>';
 }
@@ -417,15 +426,15 @@ function dessinerKpis(s) {
 
   let titre;
   if (s.causeSession === 'live') {
-    titre = s.enDirect
-      ? 'Ce live — en direct depuis ' + heure
-      : 'Dernier live — commencé à ' + heure;
+    titre = s.enDirect ? 'Ce live — en direct depuis ' + heure : 'Dernier live — commencé à ' + heure;
   } else {
     titre = 'Depuis le lancement de StreamKit, ' + heure;
   }
 
   return (
-    '<div class="section"><h3>Utilisation · ' + echapper(titre) + '</h3>' +
+    '<div class="section"><h3>Utilisation · ' +
+    echapper(titre) +
+    '</h3>' +
     blocs
       .map(
         (k) => `
@@ -621,9 +630,13 @@ function brancherConnecteurs() {
       try {
         if (id === 'twitch') {
           const chaine = $('#cid-chaine')?.value.trim();
-          if (chaine) await api('/api/connecteurs/twitch/chaine', { method: 'POST', corps: { channel: chaine } });
+          if (chaine)
+            await api('/api/connecteurs/twitch/chaine', { method: 'POST', corps: { channel: chaine } });
         }
-        const r = await api('/api/connecteurs/' + id + '/app', { method: 'POST', corps: { clientId, clientSecret } });
+        const r = await api('/api/connecteurs/' + id + '/app', {
+          method: 'POST',
+          corps: { clientId, clientSecret },
+        });
         if (r.ok === false) return retour(id, r.erreur || 'refusé', true);
         retour(id, 'Enregistré — clique sur « Connecter »');
         await chargerConnecteurs();
@@ -829,7 +842,9 @@ async function basculerModule(m) {
 // quand on ajoute un type de champ.
 function dessinerChamp(c, valeur) {
   const id = 'c_' + c.cle;
-  let saisie = '';
+  // Pas de valeur initiale : le switch a un `default`, toutes les branches
+  // affectent. Un '' ici masquerait un type de champ oublie.
+  let saisie;
 
   switch (c.type) {
     case 'bool':
@@ -897,7 +912,9 @@ function dessinerFormulaire(m) {
 
   // Les interrupteurs du formulaire.
   $$('#formulaire .bascule').forEach((b) =>
-    b.addEventListener('click', () => b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true'))
+    b.addEventListener('click', () =>
+      b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true')
+    )
   );
 
   // Le sélecteur de couleur et son champ texte restent synchronisés.
@@ -908,7 +925,6 @@ function dessinerFormulaire(m) {
       if (/^#[0-9a-f]{6}$/i.test(texte.value)) picker.value = texte.value;
     });
   });
-
 }
 
 function lireFormulaire(m) {
@@ -996,7 +1012,8 @@ async function chargerJournal() {
   const j = await api('/api/journal?limite=800&niveau=debug');
   etat.lignes = j.lignes;
   etat.erreurs = j.lignes.filter((l) => l.niveau === 'erreur').length;
-  if (etat.erreurs) $('#compteur-erreurs').textContent = etat.erreurs + ' erreur' + (etat.erreurs > 1 ? 's' : '');
+  if (etat.erreurs)
+    $('#compteur-erreurs').textContent = etat.erreurs + ' erreur' + (etat.erreurs > 1 ? 's' : '');
   remplirFiltreSources(j.sources);
   redessinerJournal();
 }

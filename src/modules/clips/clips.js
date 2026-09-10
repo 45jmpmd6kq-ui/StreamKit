@@ -22,7 +22,10 @@ const ESSAIS = 8; // ~12 s d'attente maximum
 const DELAI_MS = 1500;
 const TITRE_MAX = 140; // longueur maximale d'un titre de stream Twitch
 
-const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
+const attendre = (ms) =>
+  new Promise((r) => {
+    setTimeout(r, ms);
+  });
 
 function echec(reason, message) {
   const e = new Error(message);
@@ -36,7 +39,10 @@ function estErreurDeDroit(err) {
   return /requested scopes/i.test(msg) || status === 401;
 }
 
-export function creerClipper({ api, broadcasterId, log }) {
+// `delaiMs` n'existe que pour les tests : l'attente d'encodage est reelle chez
+// Twitch, mais la faire subir a la suite de tests couterait douze secondes pour
+// ne rien verifier de plus.
+export function creerClipper({ api, broadcasterId, log, delaiMs = DELAI_MS }) {
   // Titre a remettre si une bascule est en cours (securite en cas d'arret brutal).
   let aRestaurer = null;
 
@@ -50,9 +56,7 @@ export function creerClipper({ api, broadcasterId, log }) {
       await api.channels.updateChannelInfo(broadcasterId, { title: titre });
       return true;
     } catch (err) {
-      log.err(
-        'Titre du stream non restauré ! Remets-le à la main : « ' + titre + ' » (' + err.message + ')'
-      );
+      log.err('Titre du stream non restauré ! Remets-le à la main : « ' + titre + ' » (' + err.message + ')');
       return false;
     }
   }
@@ -85,7 +89,7 @@ export function creerClipper({ api, broadcasterId, log }) {
           soucisRenommage = estErreurDeDroit(err) ? 'NO_SCOPE' : 'FAILED';
           if (soucisRenommage === 'NO_SCOPE') {
             log.warn(
-              "Droit « channel:manage:broadcast » manquant : clip créé sans nom personnalisé. " +
+              'Droit « channel:manage:broadcast » manquant : clip créé sans nom personnalisé. ' +
                 'Reconnecte ta chaîne depuis le dashboard.'
             );
           } else {
@@ -102,7 +106,7 @@ export function creerClipper({ api, broadcasterId, log }) {
         const msg = err?.message || '';
         const status = err?.statusCode ?? err?.status;
         if (/clips:edit/i.test(msg) || estErreurDeDroit(err)) {
-          throw echec('NO_SCOPE', "autorisation « clips:edit » absente");
+          throw echec('NO_SCOPE', 'autorisation « clips:edit » absente');
         }
         if (status === 404 || /\b404\b/.test(msg)) throw echec('OFFLINE', "la chaîne n'est pas en live");
         if (status === 429 || /\b429\b/.test(msg)) throw echec('RATE_LIMIT', 'trop de clips en peu de temps');
@@ -119,7 +123,7 @@ export function creerClipper({ api, broadcasterId, log }) {
       const renomme = Boolean(label) && bascule;
 
       for (let i = 0; i < ESSAIS; i++) {
-        await attendre(DELAI_MS);
+        await attendre(delaiMs);
         try {
           const clip = await api.clips.getClipById(id);
           if (clip) {

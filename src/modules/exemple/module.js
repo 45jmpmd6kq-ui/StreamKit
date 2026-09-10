@@ -106,7 +106,7 @@ export default {
   // Seules celles listees dans libellesActions apparaissent en bouton dans le
   // dashboard. Les autres restent appelables par les pages du module.
   libellesActions: {
-    tester: "Tester l’overlay",
+    tester: 'Tester l’overlay',
   },
 
   actions: {
@@ -136,13 +136,18 @@ export default {
     };
     pousser();
 
-    ctx.minuteur.intervalle(() => {
-      ticks++;
-      pousser();
-      if (bavard && ticks % 12 === 0) {
-        ctx.log.debug(ticks + ' tics — ' + ctx.overlay.nbSources('compteur') + ' source(s) OBS connectée(s)');
-      }
-    }, Math.max(1, intervalle) * 1000);
+    ctx.minuteur.intervalle(
+      () => {
+        ticks++;
+        pousser();
+        if (bavard && ticks % 12 === 0) {
+          ctx.log.debug(
+            ticks + ' tics — ' + ctx.overlay.nbSources('compteur') + ' source(s) OBS connectée(s)'
+          );
+        }
+      },
+      Math.max(1, intervalle) * 1000
+    );
 
     return {
       async arreter() {

@@ -206,7 +206,11 @@ test('le dashboard est servi avec une CSP et un nonce de script', async () => {
   const politique = r.entetes['content-security-policy'] ?? '';
 
   assert.match(politique, /script-src 'self' 'nonce-[^']+'/, 'script-src doit porter un nonce');
-  assert.doesNotMatch(politique, /script-src[^;]*unsafe-inline/, "script-src ne doit pas etre 'unsafe-inline'");
+  assert.doesNotMatch(
+    politique,
+    /script-src[^;]*unsafe-inline/,
+    "script-src ne doit pas etre 'unsafe-inline'"
+  );
   assert.match(politique, /object-src 'none'/);
   assert.match(politique, /frame-ancestors 'none'/);
   assert.match(politique, /base-uri 'none'/);

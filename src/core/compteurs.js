@@ -47,7 +47,7 @@ export function charger() {
     return;
   }
   try {
-    const brut = JSON.parse(readFileSync(FICHIER, 'utf8').replace(/^﻿/, ''));
+    const brut = JSON.parse(readFileSync(FICHIER, 'utf8').replace(/^\uFEFF/, ''));
     totaux = brut.modules ?? {};
   } catch {
     // Fichier illisible : des compteurs perdus ne valent pas un démarrage raté.

@@ -14,9 +14,38 @@ const DELAI_RESEAU = 15000;
 // --- Aide a la correspondance stricte des titres ---
 // Mots vides ignores dans la comparaison (articles, "feat", "by", etc.)
 const STOPWORDS = new Set([
-  'the', 'a', 'an', 'of', 'and', 'or', 'feat', 'featuring', 'ft', 'with', 'x', 'vs',
-  'le', 'la', 'les', 'de', 'du', 'des', 'et', 'un', 'une',
-  'by', 'song', 'music', 'musique', 'play', 'joue', 'please', 'stp', 'svp', 'track', 'remix',
+  'the',
+  'a',
+  'an',
+  'of',
+  'and',
+  'or',
+  'feat',
+  'featuring',
+  'ft',
+  'with',
+  'x',
+  'vs',
+  'le',
+  'la',
+  'les',
+  'de',
+  'du',
+  'des',
+  'et',
+  'un',
+  'une',
+  'by',
+  'song',
+  'music',
+  'musique',
+  'play',
+  'joue',
+  'please',
+  'stp',
+  'svp',
+  'track',
+  'remix',
 ]);
 
 function normalizeText(s) {
@@ -49,7 +78,7 @@ function levenshtein(a, b) {
       dp[i] = Math.min(
         dp[i] + 1, // suppression
         dp[i - 1] + 1, // insertion
-        prev + (a[i - 1] === b[j - 1] ? 0 : 1), // substitution
+        prev + (a[i - 1] === b[j - 1] ? 0 : 1) // substitution
       );
       prev = tmp;
     }
@@ -87,7 +116,47 @@ export function looseMatch(input, reference) {
   const a = toTokens(input);
   const b = toTokens(reference);
   if (!a.length || !b.length) return false;
-  return coverage(a, b) >= 0.6;
+  return coverage(a, b) >= SEUIL;
+}
+
+// En dessous, on refuse le morceau plutot que de passer n'importe quoi.
+const SEUIL = 0.6;
+
+// Choisit le meilleur resultat Spotify pour une demande, ou null si aucun ne
+// correspond VRAIMENT.
+//
+// Sortie de searchTrack pour etre testable sans reseau : c'est la regle qui
+// decide si un viewer entend son morceau ou se fait rembourser ses points. Une
+// erreur ici ne se voit pas dans un journal, elle se voit en direct.
+export function choisirMeilleur(demande, resultats = []) {
+  const demandeTokens = toTokens(demande || '');
+  if (!demandeTokens.length || !resultats.length) return null;
+
+  let best = null;
+  for (const it of resultats) {
+    const nameTokens = toTokens(it.name);
+    const artistTokens = toTokens((it.artists ?? []).map((a) => a.name).join(' '));
+    const candidateTokens = [...nameTokens, ...artistTokens];
+
+    // Le titre trouve est-il present dans la demande ? (evite "Beautiful" pour "Beautiful Things")
+    const titleCoverage = coverage(nameTokens, demandeTokens);
+    // La demande correspond-elle bien au morceau ? (titre + artiste)
+    const inputCoverage = coverage(demandeTokens, candidateTokens);
+    const artistHit = artistTokens.some((t) => fuzzyHas(t, demandeTokens));
+
+    const score = titleCoverage + inputCoverage + (artistHit ? 0.3 : 0);
+    if (!best || score > best.score) best = { it, titleCoverage, inputCoverage, score };
+  }
+
+  // STRICT : le titre trouve ET la demande doivent bien se recouvrir.
+  if (best.titleCoverage < SEUIL || best.inputCoverage < SEUIL) return null;
+
+  const it = best.it;
+  return {
+    uri: it.uri,
+    name: it.name,
+    artists: (it.artists ?? []).map((a) => a.name).join(', '),
+  };
 }
 
 export class SpotifyClient {
@@ -118,7 +187,9 @@ export class SpotifyClient {
       signal: AbortSignal.timeout(DELAI_RESEAU),
     });
     if (!r.ok) {
-      throw new Error(`Spotify : echec du rafraichissement du token (${r.status}). Relance setup.bat si ca persiste.`);
+      throw new Error(
+        `Spotify : echec du rafraichissement du token (${r.status}). Relance setup.bat si ca persiste.`
+      );
     }
     const j = await r.json();
     this.accessToken = j.access_token;
@@ -168,7 +239,9 @@ export class SpotifyClient {
         if (r.ok) return null;
         // Sinon (erreur HTTP + corps non-JSON) : on remonte le detail pour diagnostiquer.
         const ct = r.headers.get('content-type') || 'inconnu';
-        const err = new Error(`Spotify: reponse NON-JSON de ${path} (HTTP ${r.status}, type "${ct}") : ${raw.slice(0, 100)}`);
+        const err = new Error(
+          `Spotify: reponse NON-JSON de ${path} (HTTP ${r.status}, type "${ct}") : ${raw.slice(0, 100)}`
+        );
         err.status = r.status;
         err.nonJson = true;
         throw err;
@@ -193,40 +266,7 @@ export class SpotifyClient {
     if (!q) return null;
 
     const data = await this.api('/search', { query: { q, type: 'track', limit: 6 } });
-    const items = data?.tracks?.items ?? [];
-    if (!items.length) return null;
-
-    const inputTokens = toTokens(q);
-    if (!inputTokens.length) return null;
-
-    let best = null;
-    for (const it of items) {
-      const nameTokens = toTokens(it.name);
-      const artistTokens = toTokens(it.artists.map((a) => a.name).join(' '));
-      const candidateTokens = [...nameTokens, ...artistTokens];
-
-      // Le titre trouve est-il present dans la demande ? (evite "Beautiful" pour "Beautiful Things")
-      const titleCoverage = coverage(nameTokens, inputTokens);
-      // La demande correspond-elle bien au morceau ? (titre + artiste)
-      const inputCoverage = coverage(inputTokens, candidateTokens);
-      const artistHit = artistTokens.some((t) => fuzzyHas(t, inputTokens));
-
-      const score = titleCoverage + inputCoverage + (artistHit ? 0.3 : 0);
-      if (!best || score > best.score) {
-        best = { it, titleCoverage, inputCoverage, score };
-      }
-    }
-
-    // STRICT : le titre trouve ET la demande doivent bien se recouvrir, sinon on refuse.
-    const MIN = 0.6;
-    if (!best || best.titleCoverage < MIN || best.inputCoverage < MIN) return null;
-
-    const it = best.it;
-    return {
-      uri: it.uri,
-      name: it.name,
-      artists: it.artists.map((a) => a.name).join(', '),
-    };
+    return choisirMeilleur(q, data?.tracks?.items ?? []);
   }
 
   // Renvoie l'appareil Spotify actuellement actif, ou null.

@@ -31,12 +31,7 @@ export default {
   // d'un module.
   connecteurs: ['spotify'],
 
-  scopes: [
-    'channel:read:redemptions',
-    'channel:manage:redemptions',
-    'chat:read',
-    'chat:edit',
-  ],
+  scopes: ['channel:read:redemptions', 'channel:manage:redemptions', 'chat:read', 'chat:edit'],
 
   config: {
     version: 3,
@@ -321,15 +316,24 @@ export default {
         ctx.compteur.incr('demandes');
         ctx.log.ok('Ajouté à la file : ' + morceau.name + ' — ' + morceau.artists);
         annoncer(
-          '@' + e.userDisplayName + ' 🎶 « ' + morceau.name + ' — ' + morceau.artists + ' » ajouté à la file !'
+          '@' +
+            e.userDisplayName +
+            ' 🎶 « ' +
+            morceau.name +
+            ' — ' +
+            morceau.artists +
+            ' » ajouté à la file !'
         );
       } catch (err) {
         if (err.reason === 'NO_ACTIVE_DEVICE' || err.message === 'NO_ACTIVE_DEVICE') {
           ctx.log.warn('Aucun appareil Spotify actif.');
           await ctx.twitch.statutRedemption(e, 'CANCELED');
           annoncer(
-            '@' + e.userDisplayName + " Spotify n'est pas actif (points remboursés). " +
-              ctx.twitch.channel + ' → ouvre Spotify et lance une musique 🙏'
+            '@' +
+              e.userDisplayName +
+              " Spotify n'est pas actif (points remboursés). " +
+              ctx.twitch.channel +
+              ' → ouvre Spotify et lance une musique 🙏'
           );
         } else {
           ctx.log.err('Erreur : ' + err.message);
@@ -350,7 +354,11 @@ export default {
         if (!cible) {
           await ctx.twitch.statutRedemption(e, 'CANCELED');
           annoncer(
-            '@' + e.userDisplayName + ' aucune musique en attente ne correspond à « ' + saisie + ' » ❌ (points remboursés)'
+            '@' +
+              e.userDisplayName +
+              ' aucune musique en attente ne correspond à « ' +
+              saisie +
+              ' » ❌ (points remboursés)'
           );
           return;
         }
@@ -361,7 +369,9 @@ export default {
         pousserEtat();
         ctx.compteur.incr('refusees');
         ctx.log.ok('Annulé : ' + cible.name + ' — ' + cible.artists + ' (sera sauté à son passage)');
-        annoncer('@' + e.userDisplayName + ' 🚫 « ' + cible.name + ' — ' + cible.artists + ' » ne passera pas.');
+        annoncer(
+          '@' + e.userDisplayName + ' 🚫 « ' + cible.name + ' — ' + cible.artists + ' » ne passera pas.'
+        );
 
         // Si le morceau annule joue deja, on le passe tout de suite.
         try {
@@ -423,7 +433,9 @@ export default {
       ctx.twitch.surCommande(c.songCommand, async () => {
         try {
           const cur = await spotify.currentlyPlaying();
-          annoncer(cur ? '🎧 En cours : ' + cur.name + ' — ' + cur.artists : 'Rien en lecture pour le moment.');
+          annoncer(
+            cur ? '🎧 En cours : ' + cur.name + ' — ' + cur.artists : 'Rien en lecture pour le moment.'
+          );
         } catch (err) {
           ctx.log.err('Lecture en cours indisponible : ' + err.message);
         }

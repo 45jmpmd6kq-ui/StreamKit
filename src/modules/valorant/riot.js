@@ -185,7 +185,7 @@ export class ClientRiot {
     }
     if (!region) {
       throw new ErreurClient(
-        "région introuvable — renseigne-la dans les réglages du module (eu, na, ap, kr…)"
+        'région introuvable — renseigne-la dans les réglages du module (eu, na, ap, kr…)'
       );
     }
     this.region = region;
@@ -246,8 +246,12 @@ export class ClientRiot {
 
   async misesAJourClassees(nombre = 20) {
     const data = await this.pd(
-      '/mmr/v1/players/' + this.puuid + '/competitiveupdates' +
-        '?startIndex=0&endIndex=' + nombre + '&queue=competitive'
+      '/mmr/v1/players/' +
+        this.puuid +
+        '/competitiveupdates' +
+        '?startIndex=0&endIndex=' +
+        nombre +
+        '&queue=competitive'
     );
     return (data.Matches || []).filter((m) => m.MatchID);
   }
