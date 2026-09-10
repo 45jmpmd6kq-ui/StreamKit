@@ -512,11 +512,44 @@ function dessinerConnecteurs() {
     return;
   }
 
+  // Ce panneau se redessine tout seul, au rythme du rafraichissement general,
+  // pendant que le streamer est peut-etre en train d y coller ses identifiants.
+  // innerHTML effacait alors sa saisie sous ses doigts : il colle l'ID, passe
+  // au secret, et l'ID a disparu. Impossible a comprendre quand ca vous arrive,
+  // et impossible a configurer quoi que ce soit.
+  //
+  // On releve donc ce qui est deja tape, ainsi que le champ actif et la
+  // position du curseur, pour tout remettre juste apres.
+  const saisies = new Map();
+  for (const champ of cible.querySelectorAll('input')) {
+    if (champ.id && champ.value) saisies.set(champ.id, champ.value);
+  }
+  const actif = document.activeElement;
+  const focus = actif && cible.contains(actif) ? actif.id : null;
+  const debut = focus ? actif.selectionStart : null;
+  const fin = focus ? actif.selectionEnd : null;
+
   cible.innerHTML =
     '<div class="titre-module"><span style="font-size:1.6rem">🔌</span><h1>Connecteurs</h1></div>' +
     '<p class="resume-accueil">Chaque service se configure ici, une seule fois. ' +
     'Les modules qui en ont besoin y puisent tout seuls.</p>' +
     liste.map(carteConnecteur).join('');
+
+  for (const [id, valeur] of saisies) {
+    const champ = document.getElementById(id);
+    if (champ) champ.value = valeur;
+  }
+  if (focus) {
+    const champ = document.getElementById(focus);
+    if (champ) {
+      champ.focus();
+      try {
+        champ.setSelectionRange(debut ?? champ.value.length, fin ?? champ.value.length);
+      } catch {
+        /* tous les types de champ n'acceptent pas une selection */
+      }
+    }
+  }
 
   brancherConnecteurs();
 }
@@ -685,6 +718,7 @@ function brancherConnecteurs() {
 }
 
 async function chargerConnecteurs() {
+  const avant = JSON.stringify(etat.connecteurs ?? null);
   try {
     etat.connecteurs = await api('/api/connecteurs');
   } catch {
@@ -696,7 +730,14 @@ async function chargerConnecteurs() {
       ? 'attente'
       : 'ok';
   $('#point-connecteurs').className = 'point ' + (etat.connecteurs ? pire : '');
-  if (etat.selection === CONNECTEURS) dessinerConnecteurs();
+
+  // Ne redessiner QUE si quelque chose a bouge, comme le fait deja le rail des
+  // modules. Le panneau est reconstruit en entier a chaque fois : le refaire
+  // toutes les 5 secondes pour un contenu identique ne sert a rien, et coute
+  // une reprise de saisie a chaque tour.
+  if (etat.selection === CONNECTEURS && JSON.stringify(etat.connecteurs ?? null) !== avant) {
+    dessinerConnecteurs();
+  }
 }
 
 // --- Détail d'un module -----------------------------------------------------
