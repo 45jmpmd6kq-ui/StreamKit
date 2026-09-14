@@ -17,6 +17,9 @@ const peutLire = (ctx) => DROITS.some((d) => ctx.twitch.aLeDroit(d));
 // Le planning bouge rarement, mais une pub repoussee doit se voir vite.
 const RELECTURE_PLANNING_MS = 15_000;
 
+const MESSAGE_AVANT = '📺 Pause pub dans {delai} — profitez-en pour boire un verre 🥤';
+const MESSAGE_PENDANT = '⏸️ Pub en cours ({duree}), on revient vite ! Les abonnés ne voient pas les pubs 💜';
+
 export default {
   id: 'pub',
   nom: 'Annonce de pub',
@@ -28,7 +31,7 @@ export default {
   scopes: ['channel:read:ads', 'chat:read', 'chat:edit'],
 
   config: {
-    version: 1,
+    version: 2,
     champs: [
       {
         cle: 'avertirSec',
@@ -54,19 +57,31 @@ export default {
         max: 60,
       },
       {
+        cle: 'chatAvantActif',
+        type: 'bool',
+        label: 'Prévenir le chat avant la pub',
+        defaut: true,
+      },
+      {
         cle: 'chatAvant',
         type: 'texte',
         label: 'Message dans le chat avant la pub',
-        aide: '{delai} devient « 1 min », « 45 s »… Laisse vide pour ne rien envoyer.',
-        defaut: '📺 Pause pub dans {delai} — profitez-en pour boire un verre 🥤',
+        aide: '{delai} devient « 1 min », « 45 s »…',
+        defaut: MESSAGE_AVANT,
         max: 300,
+      },
+      {
+        cle: 'chatPendantActif',
+        type: 'bool',
+        label: 'Prévenir le chat au début de la pub',
+        defaut: true,
       },
       {
         cle: 'chatPendant',
         type: 'texte',
         label: 'Message dans le chat au début de la pub',
-        aide: '{duree} devient « 1 min 30 », « 30 s »… Laisse vide pour ne rien envoyer.',
-        defaut: '⏸️ Pub en cours ({duree}), on revient vite ! Les abonnés ne voient pas les pubs 💜',
+        aide: '{duree} devient « 1 min 30 », « 30 s »…',
+        defaut: MESSAGE_PENDANT,
         max: 300,
       },
       {
@@ -86,7 +101,16 @@ export default {
     ],
   },
 
-  migrations: {},
+  migrations: {
+    // v2 : un interrupteur par message de chat. Avant, on coupait un message en
+    // videant son texte : on le traduit en interrupteur éteint, et le texte
+    // reprend sa valeur d'origine pour le jour où on le rallume.
+    2: (r) => {
+      if (r.chatAvant === '') Object.assign(r, { chatAvantActif: false, chatAvant: MESSAGE_AVANT });
+      if (r.chatPendant === '') Object.assign(r, { chatPendantActif: false, chatPendant: MESSAGE_PENDANT });
+      return r;
+    },
+  },
 
   compteurs: {
     pubs: 'Pubs',
@@ -160,7 +184,10 @@ export default {
       publier,
       dire: (message) => ctx.twitch.dire(message),
       avertirMs: Math.max(10, c.avertirSec) * 1000,
-      messages: { avant: c.chatAvant, pendant: c.chatPendant },
+      messages: {
+        avant: c.chatAvantActif ? c.chatAvant : '',
+        pendant: c.chatPendantActif ? c.chatPendant : '',
+      },
     });
     ctx._suivi = suivi;
     ctx.minuteur.intervalle(() => suivi.tic(), 1000);

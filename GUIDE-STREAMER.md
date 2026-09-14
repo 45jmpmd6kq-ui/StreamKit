@@ -128,8 +128,8 @@ tu veux, puis clique sur **Enregistrer** en bas.
   automatique, un bandeau annonce « Pause pub dans 0:45 » et un message part dans
   le chat ; pendant la pub, le bandeau affiche le temps restant. Une pub lancée à
   la main n'est pas connue à l'avance : elle s'affiche dès son début. Le délai,
-  les phrases et les messages du chat se changent dans le module (message vide =
-  rien dans le chat). **Si ta chaîne était déjà connectée avant**, reconnecte-la :
+  les phrases et les messages du chat se changent dans le module ; chaque message
+  du chat a son interrupteur pour le couper. **Si ta chaîne était déjà connectée avant**, reconnecte-la :
   ce module demande un droit de plus. **Simuler une pub** joue un exemple complet
   dans l'overlay, sans rien écrire dans le chat.
 - **Overlay W/L** : rien à connecter. Lance Valorant, le bandeau se remplit tout

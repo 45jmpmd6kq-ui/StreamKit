@@ -171,7 +171,12 @@ test('simulation : deroule avant, pendant, fin, sans rien envoyer dans le chat',
 
 // --- Module ---------------------------------------------------------------------
 
-function contexte({ droits = ['channel:read:ads', 'chat:edit'], planning, erreurPlanning } = {}) {
+function contexte({
+  droits = ['channel:read:ads', 'chat:edit'],
+  planning,
+  erreurPlanning,
+  config = {},
+} = {}) {
   const etats = [];
   const chat = [];
   const compteurs = {};
@@ -182,9 +187,12 @@ function contexte({ droits = ['channel:read:ads', 'chat:edit'], planning, erreur
       avertirSec: 60,
       phraseAvant: 'Profitez-en pour boire un verre 🥤',
       phrasePendant: 'Les abonnés ne voient pas les pubs 💜',
+      chatAvantActif: true,
       chatAvant: 'Pause pub dans {delai}',
+      chatPendantActif: true,
       chatPendant: 'Pub en cours ({duree})',
       coin: 'bottom-left',
+      ...config,
     },
     log: { debug() {}, info() {}, ok() {}, warn() {}, err() {} },
     overlay: { etat: (vue, d) => etats.push(d), url: () => 'http://127.0.0.1/overlay/pub/bandeau' },
@@ -233,6 +241,46 @@ test('module : le planning Twitch alimente l avertissement', async () => {
     t.minuteurs.some((m) => m.ms === 15_000),
     'le planning est relu toutes les 15 s'
   );
+});
+
+test('module : interrupteurs du chat eteints -> bandeau seul, chat muet', async () => {
+  const t = contexte({
+    planning: { nextAdDate: new Date(Date.now() + 30_000), duration: 60 },
+    config: { chatAvantActif: false, chatPendantActif: false },
+  });
+  await manifeste.demarrer(t.ctx);
+  t.ctx._suivi.tic();
+  assert.equal(t.dernier().annonce.phase, 'avant', 'le bandeau, lui, prévient toujours');
+  t.pub({ durationSeconds: 60, startDate: new Date(), isAutomatic: true });
+  assert.equal(t.dernier().annonce.phase, 'pendant');
+  assert.deepEqual(t.chat, []);
+});
+
+test('module : un seul interrupteur eteint ne coupe que son message', async () => {
+  const t = contexte({
+    planning: { nextAdDate: new Date(Date.now() + 30_000), duration: 60 },
+    config: { chatAvantActif: false },
+  });
+  await manifeste.demarrer(t.ctx);
+  t.ctx._suivi.tic();
+  t.pub({ durationSeconds: 60, startDate: new Date(), isAutomatic: true });
+  assert.deepEqual(t.chat, ['Pub en cours (1 min)']);
+});
+
+test('migration v2 : un message vide devient un interrupteur eteint', async () => {
+  const { valeursParDefaut, migrer } = await import('../src/core/schema.js');
+  const champs = manifeste.config.champs;
+  const defauts = valeursParDefaut(champs);
+
+  // Réglages d'un streamer en 0.18/0.19 qui avait vidé le message d'avant.
+  const r = migrer({ ...defauts, chatAvant: '', chatPendant: 'Pub ! {duree}' }, 1, 2, manifeste.migrations);
+  assert.equal(r.chatAvantActif, false);
+  assert.equal(r.chatAvant, defauts.chatAvant, 'le texte revient, prêt à être rallumé');
+  assert.equal(r.chatPendantActif, true);
+  assert.equal(r.chatPendant, 'Pub ! {duree}', 'un message personnalisé est gardé');
+
+  // Installation neuve : rien ne bouge.
+  assert.deepEqual(migrer({ ...defauts }, 0, 2, manifeste.migrations), defauts);
 });
 
 test('module : chaine non affiliee (403) -> demarre, et la sante l explique', async () => {
