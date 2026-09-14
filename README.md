@@ -71,6 +71,7 @@ src/
     clips/              commande !clip, extraite du bot musique
     predictions/        carte OBS de la prédiction Twitch en cours
     roue-rl/            roue des voitures Rocket League (portage)
+    rl-session/         compteur V/D Rocket League (API de stats officielle + Launch.log)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)
 
 scripts/                génération de l'icône — rien ne part chez le streamer

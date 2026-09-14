@@ -2,7 +2,8 @@
 
 StreamKit rassemble des outils pour ton live dans une seule application Windows :
 musique demandée par les viewers, clips au chat, prédictions Twitch en direct à
-l'écran, voiture au hasard sur Rocket League, bandeau de session Valorant. Tout tourne **sur ton PC** : pas de compte
+l'écran, voiture au hasard et compteur de victoires sur Rocket League, bandeau
+de session Valorant. Tout tourne **sur ton PC** : pas de compte
 à créer chez nous, pas de serveur, et tes accès restent chez toi.
 
 Compte une vingtaine de minutes la première fois. Ensuite, StreamKit se met à
@@ -23,6 +24,7 @@ veux utiliser.
 | Bot Musique                        | **Spotify Premium**, et Spotify ouvert sur un appareil pendant le live     |
 | Clips                              | Rien de plus — mais on ne peut clipper que **pendant un live**             |
 | Overlay W/L (Valorant)             | Valorant installé sur le même PC                                           |
+| Compteur de session (Rocket League) | Rocket League installé sur le même PC (Epic ou Steam). **Pas de BakkesMod** : le module passe par l'API officielle du jeu, compatible anti-triche |
 
 ---
 
@@ -119,6 +121,13 @@ tu veux, puis clique sur **Enregistrer** en bas.
   fermeture, résultat) dans l'overlay, sans rien envoyer à Twitch.
 - **Overlay W/L** : rien à connecter. Lance Valorant, le bandeau se remplit tout
   seul.
+- **Compteur de session** (Rocket League) : l'API de stats du jeu est livrée
+  **éteinte**. Clique une fois sur **Activer l'API dans Rocket League** (StreamKit
+  modifie le réglage du jeu et en garde une copie), puis **relance Rocket
+  League** : le jeu ne lit ce réglage qu'au démarrage. Ensuite, chaque fin de
+  partie classée met le compteur à jour. Les matchs privés, les parties hors
+  ligne et les replays ne comptent jamais. **Réinitialiser la session** remet le
+  compteur à zéro en début de live.
 
 ---
 
@@ -127,7 +136,7 @@ tu veux, puis clique sur **Enregistrer** en bas.
 1. Dans StreamKit, ouvre le module. Dans **Overlays OBS**, clique sur **Copier**.
 2. Dans OBS : **Sources** → **+** → **Navigateur**, et colle l'adresse dans
    **URL**. Pour la taille :
-   - **Bot Musique, Random Car, Clips, Prédictions** : la taille de ta scène (par exemple
+   - **Bot Musique, Random Car, Clips, Prédictions, Compteur de session** : la taille de ta scène (par exemple
      1920 × 1080). L'overlay se place tout seul dans le coin choisi dans les
      réglages du module ;
    - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux.
@@ -168,6 +177,13 @@ appareil, et que le compte est bien Premium.
 
 **Un clip est refusé.**
 Tu n'es pas en live, ou le délai entre deux clips n'est pas écoulé.
+
+**Le compteur Rocket League ne bouge pas.**
+Regarde la carte **Rocket League** de la Vue d'ensemble, elle dit quoi faire :
+« API du jeu désactivée » (clique sur **Activer l'API**, puis relance le jeu),
+« jeu lancé, mais l'API ne répond pas » (relance le jeu), ou « joueur non
+identifié » (renseigne ton pseudo en jeu tout en bas des réglages du module).
+Seules les parties **classées** comptent par défaut : c'est réglable.
 
 **Le scoreboard de prédiction n'apparaît pas.**
 Clique sur **Simuler une prédiction** dans le module. S'il s'affiche,
