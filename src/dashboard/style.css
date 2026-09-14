@@ -200,6 +200,9 @@ a.btn {
   display: grid;
   gap: 0.85rem;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  /* Toutes les lignes prennent la hauteur de la plus haute : une grille de
+     cartes de tailles differentes se lit comme un tableau casse. */
+  grid-auto-rows: 1fr;
   margin-bottom: 2rem;
 }
 
@@ -209,6 +212,9 @@ a.btn {
   border-left: 3px solid var(--texte-faible);
   border-radius: var(--rayon);
   padding: 0.9rem 1.05rem;
+  /* En colonne, pour pouvoir caler l'aide en bas (voir .carte .aide). */
+  display: flex;
+  flex-direction: column;
 }
 /* La bordure gauche porte l'état : lisible d'un coup d'œil sans lire un mot. */
 .carte.ok { border-left-color: var(--succes); }
@@ -230,18 +236,24 @@ a.btn {
   font-size: 0.72rem;
   color: var(--texte-faible);
 }
-.carte .detail {
+/* « carte-detail » et surtout pas « detail » : .detail est deja le panneau
+   central qui defile (plus bas). La carte en heritait ses marges de panneau
+   -- texte decale et cartes de hauteurs differentes selon leur contenu. */
+.carte .carte-detail {
   color: var(--texte-doux);
   font-size: 0.92rem;
   word-break: break-word;
 }
+/* L'aide se cale en bas de la carte : a hauteur egale, les aides de toute la
+   grille s'alignent au lieu de flotter a des hauteurs differentes. */
 .carte .aide {
-  margin-top: 0.45rem;
+  margin-top: auto;
+  padding-top: 0.45rem;
   font-size: 0.84rem;
   color: var(--texte-faible);
   line-height: 1.5;
 }
-.carte.inactif .detail,
+.carte.inactif .carte-detail,
 .carte.inactif .entete .nom {
   color: var(--texte-faible);
 }

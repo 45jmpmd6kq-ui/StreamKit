@@ -501,7 +501,7 @@ function dessinerAccueil() {
             <span class="nom">${echapper(c.nom)}</span>
             ${c.module ? `<span class="provenance">${echapper(c.module)}</span>` : ''}
           </div>
-          <div class="detail">${echapper(c.detail || '')}</div>
+          <div class="carte-detail">${echapper(c.detail || '')}</div>
           ${c.aide ? `<div class="aide">${echapper(c.aide)}</div>` : ''}
         </div>`
         )
