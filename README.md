@@ -72,16 +72,17 @@ src/
     roue-rl/            roue des voitures Rocket League (portage)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)
 
-scripts/                icône, captures, recadrages, deck — rien ne part chez le streamer
-doc/captures/           captures du dashboard, refaites par script et pas à la main
-StreamKit_Presentation.pptx   la doc du streamer : à quoi ça sert, puis l'installation
-GUIDE-STREAMER.md             le pas-à-pas d'installation, lisible sur GitHub sans rien télécharger
+scripts/                génération de l'icône — rien ne part chez le streamer
+GUIDE-STREAMER.md       LA documentation du streamer : prérequis, installation, dépannage
 ```
 
 > Il n'y a plus de `LISEZ-MOI.txt` : l'installeur n'embarque que `src/**` et
 > `package.json` (`build.files`), donc ce fichier ne quittait jamais le dépôt.
-> La documentation du streamer vit dans le dépôt : le deck en illustré,
-> `GUIDE-STREAMER.md` pour un lien à envoyer.
+> La documentation du streamer est **un seul fichier**, `GUIDE-STREAMER.md`,
+> lisible sur GitHub par un simple lien. Le deck PowerPoint qui la précédait
+> (et ses captures) a été retiré en 0.15.2 : resté figé en 0.10.1, il
+> contredisait l'application. Deux documentations finissent toujours par
+> diverger ; une seule, tenue à jour avec le code, ne le peut pas.
 
 ### La règle qui structure tout
 
