@@ -28,6 +28,7 @@ import * as diffusion from './core/diffusion.js';
 import * as compteurs from './core/compteurs.js';
 import * as connecteurs from './core/connecteurs.js';
 import * as coffre from './core/coffre.js';
+import { creerSante, resumeModules } from './core/sante.js';
 import { creerServeur, ecouter, ENTETES_PAGE_OAUTH } from './core/serveur.js';
 
 const log = journal.pour('noyau');
@@ -45,16 +46,6 @@ const UPDATER_PAR_DEFAUT = {
 // (raccourci de session Windows), le lancement en ligne de commande non. Quand
 // il n'est pas fourni, le dashboard masque simplement l'option.
 const DEMARRAGE_AUTO_ABSENT = { disponible: false, lire: () => false, ecrire: () => false };
-
-// Ce que le streamer lit du lien avec Twitch. Les deux canaux sont
-// INDEPENDANTS : le chat peut tourner pendant qu'EventSub se reconnecte (les
-// points de chaine ne repondent plus, mais les commandes si). Un « tout va
-// bien » global l'aurait envoye chercher ailleurs.
-function canauxTwitch(t) {
-  if (t.chatConnecte && t.eventsubConnecte) return 'chat et EventSub connectés';
-  if (!t.chatConnecte && !t.eventsubConnecte) return 'connexion en cours…';
-  return t.chatConnecte ? 'chat connecté, EventSub en attente' : 'EventSub connecté, chat en reconnexion';
-}
 
 export async function demarrerNoyau({
   updater = UPDATER_PAR_DEFAUT,
@@ -236,12 +227,8 @@ export async function demarrerNoyau({
     await registre.arreter(id);
     contextes.get(id)?._nettoyer();
     contextes.delete(id);
-    santeModules.delete(id); // ce qu'on savait de lui ne vaut plus rien
+    vuesSante.oublier(id); // ce qu'on savait de sa sante ne vaut plus rien
   }
-
-  // Derniere sante connue de chaque module (voir app.sante).
-  const santeModules = new Map(); // id -> { a: horodatage, cartes: [...] }
-  const FRAICHEUR_SANTE_MS = 20000;
 
   // --- Suivi du live --------------------------------------------------------
   // Les compteurs se rattachent au LIVE, pas a la duree de vie de StreamKit.
@@ -249,6 +236,18 @@ export async function demarrerNoyau({
   // jours : « depuis le lancement » agregerait alors plusieurs lives et des
   // journees entieres sans stream.
   const etatDirect = { enCours: false, depuis: null };
+
+  // Vue d'ensemble et ecran Connecteurs : voir core/sante.js.
+  const vuesSante = creerSante({
+    registre,
+    twitch,
+    connecteurs,
+    diffusion,
+    compteurs,
+    port: PORT,
+    contexteDe: (id) => contextes.get(id),
+    etatDirect,
+  });
 
   function brancherSuiviDuDirect() {
     twitch.surDirect({
@@ -286,9 +285,6 @@ export async function demarrerNoyau({
     port: PORT,
 
     etatGeneral() {
-      // Un module de developpement ne compte que s'il est active : sinon le
-      // dashboard annoncerait « 5 modules » en n'en affichant que 4.
-      const modules = registre.liste().filter((m) => !m.manifeste.developpement || m.actif);
       return {
         version: maj.versionActuelle(),
         port: PORT,
@@ -296,12 +292,7 @@ export async function demarrerNoyau({
         twitch: twitch.getEtat(),
         chaine: store.getConfig().twitch.channel,
         appConfiguree: !!store.lireTokens().twitchApp?.clientId,
-        modules: {
-          total: modules.length,
-          actifs: modules.filter((m) => m.actif).length,
-          demarres: modules.filter((m) => m.etat === 'demarre').length,
-          enErreur: modules.filter((m) => m.etat === 'erreur' || m.etat === 'incomplet').length,
-        },
+        modules: resumeModules(registre),
         droitsManquants: twitch.droitsManquants(registre.scopesRequis()),
         demarrageAuto: { disponible: !!demarrageAuto.disponible, actif: !!demarrageAuto.lire() },
       };
@@ -309,76 +300,9 @@ export async function demarrerNoyau({
 
     // --- Connecteurs ----------------------------------------------------
     // Écran dédié : identifiants d'application ET autorisation de compte, au
-    // même endroit pour tous les services. Twitch y figure aussi, même si son
-    // flux reste dans core/auth.js.
-
-    etatConnecteurs() {
-      const t = twitch.getEtat();
-      const appTwitch = store.lireTokens().twitchApp ?? {};
-      const manquants = twitch.droitsManquants(registre.scopesRequis({ tousLesModules: true }));
-
-      const liste = [
-        {
-          id: 'twitch',
-          nom: 'Twitch',
-          icone: '🟣',
-          description: 'Chat, points de chaîne, clips. Nécessaire à la plupart des modules.',
-          consoleUrl: 'https://dev.twitch.tv/console/apps/create',
-          urlDeRetour: auth.urlDeRetour(PORT),
-          configure: !!(appTwitch.clientId && appTwitch.clientSecret),
-          connecte: t.pret,
-          compte: t.channel || '',
-          detail: t.pret
-            ? canauxTwitch(t) + (manquants.length ? ' — ' + manquants.length + ' droit(s) à renouveler' : '')
-            : t.raison || 'non connecté',
-          etat: !t.pret ? (appTwitch.clientId ? 'ko' : 'inactif') : manquants.length ? 'attention' : 'ok',
-          etapes: [
-            'Ouvre la console développeur Twitch et connecte-toi.',
-            'Nom : StreamKit — Catégorie : Chat Bot.',
-            'URL de redirection OAuth : colle l’adresse ci-dessous, exactement.',
-            'Valide, puis récupère l’ID client et génère un secret client.',
-          ],
-          // Le nom de chaîne fait partie de la configuration Twitch, pas d'une
-          // application : c'est le seul connecteur qui en demande un.
-          champChaine: store.getConfig().twitch.channel || '',
-        },
-      ];
-
-      for (const c of connecteurs.catalogue()) {
-        const e = connecteurs.pour(c.id);
-        // Un connecteur n'est réclamé que si un module le demande : inutile de
-        // faire configurer Spotify à quelqu'un qui ne veut que la roue.
-        const demandePar = registre
-          .liste()
-          .filter((m) => (m.manifeste.connecteurs ?? []).includes(c.id))
-          .map((m) => m.manifeste.nom);
-
-        liste.push({
-          id: c.id,
-          nom: c.nom,
-          icone: c.icone,
-          description: c.description,
-          consoleUrl: c.consoleUrl,
-          urlDeRetour: connecteurs.urlDeRetour(c.id, PORT),
-          // Le dashboard en a besoin pour ne PAS reclamer de secret client a un
-          // connecteur qui n'en utilise plus.
-          pkce: connecteurs.estPkce(c),
-          configure: e.configure,
-          connecte: e.connecte,
-          compte: e.compte,
-          detail: e.connecte
-            ? e.compte || 'connecté'
-            : e.configure
-              ? 'application enregistrée, compte non autorisé'
-              : 'non configuré',
-          etat: e.connecte ? 'ok' : e.configure ? 'attention' : 'inactif',
-          etapes: c.etapes,
-          demandePar,
-        });
-      }
-
-      return liste;
-    },
+    // même endroit pour tous les services. La vue est calculée dans
+    // core/sante.js ; les actions restent ici, car elles relancent des modules.
+    etatConnecteurs: () => vuesSante.etatConnecteurs(),
 
     async definirAppConnecteur(id, corps) {
       if (id === 'twitch') return app.definirAppTwitch(corps);
@@ -415,180 +339,8 @@ export async function demarrerNoyau({
       }
     },
 
-    // --- Vue d'ensemble des connexions ---------------------------------
-    // Ce qu'on regarde avant de partir en live. Le socle sait deja beaucoup :
-    // Twitch, les sources OBS branchees sur nos overlays, les mises a jour.
-    // Chaque module ajoute les siennes via sante() dans son manifeste --
-    // Spotify pour le bot musique, le Riot Client pour Valorant.
-    async sante() {
-      const connexions = [];
-
-      // --- Twitch ---
-      const t = twitch.getEtat();
-      const manquants = twitch.droitsManquants(registre.scopesRequis());
-      if (!t.pret) {
-        connexions.push({
-          id: 'twitch',
-          nom: 'Twitch',
-          etat: store.lireTokens().twitchApp?.clientId ? 'ko' : 'inactif',
-          detail: t.raison || 'non connecté',
-          aide: 'Clique sur l’indicateur Twitch en haut de la fenêtre.',
-        });
-      } else if (manquants.length) {
-        connexions.push({
-          id: 'twitch',
-          nom: 'Twitch',
-          etat: 'attention',
-          detail: t.channel + ' — ' + manquants.length + ' droit(s) manquant(s)',
-          aide: 'Reconnecte ta chaîne : ' + manquants.join(', '),
-        });
-      } else {
-        connexions.push({
-          id: 'twitch',
-          nom: 'Twitch',
-          etat: t.chatConnecte ? 'ok' : 'attention',
-          detail: t.channel + ' — ' + canauxTwitch(t),
-        });
-      }
-
-      // --- OBS : combien de sources ecoutent nos overlays ---
-      // On ne parle pas a OBS, mais un overlay branche PROUVE qu'il tourne.
-      // C'est la vraie question du streamer : « ma source est-elle en place ? »
-      const vues = [];
-      let total = 0;
-      for (const m of registre.liste()) {
-        for (const o of m.manifeste.overlays ?? []) {
-          const n = diffusion.nbClients('overlay:' + m.id + ':' + o.chemin);
-          total += n;
-          if (n) vues.push(m.manifeste.nom + ' › ' + o.nom + ' (' + n + ')');
-        }
-      }
-      connexions.push({
-        id: 'obs',
-        nom: 'OBS',
-        etat: total ? 'ok' : 'inactif',
-        detail: total ? total + ' source(s) connectée(s)' : 'aucune source connectée',
-        aide: total ? vues.join(' · ') : 'Ajoute les overlays de tes modules en source Navigateur.',
-      });
-
-      // --- Connecteurs : Spotify & co, meme quand aucun module ne tourne ---
-      // Un connecteur se configure au niveau du socle : son etat ne depend pas
-      // d'un module demarre. Sans cette boucle, « est-ce que Spotify est
-      // branche ? » n'avait de reponse qu'une fois le bot musique allume —
-      // exactement l'inverse de ce qu'on vient verifier avant un live.
-      for (const c of connecteurs.catalogue()) {
-        const requis = registre.liste().filter((m) => (m.manifeste.connecteurs ?? []).includes(c.id));
-        // Personne ne s'en sert : pas la peine d'encombrer l'ecran.
-        if (!requis.length) continue;
-
-        const e = connecteurs.pour(c.id);
-        connexions.push({
-          id: c.id,
-          nom: c.nom,
-          // Pas connecte n'est pas une panne : un streamer qui n'utilise pas le
-          // bot musique n'a aucune raison d'avoir Spotify branche.
-          etat: e.connecte ? 'ok' : 'inactif',
-          detail: e.connecte
-            ? e.compte || 'connecté'
-            : e.configure
-              ? 'application enregistrée, autorisation à donner'
-              : 'non configuré',
-          aide: e.connecte
-            ? 'Utilisé par : ' + requis.map((m) => m.manifeste.nom).join(', ')
-            : e.configure
-              ? 'Écran Connecteurs → carte ' + c.nom + ' → Connecter.'
-              : 'Écran Connecteurs : renseigne ton application ' + c.nom + '.',
-        });
-      }
-
-      // --- Modules : chacun declare ses propres connexions ---
-      //
-      // Ces sante() parlent au RESEAU : celle du bot musique demande a Spotify
-      // quel appareil joue. Le dashboard, lui, rafraichit toutes les 5 s --
-      // dashboard ouvert, ca faisait douze appels Spotify par minute pour une
-      // information qui ne bouge pas si vite, et qui compte surtout au moment
-      // ou on verifie son installation avant un live. On garde donc la
-      // derniere reponse quelques secondes.
-      for (const m of registre.liste()) {
-        if (typeof m.manifeste.sante !== 'function') continue;
-        // Un module arrete n'a pas de contexte : inutile de l'interroger.
-        if (m.etat !== 'demarre') continue;
-
-        const connu = santeModules.get(m.id);
-        let cartes;
-        if (connu && Date.now() - connu.a < FRAICHEUR_SANTE_MS) {
-          cartes = connu.cartes;
-        } else {
-          try {
-            cartes = (await m.manifeste.sante(contextes.get(m.id))) ?? [];
-          } catch (e) {
-            // Un module qui repond mal ne doit pas etre reinterroge en boucle :
-            // on met son echec en cache comme le reste.
-            cartes = [
-              {
-                id: m.id + ':sante',
-                nom: m.manifeste.nom,
-                etat: 'ko',
-                detail: 'état illisible',
-                aide: e?.message || String(e),
-              },
-            ];
-          }
-          santeModules.set(m.id, { a: Date.now(), cartes });
-        }
-
-        for (const c of cartes) {
-          const enrichi = { ...c, module: m.manifeste.nom };
-          // Un module qui tourne en sait plus que le socle sur son connecteur
-          // — l'appareil Spotify actif, par exemple. Sa version remplace la
-          // carte generique, a la meme place, au lieu de doubler avec elle.
-          const i = connexions.findIndex((x) => x.id === enrichi.id);
-          if (i >= 0) connexions[i] = enrichi;
-          else connexions.push(enrichi);
-        }
-      }
-
-      // --- Compteurs d'usage ---
-      // Un module qui declare `compteurs: { cle: 'Libelle' }` voit ses chiffres
-      // remonter ici. On les expose meme module arrete : « 0 clip ce live »
-      // reste une information, et l'historique ne disparait pas parce qu'on a
-      // decoche une case.
-      const kpis = [];
-      for (const m of registre.liste()) {
-        const libelles = m.manifeste.compteurs;
-        if (!libelles) continue;
-        const { total, session } = compteurs.pour(m.id);
-        kpis.push({
-          module: m.manifeste.nom,
-          icone: m.manifeste.icone ?? '🧩',
-          actif: m.etat === 'demarre',
-          valeurs: Object.entries(libelles).map(([cle, label]) => ({
-            cle,
-            label,
-            session: session[cle] || 0,
-            total: total[cle] || 0,
-          })),
-        });
-      }
-
-      return {
-        connexions,
-        kpis,
-        depuis: compteurs.debutSession(),
-        causeSession: compteurs.causeSession(),
-        enDirect: etatDirect.enCours,
-        directDepuis: etatDirect.depuis,
-        version: maj.versionActuelle(),
-        modules: (() => {
-          const vus = registre.liste().filter((m) => !m.manifeste.developpement || m.actif);
-          return {
-            total: vus.length,
-            demarres: vus.filter((m) => m.etat === 'demarre').length,
-            enErreur: vus.filter((m) => m.etat === 'erreur' || m.etat === 'incomplet').length,
-          };
-        })(),
-      };
-    },
+    // --- Vue d'ensemble des connexions (core/sante.js) -----------------
+    sante: () => vuesSante.sante(),
 
     async definirActif(id, actif) {
       if (actif) {
