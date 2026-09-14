@@ -180,9 +180,22 @@ export class SpotifyClient {
       grant_type: 'refresh_token',
       refresh_token: this.refreshToken,
     });
+    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+
+    // Deux facons de s'identifier aupres de Spotify, selon la connexion :
+    //   PKCE (sans secret)  client_id dans le corps. C'est le cas de TOUTE
+    //                       connexion faite depuis la 0.14.0 ;
+    //   ancien flux         en-tete Basic, avec le secret client, tant que le
+    //                       streamer ne s'est pas reconnecte.
+    // Jusqu'en 0.15.2, seul l'en-tete Basic partait -- avec un secret VIDE pour
+    // une connexion PKCE. Spotify le refuse (invalid_client) : le bot musique
+    // echouait des son premier appel, sans qu'aucun test ne le voie.
+    if (this.clientSecret) headers.Authorization = this.basicAuth;
+    else body.set('client_id', this.clientId);
+
     const r = await fetch(TOKEN_URL, {
       method: 'POST',
-      headers: { Authorization: this.basicAuth, 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers,
       body,
       signal: AbortSignal.timeout(DELAI_RESEAU),
     });
