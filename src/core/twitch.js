@@ -13,6 +13,7 @@
 //   surCommande(cmd, fn)   commande de chat, avec controle des droits
 //   surRecompense(id, fn)  redemption de points de chaine
 //   surPredictions({...})  predictions : debut, progression, verrou, fin
+//   surPub(fn)             debut d'une coupure pub (duree, automatique ou non)
 //   statutRedemption(e, s) valider (FULFILLED) / rembourser (CANCELED)
 //   aLeDroit(scope)        savoir si l'autorisation courante couvre un droit
 //
@@ -326,6 +327,21 @@ export function contextePour(moduleId, logModule) {
       if (verrou) abonnements.push(listener.onChannelPredictionLock(id, proteger(verrou)));
       if (fin) abonnements.push(listener.onChannelPredictionEnd(id, proteger(fin)));
       return noter(moduleId, () => abonnements.forEach((a) => a.stop()));
+    },
+
+    // Debut d'une coupure pub (automatique ou lancee par le streamer). Twitch
+    // n'envoie PAS de fin : elle se deduit de la duree. Droit requis :
+    // channel:read:ads.
+    surPub(fn) {
+      exige();
+      const sub = listener.onChannelAdBreakBegin(etat.broadcasterId, async (e) => {
+        try {
+          await fn(e);
+        } catch (err) {
+          logModule.err('erreur sur la pub : ' + (err?.message || err));
+        }
+      });
+      return noter(moduleId, () => sub.stop());
     },
 
     // Valider (points depenses) ou annuler (points rembourses) une redemption.

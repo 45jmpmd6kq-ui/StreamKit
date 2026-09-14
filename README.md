@@ -70,6 +70,7 @@ src/
     musique/            bot musique Spotify (portage de la V2)
     clips/              commande !clip, extraite du bot musique
     predictions/        carte OBS de la prédiction Twitch en cours
+    pub/                annonce des pubs Twitch : bandeau avant/pendant + chat
     roue-rl/            roue des voitures Rocket League (portage)
     rl-session/         compteur V/D Rocket League (API de stats officielle + Launch.log)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)

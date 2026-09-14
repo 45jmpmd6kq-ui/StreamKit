@@ -31,7 +31,16 @@ test('les modules du depot sont tous decouverts', () => {
     .sort();
   // Si un module disparait de cette liste, c'est qu'il a ete ecarte au
   // chargement : manifeste invalide, ou fichier illisible.
-  assert.deepEqual(ids, ['clips', 'exemple', 'musique', 'predictions', 'rl-session', 'roue-rl', 'valorant']);
+  assert.deepEqual(ids, [
+    'clips',
+    'exemple',
+    'musique',
+    'predictions',
+    'pub',
+    'rl-session',
+    'roue-rl',
+    'valorant',
+  ]);
 });
 
 test('chaque manifeste respecte le contrat', () => {
