@@ -247,6 +247,9 @@ function servirFichier(res, base, relatif, { cache = false } = {}) {
 //   dans l'en-tete Host, et nous ne repondons qu'a des noms qu'on reconnait.
 //
 // Les deux controles sont donc complementaires, aucun ne remplace l'autre.
+//
+// Un troisieme, independant des deux premiers : Fetch Metadata (voir
+// siteAutorise plus bas).
 
 const HOTES_LOCAUX = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 
@@ -273,6 +276,43 @@ function origineLocale(origine, port) {
   }
 }
 
+// Fetch Metadata : le navigateur dit lui-meme d'ou vient la requete, dans
+// Sec-Fetch-Site, et il ne laisse aucune page le falsifier.
+//
+// Pourquoi en plus d'Origin : Origin n'est PAS envoye sur tout. Une balise
+// <img>, <script> ou <link> posee sur un site quelconque part sans Origin -- c'est
+// exactement par la que passait le plantage a distance de la 0.12.0 (S1). Le
+// correctif a ferme CETTE route ; ce controle ferme la famille entiere : plus
+// aucune ressource de StreamKit ne se charge depuis une page d'un autre site.
+//
+//   none         saisie dans la barre d'adresse, favori, source OBS, fenetre
+//                Electron : c'est le streamer lui-meme ;
+//   same-origin  le dashboard qui parle a son API, un overlay a son flux ;
+//   same-site    une AUTRE application sur localhost (autre port) : refuse,
+//                personne n'a de raison legitime de nous appeler de la ;
+//   cross-site   un site web : refuse...
+//
+// ...sauf une navigation de page entiere, en GET. C'est le retour d'autorisation :
+// Twitch et Spotify renvoient le navigateur chez nous depuis leur propre site,
+// donc en cross-site. La refuser casserait toute connexion de compte. Elle ne
+// donne rien a lire a la page d'origine, qui ne voit jamais la reponse, et les
+// retours OAuth sont proteges par leur `state`.
+//
+// En-tete absent : on laisse passer. Clients hors navigateur (curl, les tests),
+// ou navigateur trop ancien pour l'envoyer -- Origin et Host continuent alors de
+// faire leur travail.
+function siteAutorise(req, methode) {
+  const site = req.headers['sec-fetch-site'];
+  if (!site || site === 'none' || site === 'same-origin') return true;
+  return (
+    methode === 'GET' &&
+    req.headers['sec-fetch-mode'] === 'navigate' &&
+    // Une iframe est aussi une « navigation » : refusee, les pages de StreamKit
+    // ne se laissent de toute facon pas encadrer (frame-ancestors 'none').
+    (req.headers['sec-fetch-dest'] ?? 'document') === 'document'
+  );
+}
+
 // ---------------------------------------------------------------------------
 
 export function creerServeur(app) {
@@ -284,7 +324,11 @@ export function creerServeur(app) {
     const methode = req.method ?? 'GET';
     let chemin = url.pathname;
 
-    if (!hoteLocal(req.headers.host, app.port) || !origineLocale(req.headers.origin, app.port)) {
+    if (
+      !hoteLocal(req.headers.host, app.port) ||
+      !origineLocale(req.headers.origin, app.port) ||
+      !siteAutorise(req, methode)
+    ) {
       // On ne dit pas pourquoi : une page qui sonde n'a pas a savoir si elle
       // s'est trompee d'hote ou d'origine. Le journal, lui, le dit.
       log.warn(
@@ -292,6 +336,9 @@ export function creerServeur(app) {
           (req.headers.host ?? '?') +
           ' »' +
           (req.headers.origin ? ', origine « ' + req.headers.origin + ' »' : '') +
+          (req.headers['sec-fetch-site']
+            ? ', site « ' + req.headers['sec-fetch-site'] + ' » / ' + (req.headers['sec-fetch-dest'] ?? '?')
+            : '') +
           ') : ' +
           methode +
           ' ' +

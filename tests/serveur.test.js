@@ -161,6 +161,106 @@ test('un retour OAuth, qui arrive sans Origin, passe', async () => {
   assert.equal(r.code, 200);
 });
 
+// --- Fetch Metadata : ce que le navigateur dit de la provenance ------------
+// Les en-tetes sont ceux qu'envoie reellement Chromium (et le CEF d'OBS) dans
+// chaque situation.
+
+const IMAGE_TIERCE = {
+  'Sec-Fetch-Site': 'cross-site',
+  'Sec-Fetch-Mode': 'no-cors',
+  'Sec-Fetch-Dest': 'image',
+};
+
+test('une balise <img> posee sur un site tiers est refusee', async () => {
+  // Le vecteur de S1 : une requete d'image ne porte pas d'Origin et son Host
+  // est legitime, elle passait donc les deux autres gardes.
+  const r = await requete({ chemin: '/overlay/roue-rl/roue', entetes: IMAGE_TIERCE });
+  assert.equal(r.code, 403);
+});
+
+test('un <script src> tiers ne peut pas charger l API', async () => {
+  const r = await requete({
+    chemin: '/api/etat',
+    entetes: { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'no-cors', 'Sec-Fetch-Dest': 'script' },
+  });
+  assert.equal(r.code, 403);
+});
+
+test('une autre application sur localhost est refusee aussi', async () => {
+  // localhost:3000 et localhost:4455 sont « same-site » : meme nom, autre port.
+  const r = await requete({
+    chemin: '/api/journal',
+    entetes: { 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'no-cors', 'Sec-Fetch-Dest': 'empty' },
+  });
+  assert.equal(r.code, 403);
+});
+
+test('une page tierce ne peut pas encadrer StreamKit dans une iframe', async () => {
+  const r = await requete({
+    chemin: '/',
+    entetes: { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'iframe' },
+  });
+  assert.equal(r.code, 403);
+});
+
+test('un formulaire tiers qui POST en navigation est refuse', async () => {
+  // Une navigation, oui, mais qui envoie des donnees : seul le GET passe.
+  const r = await requete({
+    methode: 'POST',
+    chemin: '/api/maj/appliquer',
+    entetes: { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' },
+  });
+  assert.equal(r.code, 403);
+});
+
+test('une valeur de Sec-Fetch-Site inconnue n ouvre pas de breche', async () => {
+  const r = await requete({ chemin: '/api/etat', entetes: { 'Sec-Fetch-Site': 'n-importe-quoi' } });
+  assert.equal(r.code, 403);
+});
+
+test('le retour de Twitch ou de Spotify, venu de leur site, passe', async () => {
+  // LE cas a ne pas casser : sans lui, plus aucune connexion de compte.
+  // Le navigateur arrive de id.twitch.tv ou accounts.spotify.com : cross-site,
+  // mais navigation de page entiere.
+  const r = await requete({
+    chemin: '/api/etat', // la route importe peu : c'est la provenance qui est jugee
+    entetes: {
+      Host: 'localhost:' + PORT,
+      'Sec-Fetch-Site': 'cross-site',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-User': '?1',
+    },
+  });
+  assert.equal(r.code, 200);
+});
+
+test('ce que fait le streamer lui-meme passe', async () => {
+  const cas = {
+    'URL collee dans OBS ou la barre d adresse': {
+      chemin: '/overlay/roue-rl/roue',
+      entetes: { 'Sec-Fetch-Site': 'none', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' },
+    },
+    'overlay qui charge son image': {
+      chemin: '/style.css',
+      entetes: { 'Sec-Fetch-Site': 'same-origin', 'Sec-Fetch-Mode': 'no-cors', 'Sec-Fetch-Dest': 'style' },
+    },
+    'dashboard qui interroge son API': {
+      chemin: '/api/etat',
+      entetes: {
+        Origin: 'http://127.0.0.1:' + PORT,
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Dest': 'empty',
+      },
+    },
+  };
+  for (const [quoi, { chemin, entetes }] of Object.entries(cas)) {
+    const r = await requete({ chemin, entetes });
+    assert.equal(r.code, 200, 'refuse a tort : ' + quoi);
+  }
+});
+
 // --- Traversee de dossier -------------------------------------------------
 
 test('on ne sort pas du dossier d un module par ../', async () => {
