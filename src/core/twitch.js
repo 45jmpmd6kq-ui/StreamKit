@@ -13,6 +13,7 @@
 //   surCommande(cmd, fn)   commande de chat, avec controle des droits
 //   surRecompense(id, fn)  redemption de points de chaine
 //   surPredictions({...})  predictions : debut, progression, verrou, fin
+//   surSondages({...})     sondages : debut, progression, fin
 //   surPub(fn)             debut d'une coupure pub (duree, automatique ou non)
 //   statutRedemption(e, s) valider (FULFILLED) / rembourser (CANCELED)
 //   aLeDroit(scope)        savoir si l'autorisation courante couvre un droit
@@ -326,6 +327,26 @@ export function contextePour(moduleId, logModule) {
       if (progression) abonnements.push(listener.onChannelPredictionProgress(id, proteger(progression)));
       if (verrou) abonnements.push(listener.onChannelPredictionLock(id, proteger(verrou)));
       if (fin) abonnements.push(listener.onChannelPredictionEnd(id, proteger(fin)));
+      return noter(moduleId, () => abonnements.forEach((a) => a.stop()));
+    },
+
+    // Cycle de vie des sondages : lance, votes qui arrivent, termine (normalement,
+    // clos a la main, ou archive). Chaque phase est optionnelle. Droit requis :
+    // channel:read:polls (channel:manage:polls le couvre aussi).
+    surSondages({ debut, progression, fin }) {
+      exige();
+      const abonnements = [];
+      const proteger = (fn) => async (e) => {
+        try {
+          await fn(e);
+        } catch (err) {
+          logModule.err('erreur sur le sondage : ' + (err?.message || err));
+        }
+      };
+      const id = etat.broadcasterId;
+      if (debut) abonnements.push(listener.onChannelPollBegin(id, proteger(debut)));
+      if (progression) abonnements.push(listener.onChannelPollProgress(id, proteger(progression)));
+      if (fin) abonnements.push(listener.onChannelPollEnd(id, proteger(fin)));
       return noter(moduleId, () => abonnements.forEach((a) => a.stop()));
     },
 

@@ -1,8 +1,8 @@
 # StreamKit — guide d'installation
 
 StreamKit rassemble des outils pour ton live dans une seule application Windows :
-musique demandée par les viewers, clips au chat, prédictions Twitch en direct à
-l'écran, annonce des pubs, voiture au hasard et compteur de victoires sur Rocket League, bandeau
+musique demandée par les viewers, clips au chat, prédictions et sondages Twitch en
+direct à l'écran, annonce des pubs, voiture au hasard et compteur de victoires sur Rocket League, bandeau
 de session Valorant. Tout tourne **sur ton PC** : pas de compte
 à créer chez nous, pas de serveur, et tes accès restent chez toi.
 
@@ -19,8 +19,8 @@ veux utiliser.
 | Pour…                              | Il te faut                                                                 |
 | ---------------------------------- | -------------------------------------------------------------------------- |
 | Tous les modules                   | Windows 10 ou 11, et OBS Studio pour afficher les overlays                 |
-| Clips, Bot Musique, Random Car, Prédictions, Annonce de pub | Ton compte Twitch, avec la **double authentification activée** (Twitch l'exige pour créer une application) |
-| Bot Musique, Random Car, Prédictions, Annonce de pub | Le statut **Affilié ou Partenaire** Twitch (points de chaîne, prédictions et pubs leur sont réservés) |
+| Clips, Bot Musique, Random Car, Prédictions, Sondages, Annonce de pub | Ton compte Twitch, avec la **double authentification activée** (Twitch l'exige pour créer une application) |
+| Bot Musique, Random Car, Prédictions, Sondages, Annonce de pub | Le statut **Affilié ou Partenaire** Twitch (points de chaîne, prédictions, sondages et pubs leur sont réservés) |
 | Bot Musique                        | **Spotify Premium**, et Spotify ouvert sur un appareil pendant le live     |
 | Clips                              | Rien de plus — mais on ne peut clipper que **pendant un live**             |
 | Overlay W/L (Valorant)             | Valorant installé sur le même PC                                           |
@@ -119,6 +119,11 @@ tu veux, puis clique sur **Enregistrer** en bas.
   (**Connecteurs** → **Twitch** → **Connecter**) : ce module demande un droit de
   plus. Le bouton **Simuler une prédiction** joue un exemple complet (votes,
   fermeture, résultat) dans l'overlay, sans rien envoyer à Twitch.
+- **Sondages** : rien à créer. Lance tes sondages depuis Twitch comme
+  d'habitude : le scoreboard apparaît tout seul, suit les votes, affiche le
+  résultat 15 secondes (réglable), puis disparaît. **Si ta chaîne était déjà
+  connectée avant**, reconnecte-la : ce module demande un droit de plus.
+  **Simuler un sondage** joue un exemple complet dans l'overlay.
 - **Annonce de pub** : rien à régler pour démarrer. Une minute avant chaque pub
   automatique, un bandeau annonce « Pause pub dans 0:45 » et un message part dans
   le chat ; pendant la pub, le bandeau affiche le temps restant. Une pub lancée à
@@ -144,7 +149,7 @@ tu veux, puis clique sur **Enregistrer** en bas.
 1. Dans StreamKit, ouvre le module. Dans **Overlays OBS**, clique sur **Copier**.
 2. Dans OBS : **Sources** → **+** → **Navigateur**, et colle l'adresse dans
    **URL**. Pour la taille :
-   - **Bot Musique, Random Car, Clips, Prédictions, Compteur de session, Annonce de pub** : la taille de ta scène (par exemple
+   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Annonce de pub** : la taille de ta scène (par exemple
      1920 × 1080). L'overlay se place tout seul dans le coin choisi dans les
      réglages du module ;
    - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux.

@@ -39,6 +39,7 @@ test('les modules du depot sont tous decouverts', () => {
     'pub',
     'rl-session',
     'roue-rl',
+    'sondages',
     'valorant',
   ]);
 });
