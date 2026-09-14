@@ -8,7 +8,7 @@ const DONNEES = dossierDeDonneesJetable(); // AVANT tout import du code
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync, existsSync, readFileSync, utimesSync } from 'node:fs';
+import { writeFileSync, existsSync, readFileSync, utimesSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const store = await import('../src/core/store.js');
@@ -61,6 +61,69 @@ test('un config.json illisible est mis de cote, pas fatal', () => {
 test('un BOM ajoute par le Bloc-notes ne coute pas ses reglages au streamer', () => {
   writeFileSync(CONFIG, '﻿' + JSON.stringify({ twitch: { channel: 'sylvain' } }), 'utf8');
   assert.equal(store.chargerConfig().twitch.channel, 'sylvain');
+});
+
+// --- Migrations du format de config.json ----------------------------------
+
+const surLeDisque = () => JSON.parse(readFileSync(CONFIG, 'utf8'));
+
+test('une config d avant la 0.9.1 eteint le module de demonstration, et rien d autre', () => {
+  writeFileSync(
+    CONFIG,
+    JSON.stringify({
+      version: 1,
+      twitch: { channel: 'sylvain' },
+      modules: {
+        exemple: { actif: true, schemaVersion: 1, reglages: { intervalle: 5 } },
+        musique: { actif: true, schemaVersion: 2, reglages: { cout: 500 } },
+      },
+    }),
+    'utf8'
+  );
+
+  const c = store.chargerConfig();
+  assert.equal(c.modules.exemple.actif, false, 'le module de demonstration doit etre eteint');
+  assert.deepEqual(c.modules.exemple.reglages, { intervalle: 5 }, 'ses reglages restent');
+  assert.equal(c.modules.musique.actif, true, 'un vrai module ne doit pas etre touche');
+  assert.equal(c.twitch.channel, 'sylvain');
+
+  // Ecrit sur le disque, sinon la migration recommencerait a chaque demarrage.
+  const disque = surLeDisque();
+  assert.equal(disque.version, 2);
+  assert.equal(disque.modules.exemple.actif, false);
+});
+
+test('la migration ne passe qu une fois : un module rallume le reste', () => {
+  // Le streamer qui rallume la demo en connaissance de cause ne doit pas la
+  // voir s'eteindre toute seule au lancement suivant.
+  store.sauverModule('exemple', { actif: true });
+  assert.equal(store.chargerConfig().modules.exemple.actif, true);
+});
+
+test('la version se lit dans le fichier, pas dans les valeurs par defaut', () => {
+  // Le piege : la fusion comble une cle absente avec la version par defaut, la
+  // plus recente. Lue apres la fusion, une config sans version paraitrait a jour
+  // et ne serait jamais migree.
+  writeFileSync(CONFIG, JSON.stringify({ modules: { exemple: { actif: true } } }), 'utf8');
+  assert.equal(store.chargerConfig().modules.exemple.actif, false);
+});
+
+test('un premier lancement part de la derniere version sans rien ecrire', () => {
+  rmSync(CONFIG, { force: true });
+  assert.equal(store.chargerConfig().version, 2);
+  assert.equal(existsSync(CONFIG), false, 'rien a migrer, donc rien a ecrire');
+});
+
+test('une config venue d une version plus recente n est ni migree ni redescendue', () => {
+  // Retour a une version anterieure apres un souci : le fichier a ete ecrit par
+  // une version qui connait des migrations que nous ignorons.
+  const futur = JSON.stringify({ version: 99, modules: { exemple: { actif: true } } });
+  writeFileSync(CONFIG, futur, 'utf8');
+
+  const c = store.chargerConfig();
+  assert.equal(c.version, 99);
+  assert.equal(c.modules.exemple.actif, true);
+  assert.equal(readFileSync(CONFIG, 'utf8'), futur, 'le fichier ne doit pas avoir ete reecrit');
 });
 
 // --- Entrees de module ----------------------------------------------------

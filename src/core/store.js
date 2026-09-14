@@ -15,10 +15,13 @@ import { join } from 'node:path';
 import { CONFIG_PATH, TOKENS_PATH, ETAT_DIR } from './paths.js';
 import { ecrireAtomique } from './fichiers.js';
 import * as coffre from './coffre.js';
+import * as journal from './journal.js';
+
+const log = journal.pour('noyau');
 
 const CONFIG_DEFAUT = {
-  // 1 -> 2 : les modules de developpement laisses actifs sont eteints une fois
-  // (voir la migration au demarrage, dans noyau.js).
+  // Version du FORMAT de config.json. La monter = ajouter une entree dans
+  // MIGRATIONS_CONFIG, plus bas.
   version: 2,
   twitch: { channel: '', broadcasterId: '', utilisateurId: '' },
   reseau: { port: 4455 },
@@ -77,10 +80,51 @@ function estObjet(v) {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
 }
 
+// --- Migrations du format de config.json ------------------------------------
+//
+// Meme mecanique que pour les reglages d'un module (schema.migrer) : la cle est
+// la version d'ARRIVEE, la fonction transforme la config en place.
+// chargerConfig() les enchaine et ecrit le resultat, une seule fois.
+//
+// Une migration decrit le PASSE et doit rester figee : elle ne consulte ni les
+// manifestes ni rien de ce qui evolue apres coup. D'ou « exemple » ecrit en
+// toutes lettres ci-dessous, plutot que « les modules marques developpement » :
+// c'etait vrai en 0.9.0, rien ne garantit que ca le reste. Et c'est aussi ce qui
+// permet de migrer AVANT que le registre ne lise quels modules sont actifs --
+// au lieu de les demarrer d'abord pour les corriger ensuite.
+const MIGRATIONS_CONFIG = {
+  // Jusqu'a la 0.9.0, le module de demonstration s'affichait dans le rail comme
+  // une fonctionnalite : certains l'ont donc active par curiosite. Depuis, un
+  // module de developpement est masque -- mais pas quand il est actif, sinon on
+  // ne pourrait plus l'eteindre. Il resterait donc visible a vie chez ceux qui
+  // l'ont allume : on l'eteint une bonne fois.
+  2: (c) => {
+    if (!c.modules?.exemple?.actif) return;
+    c.modules.exemple.actif = false;
+    log.info("« Module de démonstration » desactive : c'est un outil de diagnostic, pas un module.");
+  },
+};
+
 let config = null;
 
 export function chargerConfig() {
-  config = fusionner(structuredClone(CONFIG_DEFAUT), lire(CONFIG_PATH, {}));
+  const existait = existsSync(CONFIG_PATH);
+  const stocke = lire(CONFIG_PATH, {});
+  config = fusionner(structuredClone(CONFIG_DEFAUT), stocke);
+
+  // La version se lit dans le FICHIER, jamais dans la config fusionnee : la
+  // fusion comble une cle absente avec la version par defaut -- la plus recente
+  // -- et plus rien ne serait jamais migre. Aucun fichier du tout : premier
+  // lancement, deja a jour.
+  const depuis = existait ? (stocke.version ?? 1) : CONFIG_DEFAUT.version;
+
+  // Une version PLUS recente que la notre (retour a une version anterieure
+  // apres un souci) : on ne touche a rien, et surtout on ne la redescend pas.
+  if (depuis < CONFIG_DEFAUT.version) {
+    for (let v = depuis + 1; v <= CONFIG_DEFAUT.version; v++) MIGRATIONS_CONFIG[v]?.(config);
+    config.version = CONFIG_DEFAUT.version;
+    sauverConfig(config);
+  }
   return config;
 }
 
