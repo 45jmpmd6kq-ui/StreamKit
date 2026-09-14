@@ -276,3 +276,13 @@ test('l ecran Connecteurs dit qui reclame chaque service, et s il faut un secret
   assert.equal(spotify.pkce, true, 'le dashboard ne doit pas reclamer de secret Spotify');
   assert.equal(spotify.etat, 'inactif');
 });
+
+test('l assistant Twitch ne propose pas un nom d application que Twitch refusera', () => {
+  // Twitch refuse un nom d'application deja pris, tous comptes confondus :
+  // « Nom : StreamKit » ne fonctionnait que pour le premier streamer.
+  const [twitch] = monter().etatConnecteurs();
+  const etapeNom = twitch.etapes.find((e) => e.startsWith('Nom'));
+  assert.ok(etapeNom, 'l etape du nom doit exister');
+  assert.doesNotMatch(etapeNom, /^Nom : StreamKit —/, 'un nom fixe ne passe qu une fois');
+  assert.match(etapeNom, /pseudo/);
+});

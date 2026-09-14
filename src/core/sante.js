@@ -89,7 +89,9 @@ export function creerSante({
         etat: !t.pret ? (appTwitch.clientId ? 'ko' : 'inactif') : manquants.length ? 'attention' : 'ok',
         etapes: [
           'Ouvre la console développeur Twitch et connecte-toi.',
-          'Nom : StreamKit — Catégorie : Chat Bot.',
+          // Twitch refuse un nom d'application deja pris, tous comptes
+          // confondus : « StreamKit » tout court ne passe qu'une fois.
+          'Nom : StreamKit-tonpseudo (Twitch refuse un nom déjà pris) — Catégorie : Chat Bot.',
           'URL de redirection OAuth : colle l’adresse ci-dessous, exactement.',
           'Valide, puis récupère l’ID client et génère un secret client.',
         ],
