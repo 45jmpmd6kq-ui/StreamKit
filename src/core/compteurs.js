@@ -8,9 +8,10 @@
 // Un module se contente d'appeler ctx.compteur.incr('demandes') : c'est le socle
 // qui persiste, agrège et sait quand écrire sur le disque.
 
-import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DONNEES } from './paths.js';
+import { ecrireAtomique } from './fichiers.js';
 
 const FICHIER = join(DONNEES, 'compteurs.json');
 
@@ -64,9 +65,7 @@ function ecrire() {
   if (!sale) return;
   sale = false;
   try {
-    const tmp = FICHIER + '.tmp';
-    writeFileSync(tmp, JSON.stringify({ modules: totaux }, null, 2), 'utf8');
-    renameSync(tmp, FICHIER);
+    ecrireAtomique(FICHIER, JSON.stringify({ modules: totaux }, null, 2));
   } catch {
     /* disque plein ou verrouillé : on réessaiera au prochain incrément */
   }

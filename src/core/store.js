@@ -5,13 +5,15 @@
 //   tokens.json     secrets : jetons OAuth, client secrets  -- JAMAIS dans un zip
 //   etat/<id>.json  memoire de travail d'un module (file d'attente, compteurs)
 //
-// Ecriture atomique partout : si le PC est coupe pile pendant une sauvegarde,
-// l'ancien fichier reste intact au lieu d'etre tronque. Un tokens.json corrompu
-// = tout reinstaller, on ne prend pas ce risque.
+// Ecriture atomique et durable partout (voir fichiers.js) : si le PC est coupe
+// pile pendant une sauvegarde, on retrouve l'ancien fichier ou le nouveau, jamais
+// un fichier tronque ou vide. Un tokens.json corrompu = tout reconnecter, on ne
+// prend pas ce risque.
 
-import { readFileSync, writeFileSync, renameSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, renameSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_PATH, TOKENS_PATH, ETAT_DIR } from './paths.js';
+import { ecrireAtomique } from './fichiers.js';
 import * as coffre from './coffre.js';
 
 const CONFIG_DEFAUT = {
@@ -49,12 +51,6 @@ function lire(chemin, defaut) {
     }
     return structuredClone(defaut);
   }
-}
-
-function ecrireAtomique(chemin, contenu) {
-  const tmp = chemin + '.tmp';
-  writeFileSync(tmp, contenu, 'utf8');
-  renameSync(tmp, chemin);
 }
 
 // Fusion PROFONDE des defauts et du fichier existant.
