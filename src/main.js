@@ -139,7 +139,7 @@ const updater = {
 
         // Filet de securite : si quelque chose retient encore le processus,
         // on force la sortie. Un StreamKit fantome empecherait l'installeur de
-        // faire son travail, et le port 4455 resterait pris.
+        // faire son travail, et le port resterait pris.
         setTimeout(() => app.exit(0), 4000);
       }, 800);
       return { ok: true, actuelle, derniere: derniereConnue };
@@ -383,7 +383,7 @@ async function quitter() {
     /* on quitte de toute facon */
   }
   // Meme demontage que pour la mise a jour : l'icone et son minuteur gardent
-  // Electron vivant, et le port 4455 resterait pris par un processus fantome.
+  // Electron vivant, et le port resterait pris par un processus fantome.
   arreterRafraichissementIcone();
   icone?.destroy();
   icone = null;

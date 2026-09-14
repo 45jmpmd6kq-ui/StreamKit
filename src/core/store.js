@@ -19,12 +19,26 @@ import * as journal from './journal.js';
 
 const log = journal.pour('noyau');
 
+// Voir `reseau` ci-dessous pour le choix de ce nombre.
+export const PORT_PAR_DEFAUT = 47455;
+
 const CONFIG_DEFAUT = {
   // Version du FORMAT de config.json. La monter = ajouter une entree dans
   // MIGRATIONS_CONFIG, plus bas.
   version: 2,
   twitch: { channel: '', broadcasterId: '', utilisateurId: '' },
-  reseau: { port: 4455 },
+  // 47455 et plus 4455 : 4455 est le port par defaut du serveur WebSocket
+  // d'OBS, que beaucoup de streamers activent pour leur Stream Deck,
+  // Streamer.bot ou Touch Portal. Les deux se disputaient le port : StreamKit
+  // refusait de demarrer si OBS etait lance avant lui, et coupait OBS de ces
+  // outils s'il demarrait le premier (avec Windows). En dessous de 49152, pour
+  // rester hors de la plage que Windows distribue et reserve a la volee.
+  //
+  // Les installations existantes gardent 4455 : `reseau` fait partie des
+  // defauts depuis le premier commit, donc de tout config.json deja ecrit, et
+  // la valeur enregistree l'emporte toujours sur le defaut. Leurs adresses de
+  // retour Twitch et Spotify, et leurs sources OBS, restent valables.
+  reseau: { port: PORT_PAR_DEFAUT },
   // Depot GitHub des mises a jour, au format "utilisateur/projet".
   //
   // LIGNE DE COMMANDE UNIQUEMENT (maj.js, npm run dev). Chez le streamer,

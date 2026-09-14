@@ -209,7 +209,7 @@ Trois règles apprises sur les projets précédents :
 3. **`EventSource` reconnecte tout seul** : un redémarrage de StreamKit (ou une
    mise à jour) ne casse pas l'overlay en plein live.
 
-Dans OBS : Source ▸ Navigateur ▸ `http://127.0.0.1:4455/overlay/<module>/<vue>`
+Dans OBS : Source ▸ Navigateur ▸ `http://127.0.0.1:47455/overlay/<module>/<vue>`
 (`127.0.0.1` plutôt que `localhost` : le navigateur d'OBS préfère parfois l'IPv6
 et n'affiche alors rien).
 

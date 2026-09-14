@@ -236,7 +236,7 @@ function servirFichier(res, base, relatif, { cache = false } = {}) {
 // streamer -- et c'est par la que passent les deux attaques qui nous concernent :
 //
 //   CSRF : n'importe quelle page ouverte dans un onglet peut envoyer un POST
-//   vers 127.0.0.1:4455. Sans controle, elle reecrit les identifiants Twitch,
+//   vers 127.0.0.1:47455. Sans controle, elle reecrit les identifiants Twitch,
 //   declenche une action de module ou force une mise a jour. Le navigateur
 //   joint TOUJOURS un en-tete Origin a une requete qui change quelque chose :
 //   il suffit de le lire.
@@ -253,11 +253,11 @@ function servirFichier(res, base, relatif, { cache = false } = {}) {
 
 const HOTES_LOCAUX = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 
-// « 127.0.0.1:4455 », « localhost », « [::1]:4455 » -> autorise ou non.
+// « 127.0.0.1:47455 », « localhost », « [::1]:47455 » -> autorise ou non.
 function hoteLocal(valeur, port) {
   if (!valeur) return false; // HTTP/1.1 impose Host : son absence est louche
   // On coupe au DERNIER deux-points, et seulement s'il suit le crochet
-  // fermant : sans ca, « [::1]:4455 » serait decoupe au milieu de l'adresse.
+  // fermant : sans ca, « [::1]:47455 » serait decoupe au milieu de l'adresse.
   const i = valeur.lastIndexOf(':');
   const avecPort = i > valeur.lastIndexOf(']');
   const nom = (avecPort ? valeur.slice(0, i) : valeur).toLowerCase();

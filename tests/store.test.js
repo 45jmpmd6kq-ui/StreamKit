@@ -35,7 +35,27 @@ test('une nouvelle option apparait sans effacer les reglages existants', () => {
   const c = store.chargerConfig();
   assert.equal(c.maj.depot, 'moi/mon-fork', 'la valeur du streamer gagne');
   assert.equal(c.maj.auto, true, 'le defaut comble ce qui manque');
-  assert.equal(c.reseau.port, 4455, 'les branches absentes arrivent entieres');
+  assert.equal(c.reseau.port, store.PORT_PAR_DEFAUT, 'les branches absentes arrivent entieres');
+});
+
+test('le port par defaut n est plus celui du WebSocket d OBS', () => {
+  // 4455 est le port par defaut du serveur WebSocket d'OBS, active par
+  // beaucoup de streamers (Stream Deck, Streamer.bot) : les deux se
+  // disputaient le port. Ce test empeche d'y revenir par megarde.
+  assert.notEqual(store.PORT_PAR_DEFAUT, 4455);
+  assert.notEqual(store.PORT_PAR_DEFAUT, 4444, 'ancien port par defaut du WebSocket d OBS');
+  assert.ok(store.PORT_PAR_DEFAUT < 49152, 'hors de la plage que Windows distribue et reserve a la volee');
+});
+
+test('une installation existante garde son port apres le changement de defaut', () => {
+  // Sa chaine Twitch, son application Spotify et ses sources OBS connaissent
+  // ce port : le changer casserait les connexions et les overlays sans rien dire.
+  writeFileSync(
+    CONFIG,
+    JSON.stringify({ version: 2, reseau: { port: 4455 }, twitch: { channel: 'sylvain' } }),
+    'utf8'
+  );
+  assert.equal(store.chargerConfig().reseau.port, 4455);
 });
 
 test('un reglage a false ou 0 n est pas remplace par son defaut', () => {
@@ -54,7 +74,7 @@ test('un config.json illisible est mis de cote, pas fatal', () => {
   writeFileSync(CONFIG, '{ ceci n est pas du JSON', 'utf8');
 
   const c = store.chargerConfig();
-  assert.equal(c.reseau.port, 4455, 'on repart des defauts');
+  assert.equal(c.reseau.port, store.PORT_PAR_DEFAUT, 'on repart des defauts');
   assert.ok(existsSync(CONFIG + '.corrompu'), 'le fichier fautif est conserve a cote');
 });
 

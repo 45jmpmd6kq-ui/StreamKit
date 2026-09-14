@@ -95,7 +95,7 @@ export default {
   // --- Overlays OBS ---------------------------------------------------------
   overlays: [
     {
-      chemin: 'compteur', // -> http://127.0.0.1:4455/overlay/exemple/compteur
+      chemin: 'compteur', // -> http://127.0.0.1:47455/overlay/exemple/compteur
       nom: 'Compteur',
       description: 'Source Navigateur de démonstration.',
       fichier: 'compteur.html', // dans le sous-dossier overlay/

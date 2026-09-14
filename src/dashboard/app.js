@@ -857,7 +857,7 @@ function dessinerDetail() {
                  (o) => `<div class="overlay-ligne">
                     <div class="infos">
                       <div class="nom">${echapper(o.nom)}</div>
-                      <code>http://127.0.0.1:${etat.general?.port ?? 4455}${o.url}</code>
+                      <code>http://127.0.0.1:${etat.general?.port ?? location.port}${o.url}</code>
                     </div>
                     <button class="btn petit" data-copier-url="${o.url}">Copier</button>
                     <a class="btn petit" href="${o.url}?demo=1" target="_blank" rel="noreferrer">Aperçu</a>
@@ -968,7 +968,9 @@ function brancherDetail() {
     if (!m) return;
     if (el.id === 'bascule-module') return basculerModule(m);
     if (el.id === 'btn-redemarrer') return redemarrerModule(m);
-    if (d.copierUrl) return copier('http://127.0.0.1:' + (etat.general?.port ?? 4455) + d.copierUrl);
+    // A defaut d'etat general, le port de la page elle-meme : le dashboard est
+    // servi par StreamKit, sur le port que les overlays utilisent aussi.
+    if (d.copierUrl) return copier('http://127.0.0.1:' + (etat.general?.port ?? location.port) + d.copierUrl);
     if (d.action) return lancerAction(m, el);
     if (el.matches('#formulaire .bascule')) {
       el.setAttribute('aria-checked', el.getAttribute('aria-checked') !== 'true');

@@ -66,7 +66,9 @@ export async function demarrerNoyau({
   }
 
   const config = store.chargerConfig();
-  const PORT = config.reseau?.port ?? 4455;
+  // Le repli couvre un config.json abime a la main (« reseau »: null) : un
+  // mauvais port ne doit pas empecher StreamKit de demarrer.
+  const PORT = config.reseau?.port ?? store.PORT_PAR_DEFAUT;
 
   log.info('StreamKit ' + maj.versionActuelle() + ' — demarrage');
 
