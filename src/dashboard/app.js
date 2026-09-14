@@ -65,6 +65,105 @@ async function copier(texte) {
   }
 }
 
+// --------------------------------------------------------- le panneau central
+
+// Le module affiché, lu AU MOMENT où on en a besoin. Un gestionnaire qui
+// garderait le module de son dessin travaillerait sur une copie périmée dès le
+// rafraîchissement suivant.
+const moduleAffiche = () => etat.modules.find((m) => m.id === etat.selection);
+
+// Un champ a-t-il été touché depuis qu'il a été dessiné ? defaultValue garde la
+// valeur écrite dans le HTML, value celle que le streamer a tapée.
+function estModifie(champ) {
+  if (champ.tagName !== 'SELECT') return champ.value !== champ.defaultValue;
+  const initial = [...champ.options].findIndex((o) => o.defaultSelected);
+  return champ.selectedIndex !== Math.max(initial, 0);
+}
+
+// Redessine le panneau central sans effacer ce que le streamer est en train
+// d'y faire.
+//
+// Le dashboard se reconstruit par innerHTML, et le rafraîchissement général
+// tourne toutes les 5 secondes. Sans précaution, chaque tour effaçait la saisie
+// sous les doigts : l'ID client collé dans l'écran Connecteurs disparaissait
+// (corrigé en 0.14.1), et le formulaire d'un module revenait à ses valeurs
+// enregistrées dès qu'un AUTRE module changeait d'état.
+//
+// Seuls les champs MODIFIÉS depuis le dernier dessin sont repris : un champ
+// auquel on n'a pas touché montre ce que dit StreamKit, y compris quand ça vient
+// de changer. Et seulement quand c'est la même vue qu'on redessine : les champs
+// de deux modules différents peuvent porter le même identifiant. Suivent aussi
+// le champ actif, la position du curseur et les messages de retour (« Enregistré »).
+//
+// Renvoie vrai si c'est la même vue qui vient d'être redessinée.
+function redessinerDetail(html) {
+  const cible = $('#detail');
+  const memeVue = cible.dataset.vue === etat.selection;
+
+  const saisies = new Map();
+  const bascules = new Map();
+  const messages = new Map();
+  let focus = null;
+  if (memeVue) {
+    for (const champ of cible.querySelectorAll('input[id], textarea[id], select[id]')) {
+      if (estModifie(champ)) saisies.set(champ.id, champ.value);
+    }
+    for (const b of cible.querySelectorAll('.bascule[data-cle]')) {
+      const valeur = b.getAttribute('aria-checked');
+      if (valeur !== b.dataset.initial) bascules.set(b.dataset.cle, valeur);
+    }
+    for (const m of cible.querySelectorAll('.etat-sauvegarde[id]')) {
+      if (m.textContent) messages.set(m.id, [m.className, m.textContent]);
+    }
+    const actif = document.activeElement;
+    if (actif?.id && cible.contains(actif)) {
+      focus = { id: actif.id, debut: actif.selectionStart, fin: actif.selectionEnd };
+    }
+  }
+
+  cible.innerHTML = html;
+  cible.dataset.vue = etat.selection;
+
+  for (const [id, valeur] of saisies) {
+    const champ = document.getElementById(id);
+    if (champ) champ.value = valeur;
+  }
+  for (const [cle, valeur] of bascules) {
+    cible.querySelector(`.bascule[data-cle="${cle}"]`)?.setAttribute('aria-checked', valeur);
+  }
+  for (const [id, [classe, texte]] of messages) {
+    const m = document.getElementById(id);
+    if (m) Object.assign(m, { className: classe, textContent: texte });
+  }
+  // Un nuancier suit son champ texte : sans ça, une couleur reprise s'afficherait
+  // dans le champ mais pas dans le carré.
+  for (const nuancier of cible.querySelectorAll('[data-couleur]')) {
+    const texte = cible.querySelector(`[data-cle="${nuancier.dataset.couleur}"]`);
+    if (texte && /^#[0-9a-f]{6}$/i.test(texte.value)) nuancier.value = texte.value;
+  }
+  if (focus) {
+    const champ = document.getElementById(focus.id);
+    if (champ) {
+      champ.focus();
+      try {
+        champ.setSelectionRange(focus.debut ?? champ.value.length, focus.fin ?? champ.value.length);
+      } catch {
+        /* tous les types de champ n'acceptent pas une selection */
+      }
+    }
+  }
+  return memeVue;
+}
+
+// Ce qui vient d'être enregistré n'est plus une saisie en cours : le prochain
+// dessin doit montrer ce que StreamKit a retenu, pas ce qui avait été tapé.
+function marquerEnregistre(zone) {
+  for (const champ of zone.querySelectorAll('input, textarea')) champ.defaultValue = champ.value;
+  for (const option of zone.querySelectorAll('option')) option.defaultSelected = option.selected;
+  for (const b of zone.querySelectorAll('.bascule[data-cle]'))
+    b.dataset.initial = b.getAttribute('aria-checked');
+}
+
 // ------------------------------------------------------------------ bandeau haut
 
 async function rafraichirEtat() {
@@ -332,35 +431,40 @@ function dessinerRail() {
         </div>`;
     })
     .join('');
+}
 
-  $$('[data-module]').forEach((b) =>
-    b.addEventListener('click', () => {
-      etat.selection = b.dataset.module;
+// Un seul écouteur pour tout le rail, posé une fois au démarrage (audit U8) :
+// le rail est redessiné sans cesse, et rebrancher chaque bouton à chaque dessin
+// ne coûtait que du code et des occasions d'oublier.
+function brancherRail() {
+  $('#liste-modules').addEventListener('click', (e) => {
+    const entree = e.target.closest('[data-module]');
+    if (entree) {
+      etat.selection = entree.dataset.module;
       dessinerRail();
       dessinerDetail();
-    })
-  );
+      return;
+    }
 
-  $$('[data-categorie]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const id = b.dataset.categorie;
+    const groupe = e.target.closest('[data-categorie]');
+    if (groupe) {
+      const id = groupe.dataset.categorie;
       if (replis.has(id)) replis.delete(id);
       else replis.add(id);
       ecrireReplis(replis);
       dessinerRail();
-    })
-  );
+    }
+  });
 }
 
 // --- Vue d'ensemble ---------------------------------------------------------
 
 function dessinerAccueil() {
   const s = etat.sante;
-  const cible = $('#detail');
   $('#pied-detail').hidden = true;
 
   if (!s) {
-    cible.innerHTML = '<div class="vide">Lecture de l’état des connexions…</div>';
+    redessinerDetail('<div class="vide">Lecture de l’état des connexions…</div>');
     return;
   }
 
@@ -381,16 +485,16 @@ function dessinerAccueil() {
         '.'
       : 'Tout est en ordre. Bon stream.';
 
-  cible.innerHTML =
+  redessinerDetail(
     '<div class="titre-module"><span style="font-size:1.6rem">📡</span>' +
-    '<h1>Vue d’ensemble</h1></div>' +
-    '<p class="resume-accueil">' +
-    echapper(resume) +
-    '</p>' +
-    '<div class="cartes">' +
-    s.connexions
-      .map(
-        (c) => `
+      '<h1>Vue d’ensemble</h1></div>' +
+      '<p class="resume-accueil">' +
+      echapper(resume) +
+      '</p>' +
+      '<div class="cartes">' +
+      s.connexions
+        .map(
+          (c) => `
         <div class="carte ${c.etat}">
           <div class="entete">
             <span class="point ${c.etat === 'ok' ? 'ok' : c.etat === 'ko' ? 'ko' : c.etat === 'attention' ? 'attente' : ''}"></span>
@@ -400,17 +504,18 @@ function dessinerAccueil() {
           <div class="detail">${echapper(c.detail || '')}</div>
           ${c.aide ? `<div class="aide">${echapper(c.aide)}</div>` : ''}
         </div>`
-      )
-      .join('') +
-    '</div>' +
-    dessinerKpis(s) +
-    '<div class="section"><h3>Modules</h3>' +
-    '<p style="color:var(--texte-doux);margin:0">' +
-    s.modules.demarres +
-    ' démarré(s) sur ' +
-    s.modules.total +
-    (s.modules.enErreur ? ' — ' + s.modules.enErreur + ' à compléter ou en erreur' : '') +
-    '</p></div>';
+        )
+        .join('') +
+      '</div>' +
+      dessinerKpis(s) +
+      '<div class="section"><h3>Modules</h3>' +
+      '<p style="color:var(--texte-doux);margin:0">' +
+      s.modules.demarres +
+      ' démarré(s) sur ' +
+      s.modules.total +
+      (s.modules.enErreur ? ' — ' + s.modules.enErreur + ' à compléter ou en erreur' : '') +
+      '</p></div>'
+  );
 }
 
 // Le gros chiffre est celui de la SESSION — ce qui s'est passé depuis que
@@ -506,55 +611,22 @@ async function ouvrirConnecteur(id) {
 }
 
 function dessinerConnecteurs() {
-  const cible = $('#detail');
   $('#pied-detail').hidden = true;
 
   const liste = etat.connecteurs;
   if (!liste) {
-    cible.innerHTML = '<div class="vide">Lecture des connecteurs…</div>';
+    redessinerDetail('<div class="vide">Lecture des connecteurs…</div>');
     return;
   }
 
-  // Ce panneau se redessine tout seul, au rythme du rafraichissement general,
-  // pendant que le streamer est peut-etre en train d y coller ses identifiants.
-  // innerHTML effacait alors sa saisie sous ses doigts : il colle l'ID, passe
-  // au secret, et l'ID a disparu. Impossible a comprendre quand ca vous arrive,
-  // et impossible a configurer quoi que ce soit.
-  //
-  // On releve donc ce qui est deja tape, ainsi que le champ actif et la
-  // position du curseur, pour tout remettre juste apres.
-  const saisies = new Map();
-  for (const champ of cible.querySelectorAll('input')) {
-    if (champ.id && champ.value) saisies.set(champ.id, champ.value);
-  }
-  const actif = document.activeElement;
-  const focus = actif && cible.contains(actif) ? actif.id : null;
-  const debut = focus ? actif.selectionStart : null;
-  const fin = focus ? actif.selectionEnd : null;
-
-  cible.innerHTML =
+  // Ce panneau se redessine tout seul pendant que le streamer y colle ses
+  // identifiants : redessinerDetail garde ce qu'il a tapé.
+  redessinerDetail(
     '<div class="titre-module"><span style="font-size:1.6rem">🔌</span><h1>Connecteurs</h1></div>' +
-    '<p class="resume-accueil">Chaque service se configure ici, une seule fois. ' +
-    'Les modules qui en ont besoin y puisent tout seuls.</p>' +
-    liste.map(carteConnecteur).join('');
-
-  for (const [id, valeur] of saisies) {
-    const champ = document.getElementById(id);
-    if (champ) champ.value = valeur;
-  }
-  if (focus) {
-    const champ = document.getElementById(focus);
-    if (champ) {
-      champ.focus();
-      try {
-        champ.setSelectionRange(debut ?? champ.value.length, fin ?? champ.value.length);
-      } catch {
-        /* tous les types de champ n'acceptent pas une selection */
-      }
-    }
-  }
-
-  brancherConnecteurs();
+      '<p class="resume-accueil">Chaque service se configure ici, une seule fois. ' +
+      'Les modules qui en ont besoin y puisent tout seuls.</p>' +
+      liste.map(carteConnecteur).join('')
+  );
 }
 
 function carteConnecteur(c) {
@@ -644,80 +716,54 @@ function carteConnecteur(c) {
     </div>`;
 }
 
-function brancherConnecteurs() {
-  $$('[data-conn]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const id = b.dataset.conn;
-      if (deplies.has(id)) deplies.delete(id);
-      else deplies.add(id);
-      dessinerConnecteurs();
-    })
-  );
+function retourConnecteur(id, texte, ko = false) {
+  const el = $('#retour-' + id);
+  if (!el) return;
+  el.className = 'etat-sauvegarde ' + (ko ? 'ko' : 'ok');
+  el.textContent = texte;
+}
 
-  $$('[data-copier-conn]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const c = etat.connecteurs.find((x) => x.id === b.dataset.copierConn);
-      copier(c.urlDeRetour);
-    })
-  );
+async function enregistrerConnecteur(id) {
+  const pkce = etat.connecteurs.find((x) => x.id === id)?.pkce;
+  const clientId = $('#cid-' + id).value.trim();
+  // Le champ n'existe pas pour un connecteur PKCE : il n'y a pas de secret.
+  const clientSecret = $('#csec-' + id)?.value.trim() ?? '';
+  if (!clientId) return retourConnecteur(id, 'ID client nécessaire', true);
+  if (!pkce && !clientSecret) return retourConnecteur(id, 'ID et secret sont nécessaires', true);
+  try {
+    if (id === 'twitch') {
+      const chaine = $('#cid-chaine')?.value.trim();
+      if (chaine) await api('/api/connecteurs/twitch/chaine', { method: 'POST', corps: { channel: chaine } });
+    }
+    const r = await api('/api/connecteurs/' + id + '/app', {
+      method: 'POST',
+      corps: { clientId, clientSecret },
+    });
+    if (r.ok === false) return retourConnecteur(id, r.erreur || 'refusé', true);
+    retourConnecteur(id, 'Enregistré — clique sur « Connecter »');
+    // Le secret n'a plus à rester affiché : la carte montrera « déjà enregistré ».
+    marquerEnregistre($('#detail'));
+    await chargerConnecteurs();
+  } catch (e) {
+    retourConnecteur(id, e.message, true);
+  }
+}
 
-  const retour = (id, texte, ko = false) => {
-    const el = $('#retour-' + id);
-    if (!el) return;
-    el.className = 'etat-sauvegarde ' + (ko ? 'ko' : 'ok');
-    el.textContent = texte;
-  };
+async function autoriserConnecteur(id) {
+  try {
+    const r = await api('/api/connecteurs/' + id + '/autoriser', { method: 'POST' });
+    if (r.ok === false) return retourConnecteur(id, r.erreur || r.conseil || 'autorisation impossible', true);
+    retourConnecteur(id, 'Autorise StreamKit dans la page qui vient de s’ouvrir…');
+    if (r.url) window.open(r.url, '_blank');
+  } catch (e) {
+    retourConnecteur(id, e.message, true);
+  }
+}
 
-  $$('[data-enregistrer-conn]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const id = b.dataset.enregistrerConn;
-      const pkce = etat.connecteurs.find((x) => x.id === id)?.pkce;
-      const clientId = $('#cid-' + id).value.trim();
-      // Le champ n'existe pas pour un connecteur PKCE : il n'y a pas de secret.
-      const clientSecret = $('#csec-' + id)?.value.trim() ?? '';
-      if (!clientId) return retour(id, 'ID client nécessaire', true);
-      if (!pkce && !clientSecret) return retour(id, 'ID et secret sont nécessaires', true);
-      try {
-        if (id === 'twitch') {
-          const chaine = $('#cid-chaine')?.value.trim();
-          if (chaine)
-            await api('/api/connecteurs/twitch/chaine', { method: 'POST', corps: { channel: chaine } });
-        }
-        const r = await api('/api/connecteurs/' + id + '/app', {
-          method: 'POST',
-          corps: { clientId, clientSecret },
-        });
-        if (r.ok === false) return retour(id, r.erreur || 'refusé', true);
-        retour(id, 'Enregistré — clique sur « Connecter »');
-        await chargerConnecteurs();
-      } catch (e) {
-        retour(id, e.message, true);
-      }
-    })
-  );
-
-  $$('[data-autoriser-conn]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const id = b.dataset.autoriserConn;
-      try {
-        const r = await api('/api/connecteurs/' + id + '/autoriser', { method: 'POST' });
-        if (r.ok === false) return retour(id, r.erreur || r.conseil || 'autorisation impossible', true);
-        retour(id, 'Autorise StreamKit dans la page qui vient de s’ouvrir…');
-        if (r.url) window.open(r.url, '_blank');
-      } catch (e) {
-        retour(id, e.message, true);
-      }
-    })
-  );
-
-  $$('[data-deconnecter-conn]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const id = b.dataset.deconnecterConn;
-      await api('/api/connecteurs/' + id + '/deconnecter', { method: 'POST' });
-      await chargerConnecteurs();
-      await chargerModules();
-    })
-  );
+async function deconnecterConnecteur(id) {
+  await api('/api/connecteurs/' + id + '/deconnecter', { method: 'POST' });
+  await chargerConnecteurs();
+  await chargerModules();
 }
 
 async function chargerConnecteurs() {
@@ -749,11 +795,10 @@ function dessinerDetail() {
   if (etat.selection === ACCUEIL) return dessinerAccueil();
   if (etat.selection === CONNECTEURS) return dessinerConnecteurs();
 
-  const m = etat.modules.find((x) => x.id === etat.selection);
-  const cible = $('#detail');
+  const m = moduleAffiche();
 
   if (!m) {
-    cible.innerHTML = '<div class="vide">Aucun module installé.</div>';
+    redessinerDetail('<div class="vide">Aucun module installé.</div>');
     $('#pied-detail').hidden = true;
     return;
   }
@@ -761,7 +806,7 @@ function dessinerDetail() {
   const twitchKo = m.scopes.length && !etat.general?.twitch?.pret;
   const droitsManquants = (m.scopes || []).filter((s) => !(etat.general?.twitch?.scopes || []).includes(s));
 
-  cible.innerHTML = `
+  const memeVue = redessinerDetail(`
     <div class="titre-module">
       <span style="font-size:1.6rem">${m.icone}</span>
       <h1>${echapper(m.nom)}</h1>
@@ -792,7 +837,13 @@ function dessinerDetail() {
         : ''
     }
 
-    ${m.champs.length ? `<div class="section"><h3>Réglages</h3><div id="formulaire"></div></div>` : ''}
+    ${
+      m.champs.length
+        ? `<div class="section"><h3>Réglages</h3><div id="formulaire">${m.champs
+            .map((c) => dessinerChamp(c, m.reglages[c.cle]))
+            .join('')}</div></div>`
+        : ''
+    }
 
     ${
       m.overlays.length
@@ -844,44 +895,104 @@ function dessinerDetail() {
         <button class="btn petit" id="btn-redemarrer">Redémarrer le module</button>
       </div>
       <div class="etat-sauvegarde" id="retour-action" style="margin-top:.6rem"></div>
-    </div>`;
+    </div>`);
 
-  // Un module sans réglage n'a rien à enregistrer : pas de pied inutile.
-  if (m.champs.length) dessinerFormulaire(m);
-  else $('#pied-detail').hidden = true;
+  // Un module sans réglage n'a rien à enregistrer : pas de pied inutile. Le
+  // message du pied (« Enregistré ✓ ») ne s'efface qu'en changeant de module --
+  // pas au rafraîchissement qui suit justement l'enregistrement.
+  $('#pied-detail').hidden = !m.champs.length;
+  if (!memeVue) {
+    $('#etat-sauvegarde').textContent = '';
+    $('#etat-sauvegarde').className = 'etat-sauvegarde';
+  }
+}
 
-  $('#bascule-module').addEventListener('click', () => basculerModule(m));
-  $('#btn-redemarrer').addEventListener('click', async () => {
-    await api(`/api/modules/${m.id}/redemarrer`, { method: 'POST' });
-    toast('Module redémarré');
-    chargerModules();
+// Actions déclarées par le module (« Connecter Spotify », « Tester »…).
+async function lancerAction(m, bouton) {
+  const retour = $('#retour-action');
+  bouton.disabled = true;
+  retour.className = 'etat-sauvegarde';
+  retour.textContent = 'En cours…';
+  try {
+    const r = await api(`/api/modules/${m.id}/action/${bouton.dataset.action}`, {
+      method: 'POST',
+      corps: {},
+    });
+    retour.className = 'etat-sauvegarde ok';
+    retour.textContent = r.message || 'Fait ✓';
+    await chargerModules();
+  } catch (e) {
+    // Le panneau a pu etre redessine pendant l'action : on vise le message
+    // actuel, pas celui qu'on tenait au depart.
+    const actuel = $('#retour-action') ?? retour;
+    actuel.className = 'etat-sauvegarde ko';
+    actuel.textContent = e.data?.erreur || e.message;
+  } finally {
+    bouton.disabled = false;
+  }
+}
+
+async function redemarrerModule(m) {
+  await api(`/api/modules/${m.id}/redemarrer`, { method: 'POST' });
+  toast('Module redémarré');
+  chargerModules();
+}
+
+// Un seul jeu d'écouteurs pour tout le panneau central, posé une fois au
+// démarrage (audit U8). Le panneau est reconstruit par innerHTML à chaque
+// rafraîchissement ; brancher ses boutons à chaque dessin demandait de ne jamais
+// en oublier un, et de ne jamais en brancher un deux fois -- ce qui était déjà
+// arrivé sur « Enregistrer ». Ici, chaque clic est aiguillé d'après l'élément
+// cliqué, et tout ce dont il a besoin est relu au moment du clic.
+function brancherDetail() {
+  const zone = $('#detail');
+
+  zone.addEventListener('click', (e) => {
+    const el = e.target.closest('button');
+    if (!el || !zone.contains(el)) return;
+    const d = el.dataset;
+
+    // --- Écran Connecteurs ---
+    if (d.conn) {
+      if (deplies.has(d.conn)) deplies.delete(d.conn);
+      else deplies.add(d.conn);
+      return dessinerConnecteurs();
+    }
+    if (d.copierConn) return copier(etat.connecteurs.find((x) => x.id === d.copierConn)?.urlDeRetour ?? '');
+    if (d.enregistrerConn) return enregistrerConnecteur(d.enregistrerConn);
+    if (d.autoriserConn) return autoriserConnecteur(d.autoriserConn);
+    if (d.deconnecterConn) return deconnecterConnecteur(d.deconnecterConn);
+
+    // --- Détail d'un module ---
+    const m = moduleAffiche();
+    if (!m) return;
+    if (el.id === 'bascule-module') return basculerModule(m);
+    if (el.id === 'btn-redemarrer') return redemarrerModule(m);
+    if (d.copierUrl) return copier('http://127.0.0.1:' + (etat.general?.port ?? 4455) + d.copierUrl);
+    if (d.action) return lancerAction(m, el);
+    if (el.matches('#formulaire .bascule')) {
+      el.setAttribute('aria-checked', el.getAttribute('aria-checked') !== 'true');
+    }
   });
-  $$('[data-copier-url]').forEach((b) =>
-    b.addEventListener('click', () =>
-      copier('http://127.0.0.1:' + (etat.general?.port ?? 4455) + b.dataset.copierUrl)
-    )
-  );
 
-  // Actions déclarées par le module (« Connecter Spotify », « Tester »…).
-  $$('[data-action]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const retour = $('#retour-action');
-      b.disabled = true;
-      retour.className = 'etat-sauvegarde';
-      retour.textContent = 'En cours…';
-      try {
-        const r = await api(`/api/modules/${m.id}/action/${b.dataset.action}`, { method: 'POST', corps: {} });
-        retour.className = 'etat-sauvegarde ok';
-        retour.textContent = r.message || 'Fait ✓';
-        await chargerModules();
-      } catch (e) {
-        retour.className = 'etat-sauvegarde ko';
-        retour.textContent = e.data?.erreur || e.message;
-      } finally {
-        b.disabled = false;
-      }
-    })
-  );
+  // Le sélecteur de couleur et son champ texte restent synchronisés.
+  zone.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.matches('[data-couleur]')) {
+      const texte = zone.querySelector(`[data-cle="${el.dataset.couleur}"]`);
+      if (texte) texte.value = el.value;
+    } else if (el.matches('#formulaire input[type="text"][data-cle]')) {
+      const nuancier = zone.querySelector(`[data-couleur="${el.dataset.cle}"]`);
+      if (nuancier && /^#[0-9a-f]{6}$/i.test(el.value)) nuancier.value = el.value;
+    }
+  });
+
+  // Le bouton vit dans le pied fixe du panneau, qui n'est jamais redessiné :
+  // branché une fois, il enregistre le module affiché au moment du clic.
+  $('#btn-sauver').addEventListener('click', () => {
+    const m = moduleAffiche();
+    if (m) sauverReglages(m);
+  });
 }
 
 async function basculerModule(m) {
@@ -906,7 +1017,9 @@ function dessinerChamp(c, valeur) {
 
   switch (c.type) {
     case 'bool':
-      saisie = `<button class="bascule" role="switch" aria-checked="${!!valeur}" data-cle="${c.cle}"></button>`;
+      // data-initial : la valeur dessinée, pour savoir si le streamer y a touché
+      // (un bouton n'a pas de defaultValue).
+      saisie = `<button class="bascule" role="switch" aria-checked="${!!valeur}" data-initial="${!!valeur}" data-cle="${c.cle}"></button>`;
       break;
     case 'nombre':
       saisie = `<input type="number" id="${id}" data-cle="${c.cle}" value="${echapper(valeur ?? 0)}"
@@ -956,35 +1069,6 @@ function dessinerChamp(c, valeur) {
     </div>`;
 }
 
-function dessinerFormulaire(m) {
-  $('#formulaire').innerHTML = m.champs.map((c) => dessinerChamp(c, m.reglages[c.cle])).join('');
-
-  // Le bouton d'enregistrement vit dans le pied fixe du panneau, hors du
-  // contenu défilant. On remplace son gestionnaire à chaque module affiché —
-  // `onclick` et pas addEventListener, sinon ils s'empileraient à chaque clic
-  // dans le rail et une sauvegarde en déclencherait plusieurs.
-  $('#pied-detail').hidden = false;
-  $('#etat-sauvegarde').textContent = '';
-  $('#etat-sauvegarde').className = 'etat-sauvegarde';
-  $('#btn-sauver').onclick = () => sauverReglages(m);
-
-  // Les interrupteurs du formulaire.
-  $$('#formulaire .bascule').forEach((b) =>
-    b.addEventListener('click', () =>
-      b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true')
-    )
-  );
-
-  // Le sélecteur de couleur et son champ texte restent synchronisés.
-  $$('[data-couleur]').forEach((picker) => {
-    const texte = $(`[data-cle="${picker.dataset.couleur}"]`);
-    picker.addEventListener('input', () => (texte.value = picker.value));
-    texte.addEventListener('input', () => {
-      if (/^#[0-9a-f]{6}$/i.test(texte.value)) picker.value = texte.value;
-    });
-  });
-}
-
 function lireFormulaire(m) {
   const out = {};
   for (const c of m.champs) {
@@ -1006,6 +1090,9 @@ async function sauverReglages(m) {
     await api(`/api/modules/${m.id}/config`, { method: 'POST', corps: { reglages: lireFormulaire(m) } });
     marqueur.className = 'etat-sauvegarde ok';
     marqueur.textContent = 'Enregistré ✓ — module redémarré';
+    // Plus une saisie en cours : le dessin qui suit doit montrer ce que le module
+    // a retenu, pas ce qui avait été tapé.
+    marquerEnregistre($('#formulaire'));
     await chargerModules();
   } catch (e) {
     marqueur.className = 'etat-sauvegarde ko';
@@ -1264,6 +1351,8 @@ $('#entree-accueil').addEventListener('click', () => {
   dessinerAccueil();
 });
 
+brancherRail();
+brancherDetail();
 brancherTiroir();
 brancherModales();
 
