@@ -90,8 +90,7 @@
       const $ = (sel) => document.querySelector(sel);
 
       function esc(s) {
-        return String(s ?? '').replace(/[&<>"]/g, (c) =>
-          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+        return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
       }
       const signe = (n) => (n > 0 ? '+' : '') + n;
 
@@ -160,10 +159,10 @@
             return (
               '<tr><td>' + heure + '</td>' +
               '<td>' + esc(m.carte || '—') + '</td>' +
-              '<td class="res ' + esc(m.resultat) + '">' + (m.resultat || '·') + '</td>' +
-              '<td>' + score + '</td>' +
+              '<td class="res ' + esc(m.resultat) + '">' + esc(m.resultat || '·') + '</td>' +
+              '<td>' + esc(score) + '</td>' +
               '<td class="rr ' + (rr > 0 ? 'up' : rr < 0 ? 'down' : '') + '">' + signe(rr) + '</td>' +
-              '<td>' + (m.rrApres ?? '—') + '</td></tr>'
+              '<td>' + esc(m.rrApres ?? '—') + '</td></tr>'
             );
           })
           .join('');

@@ -50,7 +50,10 @@ function toast(message, ko = false) {
 }
 
 function echapper(s) {
-  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  return String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+  );
 }
 
 async function copier(texte) {
@@ -906,7 +909,7 @@ function dessinerChamp(c, valeur) {
       saisie = `<button class="bascule" role="switch" aria-checked="${!!valeur}" data-cle="${c.cle}"></button>`;
       break;
     case 'nombre':
-      saisie = `<input type="number" id="${id}" data-cle="${c.cle}" value="${valeur ?? 0}"
+      saisie = `<input type="number" id="${id}" data-cle="${c.cle}" value="${echapper(valeur ?? 0)}"
                   ${c.min !== undefined ? `min="${c.min}"` : ''} ${c.max !== undefined ? `max="${c.max}"` : ''}
                   ${c.pas ? `step="${c.pas}"` : ''} />`;
       break;
@@ -922,7 +925,7 @@ function dessinerChamp(c, valeur) {
       break;
     case 'couleur':
       saisie = `<div class="couleur-ligne">
-                  <input type="color" value="${valeur || '#ffffff'}" data-couleur="${c.cle}" />
+                  <input type="color" value="${echapper(valeur || '#ffffff')}" data-couleur="${c.cle}" />
                   <input type="text" id="${id}" data-cle="${c.cle}" value="${echapper(valeur || '')}" spellcheck="false" />
                 </div>`;
       break;

@@ -348,6 +348,13 @@ function signed(value) {
   return (value > 0 ? "+" : "") + value;
 }
 
+// Ce qui part dans innerHTML passe par ici, meme ce qui « ne peut etre qu'un
+// nombre » : ces valeurs arrivent du Riot Client via le module, et un overlay
+// ne doit pas parier sur la forme de ce qu'il recoit.
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
 function render(state) {
   const rank = state.rank || {};
   const session = state.session || {};
@@ -397,7 +404,7 @@ function render(state) {
 
   // -- session ------------------------------------------------------------
   const rr = session.rr || 0;
-  nodes.sessionRr.innerHTML = `${signed(rr)}<span class="unit">RR</span>`;
+  nodes.sessionRr.innerHTML = `${esc(signed(rr))}<span class="unit">RR</span>`;
   nodes.sessionRr.className = "value " + (rr > 0 ? "up" : rr < 0 ? "down" : "flat");
 
   nodes.wins.textContent = session.wins || 0;
@@ -421,7 +428,7 @@ function render(state) {
   if (nodes.pips.dataset.sig !== results.join("")) {
     nodes.pips.dataset.sig = results.join("");
     nodes.pips.innerHTML = results
-      .map((r) => `<span class="pip ${r}"></span>`)
+      .map((r) => `<span class="pip ${esc(r)}"></span>`)
       .join("");
   }
 }

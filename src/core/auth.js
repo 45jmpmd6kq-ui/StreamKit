@@ -206,7 +206,10 @@ export async function traiterRetour(url, port) {
 // notre propre origine -- donc avec un acces complet a l'API locale, jetons
 // compris. Tout ce qui vient de l'exterieur passe par echapper().
 function echapper(s) {
-  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  return String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+  );
 }
 
 export function pageRetour({ ok, message }) {
