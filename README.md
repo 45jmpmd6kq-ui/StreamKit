@@ -1,5 +1,9 @@
 # StreamKit
 
+> **Tu es streamer et tu veux installer StreamKit ?** Tout est dans
+> **[GUIDE-STREAMER.md](GUIDE-STREAMER.md)**. La suite de cette page s'adresse
+> aux développeurs.
+
 Socle commun des outils de stream. Un seul service local, des modules
 activables, et **un canal de mise à jour** — c'est la raison d'être du projet :
 corriger un bug une fois, et que tous les streamers l'aient sans rien
@@ -26,7 +30,7 @@ chacun le même socle (config, .bat, serveur web local, overlay OBS).
 ```bash
 npm install
 npm start          # application Electron
-npm run dev        # noyau seul, sans Electron (http://127.0.0.1:4455)
+npm run dev        # noyau seul, sans Electron (http://127.0.0.1:47455)
 npm test           # la suite de tests (~1 s, aucune dépendance)
 ```
 
@@ -71,11 +75,13 @@ src/
 scripts/                icône, captures, recadrages, deck — rien ne part chez le streamer
 doc/captures/           captures du dashboard, refaites par script et pas à la main
 StreamKit_Presentation.pptx   la doc du streamer : à quoi ça sert, puis l'installation
+GUIDE-STREAMER.md             le pas-à-pas d'installation, lisible sur GitHub sans rien télécharger
 ```
 
 > Il n'y a plus de `LISEZ-MOI.txt` : l'installeur n'embarque que `src/**` et
 > `package.json` (`build.files`), donc ce fichier ne quittait jamais le dépôt.
-> Tout ce qu'il disait est dans le deck, en illustré.
+> La documentation du streamer vit dans le dépôt : le deck en illustré,
+> `GUIDE-STREAMER.md` pour un lien à envoyer.
 
 ### La règle qui structure tout
 
@@ -137,8 +143,10 @@ poussée, et reconstruit l'installeur sur `main`. Elle ne publie jamais :
 
 ```bash
 npm version patch          # ou minor / major
-git push && git push --tags
-npm run publier            # build + release GitHub + envoi des fichiers
+git push --follow-tags
+# créer la release en BROUILLON, vide, sur le tag (voir le troisième piège)
+npm run publier            # build + envoi des fichiers dans ce brouillon
+# vérifier les 3 fichiers, puis publier le brouillon
 ```
 
 `npm run publier` fait tout d'un coup. Il lui faut un jeton dans la variable
@@ -152,7 +160,7 @@ release à la main en y joignant **l'installeur, `latest.yml` et le `.blockmap`*
 existe ; le `.blockmap` lui permet de ne télécharger que les octets modifiés.
 Sans eux, les streamers ne verront jamais la mise à jour.
 
-Deux pièges rencontrés :
+Trois pièges rencontrés :
 
 - **Une variable d'environnement définie pendant que l'application tourne n'est
   pas vue du processus en cours.** Il faut relancer, ou la relire depuis le
@@ -160,6 +168,16 @@ Deux pièges rencontrés :
 - **`electron-builder` crée la release en brouillon par défaut.** Un brouillon
   est invisible des streamers : `latest.yml` n'est pas joignable, donc aucune
   mise à jour ne part. D'où `releaseType: "release"` dans `build.publish`.
+- **`npm run publier` seul crée DEUX releases sur le même tag** (0.13.0, 0.14.1).
+  Deux envois courent en parallèle, chacun constate l'absence de release et la
+  crée ; GitHub ne résout alors plus les téléchargements et tout répond 404 —
+  aucun streamer ne reçoit la mise à jour. Parade, validée en 0.15.0 et 0.15.1 :
+  créer d'abord la release **en brouillon**, vide, sur le tag (API GitHub,
+  `POST /repos/<dépôt>/releases` avec `"draft": true`). `electron-builder`
+  réutilise un brouillon du même tag : les deux envois y déposent leurs
+  fichiers. Il ne le publie pas lui-même : vérifier `latest.yml`, l'installeur
+  et le `.blockmap`, puis passer `"draft": false`. Bonus : la version n'est
+  jamais visible sans ses fichiers.
 
 Chez le streamer : un bouton « Mettre à jour » apparaît dans la fenêtre. Un
 clic, StreamKit télécharge, se remplace et redémarre — Electron sait remplacer
