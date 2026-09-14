@@ -1,8 +1,8 @@
 # StreamKit — guide d'installation
 
 StreamKit rassemble des outils pour ton live dans une seule application Windows :
-musique demandée par les viewers, clips au chat, voiture au hasard sur Rocket
-League, bandeau de session Valorant. Tout tourne **sur ton PC** : pas de compte
+musique demandée par les viewers, clips au chat, prédictions Twitch en direct à
+l'écran, voiture au hasard sur Rocket League, bandeau de session Valorant. Tout tourne **sur ton PC** : pas de compte
 à créer chez nous, pas de serveur, et tes accès restent chez toi.
 
 Compte une vingtaine de minutes la première fois. Ensuite, StreamKit se met à
@@ -18,8 +18,8 @@ veux utiliser.
 | Pour…                              | Il te faut                                                                 |
 | ---------------------------------- | -------------------------------------------------------------------------- |
 | Tous les modules                   | Windows 10 ou 11, et OBS Studio pour afficher les overlays                 |
-| Clips, Bot Musique, Random Car     | Ton compte Twitch, avec la **double authentification activée** (Twitch l'exige pour créer une application) |
-| Bot Musique, Random Car            | Le statut **Affilié ou Partenaire** Twitch (ils utilisent les points de chaîne) |
+| Clips, Bot Musique, Random Car, Prédictions | Ton compte Twitch, avec la **double authentification activée** (Twitch l'exige pour créer une application) |
+| Bot Musique, Random Car, Prédictions | Le statut **Affilié ou Partenaire** Twitch (points de chaîne et prédictions leur sont réservés) |
 | Bot Musique                        | **Spotify Premium**, et Spotify ouvert sur un appareil pendant le live     |
 | Clips                              | Rien de plus — mais on ne peut clipper que **pendant un live**             |
 | Overlay W/L (Valorant)             | Valorant installé sur le même PC                                           |
@@ -109,6 +109,14 @@ tu veux, puis clique sur **Enregistrer** en bas.
   voitures que tu possèdes. Le tirage se fait uniquement parmi elles.
 - **Clips** : par défaut, seuls tes modérateurs peuvent taper `!clip`. Ce qui
   suit la commande devient le titre du clip : `!clip pentakill`.
+- **Prédictions** : rien à créer. Lance tes prédictions depuis Twitch comme
+  d'habitude : un scoreboard apparaît tout seul dans OBS. Quand les votes
+  ferment, il reste 15 secondes puis s'efface pendant la partie, et revient tout
+  seul avec le résultat (ou l'annulation). Les deux durées se règlent dans le
+  module. **Si ta chaîne était déjà connectée avant**, reconnecte-la
+  (**Connecteurs** → **Twitch** → **Connecter**) : ce module demande un droit de
+  plus. Le bouton **Simuler une prédiction** joue un exemple complet (votes,
+  fermeture, résultat) dans l'overlay, sans rien envoyer à Twitch.
 - **Overlay W/L** : rien à connecter. Lance Valorant, le bandeau se remplit tout
   seul.
 
@@ -119,7 +127,7 @@ tu veux, puis clique sur **Enregistrer** en bas.
 1. Dans StreamKit, ouvre le module. Dans **Overlays OBS**, clique sur **Copier**.
 2. Dans OBS : **Sources** → **+** → **Navigateur**, et colle l'adresse dans
    **URL**. Pour la taille :
-   - **Bot Musique, Random Car, Clips** : la taille de ta scène (par exemple
+   - **Bot Musique, Random Car, Clips, Prédictions** : la taille de ta scène (par exemple
      1920 × 1080). L'overlay se place tout seul dans le coin choisi dans les
      réglages du module ;
    - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux.
@@ -160,6 +168,12 @@ appareil, et que le compte est bien Premium.
 
 **Un clip est refusé.**
 Tu n'es pas en live, ou le délai entre deux clips n'est pas écoulé.
+
+**Le scoreboard de prédiction n'apparaît pas.**
+Clique sur **Simuler une prédiction** dans le module. S'il s'affiche,
+l'overlay est bien placé : regarde alors la carte **Prédictions** de la Vue
+d'ensemble — droit manquant (reconnecte ta chaîne) ou chaîne ni Affiliée ni
+Partenaire. Si rien ne s'affiche, c'est la source OBS : recopie son adresse.
 
 **Tu dois demander de l'aide.**
 Envoie le journal : en bas de la fenêtre, dans la barre **Journal**, clique sur

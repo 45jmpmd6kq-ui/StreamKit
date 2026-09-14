@@ -6,6 +6,8 @@ journal, overlays, persistance, mises à jour.
 
 Le meilleur point de départ est un module qui fait déjà quelque chose :
 `src/modules/clips/` pour un module minimal (une commande de chat, un overlay),
+`src/modules/predictions/` pour un overlay piloté par des événements Twitch (et
+une simulation pour le régler sans attendre un vrai événement),
 `src/modules/roue-rl/` s'il te faut une page de réglages sur mesure et des
 assets, `src/modules/valorant/` pour un module qui interroge une API externe
 sans passer par Twitch.
@@ -153,6 +155,7 @@ ctx.twitch.surMessage(fn)
 ctx.twitch.surCommande('!skip', fn, { qui: 'mods' })   // 'tous'|'mods'|'streamer'
 ctx.twitch.surRecompense(rewardId, fn)
 ctx.twitch.statutRedemption(e, 'FULFILLED' | 'CANCELED')
+ctx.twitch.surPredictions({ debut, progression, verrou, fin })   // chaque phase optionnelle
 ctx.twitch.assurerRecompense({ titre, cout, prompt, saisieRequise })
 ctx.twitch.aLeDroit('clips:edit')
 

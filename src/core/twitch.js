@@ -12,6 +12,7 @@
 //   surMessage(fn)         -> desabonnement
 //   surCommande(cmd, fn)   commande de chat, avec controle des droits
 //   surRecompense(id, fn)  redemption de points de chaine
+//   surPredictions({...})  predictions : debut, progression, verrou, fin
 //   statutRedemption(e, s) valider (FULFILLED) / rembourser (CANCELED)
 //   aLeDroit(scope)        savoir si l'autorisation courante couvre un droit
 //
@@ -303,6 +304,28 @@ export function contextePour(moduleId, logModule) {
         }
       });
       return noter(moduleId, () => sub.stop());
+    },
+
+    // Cycle de vie des predictions de la chaine : lancee, votes qui arrivent,
+    // votes fermes, terminee (resolue OU annulee -- c'est le meme evenement).
+    // Chaque phase est optionnelle. Droit requis : channel:read:predictions
+    // (channel:manage:predictions le couvre aussi).
+    surPredictions({ debut, progression, verrou, fin }) {
+      exige();
+      const abonnements = [];
+      const proteger = (fn) => async (e) => {
+        try {
+          await fn(e);
+        } catch (err) {
+          logModule.err('erreur sur la prediction : ' + (err?.message || err));
+        }
+      };
+      const id = etat.broadcasterId;
+      if (debut) abonnements.push(listener.onChannelPredictionBegin(id, proteger(debut)));
+      if (progression) abonnements.push(listener.onChannelPredictionProgress(id, proteger(progression)));
+      if (verrou) abonnements.push(listener.onChannelPredictionLock(id, proteger(verrou)));
+      if (fin) abonnements.push(listener.onChannelPredictionEnd(id, proteger(fin)));
+      return noter(moduleId, () => abonnements.forEach((a) => a.stop()));
     },
 
     // Valider (points depenses) ou annuler (points rembourses) une redemption.

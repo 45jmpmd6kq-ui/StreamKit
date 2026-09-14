@@ -69,6 +69,7 @@ src/
     exemple/            module de diagnostic (masqué du rail)
     musique/            bot musique Spotify (portage de la V2)
     clips/              commande !clip, extraite du bot musique
+    predictions/        carte OBS de la prédiction Twitch en cours
     roue-rl/            roue des voitures Rocket League (portage)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)
 
