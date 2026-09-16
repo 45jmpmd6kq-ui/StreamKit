@@ -3,12 +3,8 @@
 // Extrait du bot musique, où il n'avait rien à faire : il s'y trouvait
 // seulement parce que c'était le seul bot qui tournait à l'époque.
 //
-// Ce qu'il faut savoir sur le NOMMAGE, parce que ce n'est pas évident :
-// l'API Twitch n'offre AUCUN moyen de nommer un clip. POST /helix/clips ne
-// prend que l'identifiant de la chaîne, et aucun endpoint ne permet de le
-// renommer ensuite. Un clip hérite du TITRE DU STREAM au moment de la capture.
-// StreamKit bascule donc le titre de la chaîne juste avant, et le remet dès que
-// Twitch a accepté le clip — moins d'une seconde de bascule.
+// NOMMAGE : le titre part avec la demande de clip (Twitch l'accepte depuis
+// décembre 2025). Le titre du stream n'est jamais touché — voir clips.js.
 
 import { creerClipper } from './clips.js';
 
@@ -20,15 +16,9 @@ export default {
   icone: '✂️',
   categorie: 'twitch',
 
-  scopes: [
-    'chat:read',
-    'chat:edit',
-    'clips:edit',
-    // Nommer un clip = basculer le titre du stream une fraction de seconde.
-    // Sans ce droit la commande marche quand même, mais les clips gardent le
-    // titre courant du stream.
-    'channel:manage:broadcast',
-  ],
+  // Nommer un clip ne demande rien de plus que de le créer : plus besoin de
+  // channel:manage:broadcast (qui servait à basculer le titre du stream).
+  scopes: ['chat:read', 'chat:edit', 'clips:edit'],
 
   config: {
     version: 1,
@@ -45,9 +35,7 @@ export default {
         cle: 'nommage',
         type: 'bool',
         label: 'Ce qui suit la commande devient le titre du clip',
-        aide:
-          '« !clip pentakill » crée un clip intitulé « pentakill ». Sans texte, le clip garde le titre du stream. ' +
-          'Twitch ne sait pas nommer un clip autrement : StreamKit bascule le titre de la chaîne moins d’une seconde, puis le remet.',
+        aide: '« !clip pentakill » crée un clip intitulé « pentakill ». Sans texte, le clip prend le titre du stream.',
         defaut: true,
       },
       {
@@ -125,7 +113,6 @@ export default {
 
   async sante(ctx) {
     const peutClipper = ctx.twitch.aLeDroit('clips:edit');
-    const peutNommer = ctx.twitch.aLeDroit('channel:manage:broadcast');
 
     if (!peutClipper) {
       return [
@@ -142,13 +129,9 @@ export default {
       {
         id: 'clips',
         nom: 'Clips Twitch',
-        etat: peutNommer ? 'ok' : 'attention',
-        detail: peutNommer
-          ? ctx.config.commande + ' — nommage actif'
-          : ctx.config.commande + ' — sans nommage',
-        aide: peutNommer
-          ? ''
-          : 'Reconnecte ta chaîne pour que « ' + ctx.config.commande + ' <nom> » puisse nommer le clip.',
+        etat: 'ok',
+        detail: ctx.config.commande + (ctx.config.nommage ? ' — nommage actif' : ' — sans nommage'),
+        aide: '',
       },
     ];
   },
@@ -168,7 +151,6 @@ export default {
     });
 
     const peutClipper = ctx.twitch.aLeDroit('clips:edit');
-    const peutNommer = ctx.twitch.aLeDroit('channel:manage:broadcast');
     const delaiMs = Math.max(0, c.delaiSec * 1000);
 
     let dernierClip = 0;
@@ -178,12 +160,6 @@ export default {
       ctx.log.warn(
         'Ton autorisation Twitch ne couvre pas la création de clips. ' +
           'Reconnecte ta chaîne depuis le dashboard.'
-      );
-    } else if (c.nommage && !peutNommer) {
-      ctx.log.warn(
-        '« ' +
-          c.commande +
-          ' <nom> » ne pourra pas nommer le clip : droit « channel:manage:broadcast » manquant.'
       );
     }
 
@@ -201,8 +177,8 @@ export default {
           );
           return;
         }
-        // Un clip est deja en cours de creation : deux appels simultanes
-        // basculeraient le titre du stream l'un sur l'autre.
+        // Un clip est deja en cours de creation : le second doublonnerait le
+        // meme moment du live.
         if (enCours) return;
 
         const restant = delaiMs - (Date.now() - dernierClip);
@@ -216,8 +192,7 @@ export default {
 
         enCours = true;
         try {
-          const nommer = c.nommage && peutNommer;
-          const clip = await clipper.creer({ nom: nommer ? argument : '' });
+          const clip = await clipper.creer({ nom: c.nommage ? argument : '' });
           dernierClip = Date.now();
           ctx.compteur.incr('crees');
 
@@ -232,7 +207,7 @@ export default {
 
           const nom = clip.renamed ? ' « ' + clip.title + ' »' : '';
           let souci = '';
-          if (argument && nommer && !clip.renamed) souci = ' (nom non appliqué cette fois)';
+          if (argument && c.nommage && !clip.renamed) souci = ' (nom non appliqué cette fois)';
 
           if (c.annoncerLien) {
             ctx.twitch.dire('✂️ Clip' + nom + ' créé par @' + user + ' : ' + clip.url + souci);
@@ -263,15 +238,10 @@ export default {
     const parQui =
       c.qui === 'tous' ? 'tout le chat' : c.qui === 'mods' ? 'toi et tes modérateurs' : 'toi seulement';
     ctx.log.ok('Prêt. ' + c.commande + ' — ' + parQui + '.');
-    if (c.nommage && peutNommer) {
+    if (c.nommage) {
       ctx.log.info('« ' + c.commande + ' pentakill » créera un clip intitulé « pentakill ».');
     }
 
-    return {
-      async arreter() {
-        // Si un clip etait en train d'etre nomme, on rend son vrai titre au stream.
-        await clipper.restaurerTitre();
-      },
-    };
+    return {};
   },
 };

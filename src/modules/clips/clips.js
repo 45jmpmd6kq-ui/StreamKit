@@ -8,19 +8,19 @@
 // Le clip capture les ~30 dernieres secondes du live (comme le bouton « Clip »
 // de Twitch) : on tape la commande APRES le moment marrant, pas avant.
 //
-// NOMMAGE (« !clip pentakill ») : l'API Twitch n'a AUCUN moyen de nommer un
-// clip (POST /helix/clips ne prend que broadcaster_id, et aucun endpoint ne
-// permet de le renommer ensuite). Un clip herite du TITRE DU STREAM au moment
-// de la capture : on bascule donc le titre de la chaine juste avant, et on le
-// remet des que Twitch a accepte le clip — moins d'une seconde de bascule.
+// NOMMAGE (« !clip pentakill ») : le titre part avec la demande de clip
+// (parametre « title » de POST /helix/clips, ajoute par Twitch le 19/12/2025).
+// Avant, faute de mieux, StreamKit basculait le titre du STREAM une fraction de
+// seconde autour de la creation. Constate en live (09/2026) : le clip gardait
+// le titre du stream. Ne pas y revenir.
 //
-// Portage StreamKit : le journal est injecte (plus d'import global), et l'etat
-// de la bascule vit dans une instance, pour survivre proprement a un
-// redemarrage a chaud du module.
+// Portage StreamKit : le journal est injecte (plus d'import global).
 
 const ESSAIS = 8; // ~12 s d'attente maximum
 const DELAI_MS = 1500;
-const TITRE_MAX = 140; // longueur maximale d'un titre de stream Twitch
+// Twitch ne documente pas de limite pour le titre d'un clip : 100 caracteres,
+// par prudence, suffisent largement a le retrouver.
+const TITRE_MAX = 100;
 
 const attendre = (ms) =>
   new Promise((r) => {
@@ -33,115 +33,103 @@ function echec(reason, message) {
   return e;
 }
 
+const statut = (err) => err?.statusCode ?? err?.status;
+
 function estErreurDeDroit(err) {
-  const msg = err?.message || '';
-  const status = err?.statusCode ?? err?.status;
-  return /requested scopes/i.test(msg) || status === 401;
+  return /requested scopes/i.test(err?.message || '') || statut(err) === 401;
 }
+
+// Twitch peut normaliser le titre (espaces, casse) : ce n'est pas un refus.
+const normaliser = (t) =>
+  String(t ?? '')
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 
 // `delaiMs` n'existe que pour les tests : l'attente d'encodage est reelle chez
 // Twitch, mais la faire subir a la suite de tests couterait douze secondes pour
 // ne rien verifier de plus.
 export function creerClipper({ api, broadcasterId, log, delaiMs = DELAI_MS }) {
-  // Titre a remettre si une bascule est en cours (securite en cas d'arret brutal).
-  let aRestaurer = null;
-
-  // Remet le titre d'origine si une bascule est restee en suspens.
-  // Appele en fin de clip, et aussi a l'arret du module.
-  async function restaurerTitre() {
-    if (!aRestaurer) return false;
-    const { titre } = aRestaurer;
-    aRestaurer = null;
+  // Une demande de clip, erreurs traduites en raisons exploitables.
+  async function demander(titre) {
     try {
-      await api.channels.updateChannelInfo(broadcasterId, { title: titre });
-      return true;
+      return await api.clips.createClip({
+        channel: broadcasterId,
+        createAfterDelay: false,
+        ...(titre ? { title: titre } : {}),
+      });
     } catch (err) {
-      log.err('Titre du stream non restauré ! Remets-le à la main : « ' + titre + ' » (' + err.message + ')');
-      return false;
+      const msg = err?.message || '';
+      if (/clips:edit/i.test(msg) || estErreurDeDroit(err)) {
+        throw echec('NO_SCOPE', 'autorisation « clips:edit » absente');
+      }
+      if (statut(err) === 404 || /\b404\b/.test(msg)) throw echec('OFFLINE', "la chaîne n'est pas en live");
+      if (statut(err) === 429 || /\b429\b/.test(msg))
+        throw echec('RATE_LIMIT', 'trop de clips en peu de temps');
+      throw err;
     }
   }
 
   return {
-    restaurerTitre,
-
     // Cree un clip et renvoie { id, url, title, renamed, renameIssue }.
-    // Erreurs typees via err.reason : NO_SCOPE | OFFLINE | RATE_LIMIT
+    // renameIssue : null | 'REFUSED' (titre refuse, clip cree sans) | 'IGNORED'
+    // (clip cree sous un autre titre). Erreurs typees via err.reason :
+    // NO_SCOPE | OFFLINE | RATE_LIMIT
     async creer({ nom = '' } = {}) {
       const label = String(nom).trim().slice(0, TITRE_MAX);
+      let titre = label;
       let soucisRenommage = null;
-      let bascule = false;
 
-      // --- Bascule du titre de la chaine (uniquement si un nom est demande) ---
-      if (label) {
-        try {
-          const info = await api.channels.getChannelInfoById(broadcasterId);
-          const original = info?.title ?? '';
-          if (!original) {
-            // Twitch refuse un titre vide : sans titre d'origine, pas de retour possible.
-            soucisRenommage = 'NO_TITLE';
-            log.warn('Titre de chaîne introuvable : le clip gardera le titre par défaut.');
-          } else {
-            await api.channels.updateChannelInfo(broadcasterId, { title: label });
-            aRestaurer = { titre: original };
-            bascule = true;
-          }
-        } catch (err) {
-          soucisRenommage = estErreurDeDroit(err) ? 'NO_SCOPE' : 'FAILED';
-          if (soucisRenommage === 'NO_SCOPE') {
-            log.warn(
-              'Droit « channel:manage:broadcast » manquant : clip créé sans nom personnalisé. ' +
-                'Reconnecte ta chaîne depuis le dashboard.'
-            );
-          } else {
-            log.warn('Renommage impossible (' + err.message + ') : on clippe quand même.');
-          }
-        }
-      }
-
-      // --- Creation du clip ---
       let id;
       try {
-        id = await api.clips.createClip({ channel: broadcasterId, createAfterDelay: false });
+        id = await demander(titre);
       } catch (err) {
-        const msg = err?.message || '';
-        const status = err?.statusCode ?? err?.status;
-        if (/clips:edit/i.test(msg) || estErreurDeDroit(err)) {
-          throw echec('NO_SCOPE', 'autorisation « clips:edit » absente');
-        }
-        if (status === 404 || /\b404\b/.test(msg)) throw echec('OFFLINE', "la chaîne n'est pas en live");
-        if (status === 429 || /\b429\b/.test(msg)) throw echec('RATE_LIMIT', 'trop de clips en peu de temps');
-        throw err;
-      } finally {
-        // Le titre du clip est fige des que Twitch a accepte la demande : on rend
-        // son vrai titre au stream tout de suite, meme si la creation a echoue.
-        if (bascule) await restaurerTitre();
+        // Titre refuse : le clip compte plus que son nom, on le redemande sans.
+        const refus = statut(err) === 400 || /\b400\b/.test(err?.message || '');
+        if (!titre || err.reason || !refus) throw err;
+        log.warn('Twitch refuse le titre « ' + titre + ' » (' + err.message + ') : clip créé sans nom.');
+        soucisRenommage = 'REFUSED';
+        titre = '';
+        id = await demander('');
       }
 
       // L'URL publique est previsible ; on interroge quand meme l'API pour
-      // recuperer le titre et confirmer que le clip est bien encode.
+      // confirmer que le clip est bien encode, et sous quel titre.
       const urlSecours = 'https://clips.twitch.tv/' + id;
-      const renomme = Boolean(label) && bascule;
-
+      let clip = null;
       for (let i = 0; i < ESSAIS; i++) {
         await attendre(delaiMs);
         try {
-          const clip = await api.clips.getClipById(id);
-          if (clip) {
-            return {
-              id,
-              url: clip.url || urlSecours,
-              title: clip.title || label,
-              renamed: renomme,
-              renameIssue: soucisRenommage,
-            };
+          const lu = await api.clips.getClipById(id);
+          if (lu) {
+            clip = lu;
+            // Sous un autre titre, on laisse a Twitch le temps de poser le bon.
+            if (!titre || normaliser(lu.title) === normaliser(titre)) break;
           }
         } catch {
           /* pas encore encode : on retente */
         }
       }
 
-      log.warn('Clip créé mais pas encore visible côté Twitch : on donne quand même le lien.');
-      return { id, url: urlSecours, title: label, renamed: renomme, renameIssue: soucisRenommage };
+      if (!clip) {
+        log.warn('Clip créé mais pas encore visible côté Twitch : on donne quand même le lien.');
+        // Twitch a accepte la demande, titre compris.
+        return { id, url: urlSecours, title: label, renamed: Boolean(titre), renameIssue: soucisRenommage };
+      }
+
+      const renomme = Boolean(titre) && normaliser(clip.title) === normaliser(titre);
+      if (titre && !renomme) {
+        soucisRenommage = 'IGNORED';
+        log.warn('Twitch a créé le clip sous le titre « ' + clip.title + ' » au lieu de « ' + titre + ' ».');
+      }
+      return {
+        id,
+        url: clip.url || urlSecours,
+        title: clip.title || label,
+        renamed: renomme,
+        renameIssue: soucisRenommage,
+      };
     },
   };
 }
