@@ -10,6 +10,7 @@
         --bg: rgba(16, 16, 20, 0.92);
         --line: rgba(255, 255, 255, 0.1);
         --muted: #b9b9c6;
+        --accent2-texte: #fff; /* texte posé sur la couleur secondaire */
       }
       * { box-sizing: border-box; }
       html, body {
@@ -108,6 +109,104 @@
       .u-item.cancelled .u-txt,
       .u-item.cancelled .u-by { text-decoration: line-through; opacity: 0.5; }
       .u-item.cancelled .u-num { opacity: 0.4; }
+
+      /* ---- Bloc « en cours + à venir » ----
+         Prend la place de la liste quand le réglage « Afficher le morceau en
+         cours » est activé : ce qui tourne sur Spotify, puis les demandes. */
+      #bloc { display: none; filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.45)); transition: opacity 0.3s ease; }
+      body.mode-bloc #bloc { display: block; }
+      body.mode-bloc #upcoming { display: none; }
+      #bloc.vide { opacity: 0; }
+      /* Hauteur animée par le script : c'est ce qui fait grandir le bloc. */
+      #b-clip { overflow: hidden; transition: height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
+      .b-carte {
+        width: 400px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+        color: #fff;
+      }
+      .b-hero { position: relative; display: flex; align-items: center; gap: 16px; padding: 16px; }
+      .b-pochette { flex: none; width: 92px; height: 92px; border-radius: 10px; object-fit: cover; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5); }
+      .b-meta { flex: 1; min-width: 0; }
+      .b-lab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 14px;
+        font-size: 11px;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .b-eq { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
+      .b-eq i { width: 3px; height: 3px; border-radius: 1px; background: var(--accent1); animation: rebond 0.9s ease-in-out infinite; }
+      .b-eq i:nth-child(2) { animation-delay: 0.15s; background: var(--accent2); }
+      .b-eq i:nth-child(3) { animation-delay: 0.3s; }
+      @keyframes rebond { 0%, 100% { height: 3px; } 50% { height: 12px; } }
+      .b-titre { margin-top: 5px; font-size: 20px; font-weight: 700; line-height: 1.2; }
+      .b-artiste { font-size: 14px; color: var(--muted); }
+      .b-titre, .b-artiste { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .b-prog {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-top: 10px;
+        font-size: 11px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .b-barre { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+      .b-barre i { display: block; width: 0; height: 100%; background: #fff; transition: width 1s linear; }
+      /* Pseudo du viewer quand le morceau en cours vient d'une demande. */
+      .b-chip {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        max-width: 170px;
+        padding: 3px 9px 4px;
+        border-radius: 999px;
+        background: var(--accent2);
+        color: var(--accent2-texte);
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .b-liste { padding: 10px 16px 12px; }
+      .b-hero + .b-liste { border-top: 1px solid var(--line); }
+      .b-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+        font-size: 11px;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .b-head::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent1); }
+      .b-item { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 14px; }
+      .b-item + .b-item { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+      .b-mini { flex: none; width: 30px; height: 30px; border-radius: 5px; object-fit: cover; }
+      .b-txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .b-txt b { font-weight: 600; }
+      .b-txt span { color: var(--muted); font-size: 12.5px; }
+      .b-par { flex: none; max-width: 112px; font-size: 12px; font-weight: 600; color: var(--accent2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .b-item.cancelled .b-mini { filter: grayscale(1) brightness(0.55); }
+      .b-item.cancelled .b-txt { text-decoration: line-through; color: rgba(255, 255, 255, 0.45); }
+      .b-item.cancelled .b-txt span { color: inherit; }
+      .b-item.cancelled .b-par { color: #ff4d5e; }
+      .b-plus { padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 12px; color: var(--muted); }
+      /* Pas de pochette (fichier local, image injoignable) : un aplat coloré. */
+      .sans-image { display: grid; place-items: center; color: rgba(255, 255, 255, 0.85); font-weight: 700; }
+      .b-pochette.sans-image { font-size: 34px; }
+      .b-mini.sans-image { font-size: 14px; }
+      /* Un morceau ou une demande qui arrive glisse en place. */
+      .entre { animation: entre 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+      @keyframes entre { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
     </style>
   </head>
   <body>
@@ -126,6 +225,10 @@
         <div class="u-head">À venir</div>
         <div id="u-list"></div>
       </div>
+
+      <div id="bloc" class="vide">
+        <div id="b-clip"></div>
+      </div>
     </div>
 
     <script>
@@ -137,6 +240,8 @@
       const nEq = document.getElementById("n-eq");
       const upcoming = document.getElementById("upcoming");
       const uList = document.getElementById("u-list");
+      const bloc = document.getElementById("bloc");
+      const bClip = document.getElementById("b-clip");
 
       let minuteurMasquage = null;
 
@@ -156,7 +261,10 @@
       // On retire vraiment du flux ce que la vue n'affiche pas : sinon un bloc
       // invisible occuperait quand même sa place et décalerait le reste.
       if (!vue.notifs.length) notif.style.display = "none";
-      if (!vue.liste) upcoming.style.display = "none";
+      if (!vue.liste) {
+        upcoming.style.display = "none";
+        bloc.style.display = "none";
+      }
 
       // ---- Mode démo : ...?demo=1 -------------------------------------------
       // Au repos l'overlay est invisible (c'est voulu), donc impossible à placer
@@ -210,11 +318,195 @@
         upcoming.classList.add("show");
       }
 
+      // ---- Bloc « en cours + à venir » -----------------------------------------
+      // Réglage « Afficher le morceau en cours » : la liste est alors coiffée du
+      // morceau qui tourne sur Spotify. Coupé, la page reste celle d'avant.
+      let modeBloc = false;
+      let lecture = null; // { uri, name, artists, image, durationMs, progressMs, at, requester }
+      let liste = [];
+      let dernierHtml = null;
+      let clesAffichees = new Set();
+      let premierRendu = true;
+      let minuteurHauteur = null;
+
+      function mmss(ms) {
+        const s = Math.floor(Math.max(0, ms) / 1000);
+        return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+      }
+
+      // StreamKit ne relève Spotify que toutes les 5 s : entre deux relevés,
+      // c'est la page qui fait avancer la barre, depuis l'heure du relevé.
+      function position(l) {
+        const ecoule = l.progressMs + (Date.now() - l.at);
+        if (l.boucle) return l.durationMs ? ecoule % l.durationMs : 0; // démo : tourne en rond
+        return Math.max(0, Math.min(l.durationMs, ecoule));
+      }
+
+      // Couleur stable tirée du titre : deux morceaux sans pochette ne se ressemblent pas.
+      function teinte(s) {
+        let h = 0;
+        for (const ch of String(s ?? "")) h = (h * 31 + ch.codePointAt(0)) % 360;
+        return h;
+      }
+
+      function pochette(url, classe, nom) {
+        if (typeof url === "string" && url.startsWith("https://")) {
+          return '<img class="' + classe + '" src="' + esc(url) + '" data-nom="' + esc(nom) + '" alt="">';
+        }
+        const h = teinte(nom);
+        return (
+          '<div class="' + classe + ' sans-image" style="background: linear-gradient(135deg, hsl(' + h + ', 62%, 52%), hsl(' +
+          ((h + 50) % 360) + ', 58%, 28%))">♪</div>'
+        );
+      }
+
+      // Image injoignable (hors ligne, adresse périmée) : l'aplat plutôt qu'une icône cassée.
+      function brancherPochettes(racine) {
+        for (const img of racine.querySelectorAll("img")) {
+          img.addEventListener(
+            "error",
+            () => {
+              const modele = document.createElement("template");
+              modele.innerHTML = pochette(null, img.className, img.dataset.nom);
+              img.replaceWith(modele.content.firstChild);
+            },
+            { once: true }
+          );
+        }
+      }
+
+      // Le HTML ne contient PAS la position : il ne change donc que si le morceau
+      // ou la file changent, et un simple recalage de la barre ne redessine rien.
+      function rendreBloc() {
+        if (!lecture && !liste.length) return "";
+        let h = '<div class="b-carte">';
+        if (lecture) {
+          h +=
+            '<div class="b-hero" data-cle="' + esc("lecture " + lecture.uri) + '">' +
+            (lecture.requester ? '<div class="b-chip">demandée par ' + esc(lecture.requester) + "</div>" : "") +
+            pochette(lecture.image, "b-pochette", lecture.name) +
+            '<div class="b-meta">' +
+            '<div class="b-lab"><span class="b-eq"><i></i><i></i><i></i></span>En cours</div>' +
+            '<div class="b-titre">' + esc(lecture.name) + "</div>" +
+            '<div class="b-artiste">' + esc(lecture.artists) + "</div>" +
+            '<div class="b-prog"><span class="b-ecoule"></span><div class="b-barre"><i></i></div><span>' +
+            mmss(lecture.durationMs) + "</span></div>" +
+            "</div></div>";
+        }
+        if (liste.length) {
+          const reste = liste.length - 5;
+          h +=
+            '<div class="b-liste"><div class="b-head">À venir</div>' +
+            liste
+              .slice(0, 5)
+              .map(
+                (it) =>
+                  '<div class="b-item' + (it.cancelled ? " cancelled" : "") + '" data-cle="' + esc("demande " + it.id) + '">' +
+                  pochette(it.image, "b-mini", it.name) +
+                  '<div class="b-txt"><b>' + esc(it.name) + "</b> <span>— " + esc(it.artists) + "</span></div>" +
+                  '<div class="b-par">' + (it.cancelled ? "🚫 refusée" : esc(it.requester)) + "</div>" +
+                  "</div>"
+              )
+              .join("") +
+            (reste > 0 ? '<div class="b-plus">+ ' + reste + (reste > 1 ? " autres" : " autre") + "</div>" : "") +
+            "</div>";
+        }
+        return h + "</div>";
+      }
+
+      function majProgression(immediat) {
+        const barre = bClip.querySelector(".b-barre i");
+        const ecoule = bClip.querySelector(".b-ecoule");
+        if (!lecture || !barre || !ecoule) return;
+        const pos = position(lecture);
+        // Pas de glissement quand la barre repart en arrière ou vient d'être dessinée.
+        const sec = immediat || pos < (barre.dataset.pos || 0);
+        if (sec) barre.style.transition = "none";
+        barre.style.width = (lecture.durationMs ? (pos / lecture.durationMs) * 100 : 0).toFixed(2) + "%";
+        barre.dataset.pos = pos;
+        ecoule.textContent = mmss(pos);
+        if (sec) {
+          void barre.offsetWidth;
+          barre.style.transition = "";
+        }
+      }
+
+      // Remplace le contenu du bloc en animant sa hauteur : il grandit quand une
+      // demande arrive et se replie quand la file se vide.
+      function morpher(html) {
+        if (html === dernierHtml) return;
+        dernierHtml = html;
+        clearTimeout(minuteurHauteur);
+        const avant = bClip.getBoundingClientRect().height;
+        // Une source rouverte en plein live s'affiche d'un coup, sans animation.
+        const animer = !premierRendu;
+        premierRendu = false;
+
+        if (!html) {
+          bloc.classList.add("vide");
+          minuteurHauteur = setTimeout(() => {
+            bClip.innerHTML = "";
+            bClip.style.height = "0px";
+            clesAffichees = new Set();
+          }, 350);
+          return;
+        }
+
+        bloc.classList.remove("vide");
+        const connues = clesAffichees;
+        bClip.innerHTML = html;
+        brancherPochettes(bClip);
+        clesAffichees = new Set();
+        for (const n of bClip.querySelectorAll("[data-cle]")) {
+          if (animer && !connues.has(n.dataset.cle)) n.classList.add("entre");
+          clesAffichees.add(n.dataset.cle);
+        }
+        majProgression(true);
+
+        bClip.style.height = "auto";
+        const apres = bClip.getBoundingClientRect().height;
+        if (!animer) {
+          bClip.style.height = "";
+          return;
+        }
+        bClip.style.height = avant + "px";
+        void bClip.offsetHeight; // repartir de l'ancienne hauteur
+        bClip.style.height = apres + "px";
+        minuteurHauteur = setTimeout(() => {
+          bClip.style.height = "";
+        }, 500);
+      }
+
+      function afficherPanneau() {
+        document.body.classList.toggle("mode-bloc", modeBloc);
+        if (modeBloc) morpher(rendreBloc());
+        else afficherListe(liste);
+      }
+
+      setInterval(() => majProgression(false), 1000);
+
+      // Texte lisible sur la couleur secondaire (pastille « demandée par ») : blanc
+      // sur le violet par défaut, noir si le streamer a choisi une teinte claire.
+      function texteSur(hex) {
+        const m = /^#([0-9a-f]{6})$/i.exec(hex || "");
+        if (!m) return "#fff";
+        const n = parseInt(m[1], 16);
+        const lin = (v) => {
+          const c = v / 255;
+          return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        };
+        const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+        return L > 0.179 ? "#111" : "#fff";
+      }
+
       function appliquerTheme(t) {
         if (!t) return;
         const r = document.documentElement.style;
         if (t.accent1) r.setProperty("--accent1", t.accent1);
-        if (t.accent2) r.setProperty("--accent2", t.accent2);
+        if (t.accent2) {
+          r.setProperty("--accent2", t.accent2);
+          r.setProperty("--accent2-texte", texteSur(t.accent2));
+        }
         // Le coin de l'URL gagne toujours sur celui des réglages.
         document.body.dataset.corner = coinDemande || t.corner || "top-left";
       }
@@ -231,9 +523,16 @@
       flux.addEventListener("etat", (e) => {
         const d = JSON.parse(e.data);
         appliquerTheme(d.theme);
-        // En démo, on ignore la liste réelle : sinon la file (vide) effacerait
-        // aussitôt la liste d'exemple qu'on vient d'afficher.
-        if (vue.liste && !modeDemo) afficherListe(d.upcoming);
+        if (!vue.liste) return;
+        modeBloc = !!d.afficherEnCours;
+        // En démo, on ignore la file et la lecture réelles : sinon la file (vide)
+        // effacerait aussitôt l'exemple qu'on vient d'afficher. Le réglage, lui,
+        // compte : la démo montre le bloc tel qu'il sera en live.
+        if (!modeDemo) {
+          lecture = d.lecture || null;
+          liste = d.upcoming || [];
+        }
+        afficherPanneau();
       });
 
       for (const nom of vue.notifs) {
@@ -255,11 +554,24 @@
       // ---- Démo --------------------------------------------------------------
       if (modeDemo) {
         if (vue.liste) {
-          afficherListe([
-            { name: "Beautiful Things", artists: "Benson Boone" },
-            { name: "Prideful", artists: "Ren", cancelled: true },
-            { name: "Feel Good Inc.", artists: "Gorillaz" },
-          ]);
+          liste = [
+            { id: 1, name: "Beautiful Things", artists: "Benson Boone", requester: "Viewer42" },
+            { id: 2, name: "Prideful", artists: "Ren", requester: "LunaTique", cancelled: true },
+            { id: 3, name: "Feel Good Inc.", artists: "Gorillaz", requester: "KaizenRL" },
+          ];
+          // Pseudo affiché pour que la source se cale sur la place maximale.
+          lecture = {
+            uri: "demo",
+            name: "Midnight City",
+            artists: "M83",
+            image: null,
+            durationMs: 244000,
+            progressMs: 72000,
+            at: Date.now(),
+            requester: "Mouette_404",
+            boucle: true,
+          };
+          afficherPanneau();
         }
         if (vue.notifs.length) {
           const exemples = {

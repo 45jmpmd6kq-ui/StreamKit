@@ -122,6 +122,25 @@ export function looseMatch(input, reference) {
 // En dessous, on refuse le morceau plutot que de passer n'importe quoi.
 const SEUIL = 0.6;
 
+// Choisit, parmi les pochettes d'un album, la plus petite qui reste nette a
+// `largeurMin` pixels. Spotify en fournit en general trois (640, 300 et 64 px) :
+// la 640 pour une vignette de 30 px, c'est cent fois trop de pixels a
+// telecharger, et une source OBS en affiche des dizaines dans la soiree.
+// Un fichier local n'a aucune pochette : null, l'overlay dessine un motif.
+export function choisirImage(images, largeurMin) {
+  const valides = (Array.isArray(images) ? images : []).filter(
+    (i) => typeof i?.url === 'string' && i.url.startsWith('https://')
+  );
+  if (!valides.length) return null;
+  const tries = [...valides].sort((a, b) => (a.width ?? 0) - (b.width ?? 0));
+  return (tries.find((i) => (i.width ?? 0) >= largeurMin) ?? tries.at(-1)).url;
+}
+
+// Tailles d'affichage de l'overlay, doublees pour rester nettes sur un ecran
+// a forte densite : la grande pochette fait 92 px, les vignettes 30 px.
+const IMAGE_EN_COURS = 184;
+const IMAGE_VIGNETTE = 60;
+
 // Choisit le meilleur resultat Spotify pour une demande, ou null si aucun ne
 // correspond VRAIMENT.
 //
@@ -156,6 +175,7 @@ export function choisirMeilleur(demande, resultats = []) {
     uri: it.uri,
     name: it.name,
     artists: (it.artists ?? []).map((a) => a.name).join(', '),
+    image: choisirImage(it.album?.images, IMAGE_VIGNETTE),
   };
 }
 
@@ -311,7 +331,8 @@ export class SpotifyClient {
     });
   }
 
-  // Morceau en cours de lecture (ou null).
+  // Morceau en cours de lecture (ou null : rien ne joue, ou une pub -- Spotify
+  // n'envoie alors pas de morceau).
   async currentlyPlaying() {
     const data = await this.api('/me/player/currently-playing');
     const item = data?.item;
@@ -319,8 +340,11 @@ export class SpotifyClient {
     return {
       uri: item.uri,
       name: item.name,
-      artists: item.artists.map((a) => a.name).join(', '),
+      artists: (item.artists ?? []).map((a) => a.name).join(', '),
       isPlaying: !!data.is_playing,
+      image: choisirImage(item.album?.images, IMAGE_EN_COURS),
+      durationMs: item.duration_ms ?? 0,
+      progressMs: data.progress_ms ?? 0,
     };
   }
 }

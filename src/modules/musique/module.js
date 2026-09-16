@@ -5,7 +5,9 @@
 //  - recompense « annuler une musique » -> le morceau sera saute a son passage
 //    (Spotify ne permet pas de retirer un morceau precis de sa file)
 //  - commandes de chat : passer le morceau, afficher le morceau en cours
-//  - deux overlays OBS : les annonces (7 s) et la liste « a venir » (permanente)
+//  - deux overlays OBS : les annonces (7 s) et la liste « a venir » (permanente),
+//    que le reglage « Afficher le morceau en cours » coiffe de la pochette et du
+//    titre qui tournent sur Spotify
 //
 // Ce qui a disparu par rapport a la version autonome, et que le socle fournit :
 // la connexion Twitch, le serveur d'overlay, le rafraichissement des jetons, le
@@ -13,9 +15,14 @@
 
 import { SpotifyClient, looseMatch } from './spotify.js';
 import { creerFile } from './file.js';
+import { etatLecture, lectureAChange, msAvantFin } from './lecture.js';
 
 const TITRE_ANNULATION = '🚫 On écoute pas ta musique de merde';
 const VUES = ['annonces', 'liste'];
+
+// Rythme du suivi de lecture : c'est aussi le retard maximal avec lequel un
+// morceau annule est saute, et avec lequel l'overlay voit un changement.
+const INTERVALLE_SUIVI = 5000;
 
 export default {
   id: 'musique',
@@ -102,6 +109,15 @@ export default {
 
       // --- Habillage ---
       {
+        cle: 'afficherEnCours',
+        type: 'bool',
+        label: 'Afficher le morceau en cours',
+        aide: 'Pochette, titre et avancement du morceau Spotify, en tête de la liste « À venir ». Masqué quand Spotify est en pause.',
+        // Coupe par defaut : une mise a jour ne doit pas changer l'ecran d'un
+        // streamer qui a deja cale sa source OBS.
+        defaut: false,
+      },
+      {
         cle: 'accent1',
         type: 'couleur',
         label: 'Couleur principale',
@@ -167,7 +183,7 @@ export default {
     {
       chemin: 'liste',
       nom: 'Liste « à venir »',
-      description: 'Le panneau permanent des morceaux en attente.',
+      description: 'Le panneau permanent des morceaux en attente, et le morceau en cours si tu l’affiches.',
       fichier: 'overlay.html',
     },
   ],
@@ -250,9 +266,20 @@ export default {
     // --- Overlays : deux vues, le meme etat ---
     const diffuser = (type, data) => VUES.forEach((v) => ctx.overlay.diffuser(v, type, data));
     const theme = { accent1: c.accent1, accent2: c.accent2, corner: c.corner };
+
+    // Le morceau que l'overlay affiche en tete du bloc (null : rien, ou pause).
+    // Reste null tant que le reglage est coupe : l'overlay garde alors
+    // exactement la liste d'avant.
+    let lecture = null;
+
     const pousserEtat = () =>
       VUES.forEach((v) =>
-        ctx.overlay.etat(v, { theme, nowPlaying: file.enCours(), upcoming: file.aVenir() })
+        ctx.overlay.etat(v, {
+          theme,
+          afficherEnCours: !!c.afficherEnCours,
+          lecture,
+          upcoming: file.aVenir(),
+        })
       );
     pousserEtat();
 
@@ -380,6 +407,7 @@ export default {
             await spotify.next();
             file.retirer(cible.uri);
             pousserEtat();
+            rafraichirBientot();
             ctx.log.info('Le morceau annulé était en cours : passé immédiatement.');
           }
         } catch {
@@ -388,26 +416,73 @@ export default {
       });
     }
 
-    // --- 3) Suivi de lecture : passe automatiquement les morceaux annules -----
+    // --- 3) Suivi de lecture ---------------------------------------------------
+    // Passe automatiquement les morceaux annules, et tient a jour le morceau en
+    // cours de l'overlay quand le streamer l'affiche.
 
-    ctx.minuteur.intervalle(async () => {
+    // Un seul releve a la fois. Le socle n'empile pas les tours de l'intervalle,
+    // mais les releves anticipes (fin de morceau, morceau passe) arrivent par un
+    // autre chemin : sans ce verrou, deux releves simultanes verraient le meme
+    // morceau annule et appelleraient « suivant » deux fois -- le second
+    // sauterait le morceau d'un autre viewer.
+    let suiviEnCours = false;
+    // Morceau dont la fin a deja son releve anticipe.
+    let finSurveillee = null;
+
+    async function suivre() {
+      if (suiviEnCours) return;
+      suiviEnCours = true;
       try {
         const cur = await spotify.currentlyPlaying();
-        if (!cur) return;
 
-        if (file.estAnnule(cur.uri)) {
+        if (cur && file.estAnnule(cur.uri)) {
           await spotify.next();
           file.retirer(cur.uri);
           ctx.log.info('Morceau annulé détecté en lecture : passé.');
           pousserEtat();
+          rafraichirBientot();
           return;
         }
 
-        if (file.marquerEnLecture(cur.uri)) pousserEtat();
+        let change = cur ? file.marquerEnLecture(cur.uri) : false;
+
+        if (c.afficherEnCours) {
+          const releve = etatLecture(cur, file.enCours());
+          if (lectureAChange(lecture, releve)) {
+            lecture = releve;
+            change = true;
+          }
+          programmerFin(lecture);
+        }
+
+        if (change) pousserEtat();
       } catch {
         /* Spotify momentanement indisponible : on reessaiera au prochain tour */
+      } finally {
+        suiviEnCours = false;
       }
-    }, 5000);
+    }
+
+    // Sans releve anticipe, l'overlay garderait jusqu'a 5 s le titre d'un
+    // morceau fini, barre pleine, pendant que le suivant joue deja.
+    function programmerFin(l) {
+      if (!l || finSurveillee === l.uri) return;
+      const reste = msAvantFin(l);
+      if (reste > INTERVALLE_SUIVI) return; // le tour normal arrivera avant
+      finSurveillee = l.uri;
+      ctx.minuteur.delai(suivre, reste + 800);
+    }
+
+    // Apres un « suivant » : l'overlay montre le nouveau morceau sans attendre
+    // le prochain tour.
+    function rafraichirBientot() {
+      if (c.afficherEnCours) ctx.minuteur.delai(suivre, 1200);
+    }
+
+    ctx.minuteur.intervalle(suivre, INTERVALLE_SUIVI);
+    // Premier releve tout de suite : apres un changement de reglages, le module
+    // redemarre, et l'overlay resterait sinon 5 s sans son morceau en cours.
+    if (c.afficherEnCours) ctx.minuteur.delai(suivre, 0);
 
     // --- 4) Commandes de chat -------------------------------------------------
 
@@ -418,6 +493,7 @@ export default {
           try {
             await spotify.next();
             persisterSpotify();
+            rafraichirBientot();
             annoncer('⏭️ Morceau suivant !');
             ctx.compteur.incr('passees');
             ctx.log.info(user + ' a passé le morceau');

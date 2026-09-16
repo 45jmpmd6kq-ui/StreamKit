@@ -19,8 +19,8 @@ export function creerFile() {
   const pending = () => items.filter((i) => i.status === 'pending');
 
   return {
-    ajouter({ uri, name, artists, requester }) {
-      const item = { id: ++seq, uri, name, artists, requester, status: 'pending', at: Date.now() };
+    ajouter({ uri, name, artists, requester, image = null }) {
+      const item = { id: ++seq, uri, name, artists, requester, image, status: 'pending', at: Date.now() };
       items.push(item);
       return item;
     },
@@ -28,14 +28,17 @@ export function creerFile() {
     enAttente: pending,
 
     // Liste « a venir » pour l'overlay : les demandes en attente ET celles
-    // annulees pas encore passees (affichees barrees).
+    // annulees pas encore passees (affichees barrees). L'id sert a l'overlay a
+    // reconnaitre une ligne qui vient d'arriver, pour l'animer elle seule.
     aVenir() {
       return items
         .filter((i) => i.status === 'pending' || i.status === 'cancelled')
         .map((i) => ({
+          id: i.id,
           name: i.name,
           artists: i.artists,
           requester: i.requester,
+          image: i.image,
           cancelled: i.status === 'cancelled',
         }));
     },

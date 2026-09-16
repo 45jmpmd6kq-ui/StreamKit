@@ -122,8 +122,11 @@ function csp(nonce) {
     nonce ? "script-src 'self' 'nonce-" + nonce + "'" : "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     // data: pour le favicon SVG du dashboard ; media.valorant-api.com pour les
-    // icones de rang du bandeau Valorant, servies par l'editeur du jeu.
-    "img-src 'self' data: https://media.valorant-api.com",
+    // icones de rang du bandeau Valorant, servies par l'editeur du jeu ;
+    // i.scdn.co et *.spotifycdn.com pour les pochettes du bot musique : Spotify
+    // sert les memes images sur les deux, et ses propres services renvoient
+    // deja le second (constate en septembre 2026).
+    "img-src 'self' data: https://media.valorant-api.com https://i.scdn.co https://*.spotifycdn.com",
     // fetch et EventSource des overlays : tout est local, rien ne sort.
     "connect-src 'self'",
     "object-src 'none'",

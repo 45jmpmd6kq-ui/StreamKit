@@ -107,6 +107,11 @@ tu veux, puis clique sur **Enregistrer** en bas.
 - **Bot Musique** et **Random Car** créent **eux-mêmes** leur récompense de
   points de chaîne, avec le nom et le coût indiqués dans leurs réglages. Tu n'as
   rien à créer sur Twitch.
+- **Bot Musique** : active **Afficher le morceau en cours** pour que l'overlay
+  « Liste » montre aussi ce qui tourne sur Spotify (pochette, titre, avancement),
+  au-dessus des demandes des viewers. Le bloc grandit quand la file se remplit et
+  se replie quand elle se vide. Rien à changer dans OBS : c'est la même source.
+  Quand Spotify est en pause, seul le morceau disparaît ; les demandes restent.
 - **Random Car** : dans **Interfaces**, ouvre **Mes voitures** et coche les
   voitures que tu possèdes. Le tirage se fait uniquement parmi elles.
 - **Clips** : par défaut, seuls tes modérateurs peuvent taper `!clip`. Ce qui

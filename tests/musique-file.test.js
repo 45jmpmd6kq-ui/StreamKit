@@ -49,6 +49,21 @@ test('la liste « a venir » montre les annulees barrees, pas les jouees', () =>
   );
 });
 
+test('la liste « a venir » porte la vignette et un id stable par demande', () => {
+  // L'id permet a l'overlay d'animer la seule ligne qui arrive ; la vignette
+  // et le pseudo s'affichent quand le morceau en cours est active.
+  const f = creerFile();
+  const a = f.ajouter({ ...morceau('Alpha', 'Artiste', 'Viewer42'), image: 'https://i.scdn.co/image/64' });
+  const b = f.ajouter(morceau('Beta'));
+
+  const [la, lb] = f.aVenir();
+  assert.equal(la.id, a.id);
+  assert.equal(la.image, 'https://i.scdn.co/image/64');
+  assert.equal(la.requester, 'Viewer42');
+  assert.equal(lb.id, b.id);
+  assert.equal(lb.image, null, 'sans pochette : null, pas undefined');
+});
+
 test('un morceau annule n est jamais mis en lecture', () => {
   const f = creerFile();
   const a = f.ajouter(morceau('Alpha'));

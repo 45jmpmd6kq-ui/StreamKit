@@ -322,6 +322,23 @@ test('le dashboard est servi avec une CSP et un nonce de script', async () => {
   assert.ok(r.corps.includes('nonce="' + nonce + '"'), 'la balise script doit porter le meme nonce');
 });
 
+test('les pochettes Spotify sont autorisees, pas n importe quelle image', async () => {
+  // Le bot musique affiche la pochette de l'album en cours, servie par Spotify.
+  // Une image ne s'execute pas, mais une balise <img> vers un serveur tiers
+  // suffit a faire sortir une information : on n'ouvre que les hotes utiles.
+  // La politique est la meme pour tous les overlays.
+  const r = await requete({ chemin: '/overlay/roue-rl/roue' });
+  const imgSrc =
+    (r.entetes['content-security-policy'] ?? '')
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('img-src')) ?? '';
+
+  assert.match(imgSrc, /\shttps:\/\/i\.scdn\.co(\s|$)/);
+  assert.match(imgSrc, /\shttps:\/\/\*\.spotifycdn\.com(\s|$)/);
+  assert.doesNotMatch(imgSrc, /\s(https:|\*)(\s|$)/, 'img-src ne doit pas ouvrir toutes les images');
+});
+
 test('un overlay recoit un nonce, different a chaque chargement', async () => {
   // Un nonce rejoue serait un nonce inutile : une page qui a vu le precedent
   // pourrait s'en servir au chargement suivant.
