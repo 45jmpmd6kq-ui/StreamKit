@@ -15,8 +15,8 @@ export const TOLERANCE_MS = 2500;
 
 // `cur` : ce que renvoie SpotifyClient.currentlyPlaying().
 // `demande` : la demande de viewer en lecture d'apres la file, ou null.
-// Renvoie null quand rien ne doit s'afficher : rien ne joue, ou pause (le bloc
-// se replie alors sur la liste, comme quand Spotify est ferme).
+// Renvoie null quand rien ne joue : pause, Spotify ferme ou pub. L'overlay
+// masque alors tout le bloc, demandes comprises, jusqu'a la reprise.
 export function etatLecture(cur, demande, maintenant = Date.now()) {
   if (!cur || !cur.isPlaying) return null;
   return {

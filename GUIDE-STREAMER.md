@@ -111,7 +111,8 @@ tu veux, puis clique sur **Enregistrer** en bas.
   « Liste » montre aussi ce qui tourne sur Spotify (pochette, titre, avancement),
   au-dessus des demandes des viewers. Le bloc grandit quand la file se remplit et
   se replie quand elle se vide. Rien à changer dans OBS : c'est la même source.
-  Quand Spotify est en pause, seul le morceau disparaît ; les demandes restent.
+  Quand la musique est en pause (ou Spotify fermé), tout le bloc disparaît, et
+  il revient en entier dès que la musique reprend.
 - **Random Car** : dans **Interfaces**, ouvre **Mes voitures** et coche les
   voitures que tu possèdes. Le tirage se fait uniquement parmi elles.
 - **Clips** : par défaut, seuls tes modérateurs peuvent taper `!clip`. Ce qui

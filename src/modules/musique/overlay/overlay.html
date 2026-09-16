@@ -378,21 +378,24 @@
       // Le HTML ne contient PAS la position : il ne change donc que si le morceau
       // ou la file changent, et un simple recalage de la barre ne redessine rien.
       function rendreBloc() {
-        if (!lecture && !liste.length) return "";
-        let h = '<div class="b-carte">';
-        if (lecture) {
-          h +=
-            '<div class="b-hero" data-cle="' + esc("lecture " + lecture.uri) + '">' +
-            (lecture.requester ? '<div class="b-chip">demandée par ' + esc(lecture.requester) + "</div>" : "") +
-            pochette(lecture.image, "b-pochette", lecture.name) +
-            '<div class="b-meta">' +
-            '<div class="b-lab"><span class="b-eq"><i></i><i></i><i></i></span>En cours</div>' +
-            '<div class="b-titre">' + esc(lecture.name) + "</div>" +
-            '<div class="b-artiste">' + esc(lecture.artists) + "</div>" +
-            '<div class="b-prog"><span class="b-ecoule"></span><div class="b-barre"><i></i></div><span>' +
-            mmss(lecture.durationMs) + "</span></div>" +
-            "</div></div>";
-        }
+        // Rien ne joue (pause, Spotify fermé) : TOUT le bloc disparaît, demandes
+        // comprises, et revient en entier à la reprise. Choix du streamer.
+        // « Spotify fermé » est traité pareil : après une longue pause, Spotify
+        // finit par ne plus rien renvoyer du tout, et la liste réapparaîtrait
+        // alors qu'il est toujours en pause.
+        if (!lecture) return "";
+        let h =
+          '<div class="b-carte">' +
+          '<div class="b-hero" data-cle="' + esc("lecture " + lecture.uri) + '">' +
+          (lecture.requester ? '<div class="b-chip">demandée par ' + esc(lecture.requester) + "</div>" : "") +
+          pochette(lecture.image, "b-pochette", lecture.name) +
+          '<div class="b-meta">' +
+          '<div class="b-lab"><span class="b-eq"><i></i><i></i><i></i></span>En cours</div>' +
+          '<div class="b-titre">' + esc(lecture.name) + "</div>" +
+          '<div class="b-artiste">' + esc(lecture.artists) + "</div>" +
+          '<div class="b-prog"><span class="b-ecoule"></span><div class="b-barre"><i></i></div><span>' +
+          mmss(lecture.durationMs) + "</span></div>" +
+          "</div></div>";
         if (liste.length) {
           const reste = liste.length - 5;
           h +=

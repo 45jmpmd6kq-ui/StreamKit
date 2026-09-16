@@ -45,7 +45,7 @@ test('un morceau qui joue donne tout ce que l overlay affiche', () => {
 });
 
 test('rien ne joue, ou pause : rien a afficher', () => {
-  // Choix du streamer : en pause, le morceau disparait du bloc.
+  // Choix du streamer : en pause, l'overlay masque alors tout le bloc.
   assert.equal(etatLecture(null, null), null);
   assert.equal(etatLecture(releve({ isPlaying: false }), null), null);
 });

@@ -112,7 +112,7 @@ export default {
         cle: 'afficherEnCours',
         type: 'bool',
         label: 'Afficher le morceau en cours',
-        aide: 'Pochette, titre et avancement du morceau Spotify, en tête de la liste « À venir ». Masqué quand Spotify est en pause.',
+        aide: 'Pochette, titre et avancement du morceau Spotify, en tête de la liste « À venir ». Tout le bloc disparaît quand la musique est en pause, et revient à la reprise.',
         // Coupe par defaut : une mise a jour ne doit pas changer l'ecran d'un
         // streamer qui a deja cale sa source OBS.
         defaut: false,
@@ -267,9 +267,10 @@ export default {
     const diffuser = (type, data) => VUES.forEach((v) => ctx.overlay.diffuser(v, type, data));
     const theme = { accent1: c.accent1, accent2: c.accent2, corner: c.corner };
 
-    // Le morceau que l'overlay affiche en tete du bloc (null : rien, ou pause).
-    // Reste null tant que le reglage est coupe : l'overlay garde alors
-    // exactement la liste d'avant.
+    // Le morceau que l'overlay affiche en tete du bloc. null : rien ne joue, et
+    // l'overlay masque alors tout le bloc ; la file continue d'etre envoyee,
+    // pour qu'il revienne complet a la reprise. Reste null tant que le reglage
+    // est coupe : l'overlay garde alors exactement la liste d'avant.
     let lecture = null;
 
     const pousserEtat = () =>

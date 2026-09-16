@@ -189,7 +189,10 @@ test('une demande : vignette et pseudo dans la liste, puis en tete quand elle jo
   assert.deepEqual(upcoming, [], 'le morceau quitte la liste en montant en tete');
 });
 
-test('pause ou Spotify ferme : le morceau disparait, et revient a la reprise', async () => {
+test('pause ou Spotify ferme : plus de morceau, et tout revient a la reprise', async () => {
+  // Sans morceau en cours, l'overlay masque TOUT le bloc (choix du streamer).
+  // La file doit pourtant continuer d'arriver : a la reprise, le bloc revient
+  // complet, demandes faites pendant la pause comprises.
   const spotify = fauxSpotify();
   const t = contexte({ afficherEnCours: true });
   spotify.lecture = joue(MIDNIGHT, { position: 72000 });
@@ -199,11 +202,17 @@ test('pause ou Spotify ferme : le morceau disparait, et revient a la reprise', a
 
   spotify.lecture = joue(MIDNIGHT, { position: 75000, pause: true });
   await t.tour();
-  assert.equal(t.liste().lecture, null, 'en pause, le bloc se replie');
+  assert.equal(t.liste().lecture, null, 'en pause : rien a afficher');
+
+  await t.demander('beautiful things benson boone', 'Viewer42');
+  assert.equal(t.liste().lecture, null, 'une demande ne fait pas reapparaitre le bloc');
+  assert.equal(t.liste().upcoming.length, 1, 'mais elle est bien gardee pour la reprise');
 
   spotify.lecture = joue(MIDNIGHT, { position: 75000 });
   await t.tour();
-  assert.equal(t.liste().lecture?.progressMs, 75000, 'reprise : la barre repart du bon endroit');
+  const repris = t.liste();
+  assert.equal(repris.lecture?.progressMs, 75000, 'reprise : la barre repart du bon endroit');
+  assert.equal(repris.upcoming[0]?.name, 'Beautiful Things', 'reprise : la liste revient avec le morceau');
 
   spotify.lecture = null; // Spotify ferme
   await t.tour();
