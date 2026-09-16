@@ -1,9 +1,10 @@
 // Sondages : ce que le scoreboard affiche, et ce qu'il n'affiche plus.
 //
 // Memes pieges que les predictions (evenements dans le desordre ou rejoues,
-// pourcentages a 100), plus un propre aux sondages : Twitch envoie une
-// SECONDE fin, « archived », qui ne doit ni couper ni relancer l'affichage du
-// resultat.
+// pourcentages a 100), plus ceux propres aux sondages : « archived » arrive
+// soit en SECONDE fin (ne coupe ni ne relance le resultat), soit seul (sondage
+// retire du chat : la carte part avec lui). Et une fin perdue ne laisse jamais
+// la carte figee a l'ecran.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,6 +15,9 @@ import {
   depuisHelix,
   creerSuivi,
   scenarioSimulation,
+  ATTENTE_FIN_MS,
+  RELANCE_MS,
+  ESSAIS_MAX,
 } from '../src/modules/sondages/sondages.js';
 import manifeste from '../src/modules/sondages/module.js';
 
@@ -69,10 +73,12 @@ test('API Helix : actif repris, archive ou modere ignores', () => {
 // --- Ce qui reste a l'ecran -----------------------------------------------------------
 
 function horloge() {
+  let t = 0;
   const minuteurs = [];
   return {
+    maintenant: () => t,
     planifier(fn, ms) {
-      const m = { fn, ms, annule: false };
+      const m = { fn, ms, echeance: t + ms, annule: false };
       minuteurs.push(m);
       return () => (m.annule = true);
     },
@@ -80,23 +86,42 @@ function horloge() {
     tout() {
       for (const m of minuteurs) if (!m.annule && !m.fait) ((m.fait = true), m.fn());
     },
+    // Avance le temps : chaque minuteur echu part a son heure, y compris ceux
+    // qu'un autre pose en route (les relances du filet).
+    async avancer(ms) {
+      const fin = t + ms;
+      for (;;) {
+        const [m] = minuteurs
+          .filter((x) => !x.annule && !x.fait && x.echeance <= fin)
+          .sort((a, b) => a.echeance - b.echeance);
+        if (!m) break;
+        t = m.echeance;
+        m.fait = true;
+        await m.fn();
+      }
+      t = fin;
+    },
   };
 }
 
-function monter() {
+function monter({ relire } = {}) {
   const h = horloge();
   const publies = [];
   const nouveaux = [];
   const termines = [];
+  const retires = [];
   const suivi = creerSuivi({
     publier: (s) => publies.push(s),
     planifier: h.planifier,
+    maintenant: h.maintenant,
     dureeResultatMs: 15000,
+    relire,
     surNouveau: (s) => nouveaux.push(s.id),
     surTermine: (s) => termines.push(s.id),
+    surRetire: (s, raison) => retires.push([s.id, raison]),
   });
   const sondage = (phase, votes = [3, 2, 1], extra = {}) => depuisEvenement(evenement(votes, extra), phase);
-  return { suivi, h, publies, nouveaux, termines, sondage, dernier: () => publies.at(-1) };
+  return { suivi, h, publies, nouveaux, termines, retires, sondage, dernier: () => publies.at(-1) };
 }
 
 test('cycle normal : votes, resultat 15 s, puis plus rien', () => {
@@ -133,9 +158,150 @@ test('progression tardive ou fin rejouee : rien ne ressuscite ni ne recompte', (
 test('un nouveau sondage remplace le resultat du precedent', () => {
   const t = monter();
   t.suivi.recevoir(t.sondage('fin', [9, 3, 1], { status: 'completed' }));
+  const masquage = t.h.actifs()[0];
   t.suivi.recevoir(depuisEvenement(evenement([0, 0, 0], { id: 'S2' }), 'debut'));
   assert.equal(t.dernier().id, 'S2');
-  assert.equal(t.h.actifs().length, 0, 'l ancien minuteur effacerait le nouveau sondage');
+  assert.equal(masquage.annule, true, 'l ancien minuteur effacerait le nouveau sondage');
+});
+
+test('« archived » seul : sondage retire du chat, la carte part aussitot et ne revient pas', () => {
+  // Ignoree, cette fin laissait la carte figee sur « Cloture… » (symptome vu
+  // en live).
+  const t = monter();
+  t.suivi.recevoir(t.sondage('debut', [0, 0, 0]));
+  t.suivi.recevoir(t.sondage('progression', [4, 2, 1]));
+  assert.equal(t.suivi.recevoir(t.sondage('fin', [4, 2, 1], { status: 'archived' })), true);
+  assert.equal(t.dernier(), null);
+  assert.deepEqual(t.retires, [['S1', 'retire']]);
+  assert.deepEqual(t.h.actifs(), [], 'plus de filet en attente');
+
+  assert.equal(t.suivi.recevoir(t.sondage('progression', [5, 2, 1])), false);
+  assert.equal(t.suivi.recevoir(t.sondage('fin', [4, 2, 1], { status: 'archived' })), false);
+  assert.equal(t.dernier(), null);
+  assert.deepEqual([t.termines, t.retires.length], [[], 1]);
+});
+
+test('« archived » d un sondage jamais affiche : rien ne bouge', () => {
+  const t = monter();
+  assert.equal(t.suivi.recevoir(t.sondage('fin', [4, 2, 1], { status: 'archived' })), false);
+  assert.deepEqual([t.publies, t.retires], [[], []]);
+});
+
+// --- Filet : la fin qui n'arrive pas ------------------------------------------------
+
+// Sondage qui se termine a FIN ; l'horloge de test part de 0.
+const FIN = 60_000;
+const aFin = (votes, extra = {}) => evenement(votes, { endDate: new Date(FIN), ...extra });
+const helix = (id, status, votes) =>
+  depuisHelix({ id, title: 'Quelle voiture ?', status, endDate: new Date(FIN), choices: choixTwitch(votes) });
+
+test('filet : fin perdue, l API donne le resultat peu apres l heure de fin', async () => {
+  const lectures = [];
+  const t = monter({ relire: async (id) => (lectures.push(id), helix(id, 'COMPLETED', [9, 3, 1])) });
+  t.suivi.recevoir(depuisEvenement(aFin([5, 3, 1]), 'progression'));
+
+  await t.h.avancer(FIN + ATTENTE_FIN_MS - 1);
+  assert.deepEqual(lectures, [], 'pas avant : EventSub a encore sa chance');
+  await t.h.avancer(1);
+  assert.deepEqual(lectures, ['S1']);
+  assert.equal(t.dernier().statut, 'termine');
+  assert.deepEqual(t.dernier().gagnants, ['c0']);
+  assert.deepEqual(t.termines, ['S1']);
+
+  await t.h.avancer(15000);
+  assert.equal(t.dernier(), null, 'puis le resultat part comme d habitude');
+});
+
+test('filet : fin normale par EventSub, l API n est jamais appelee', async () => {
+  let lectures = 0;
+  const t = monter({ relire: async () => (lectures++, null) });
+  t.suivi.recevoir(depuisEvenement(aFin([0, 0, 0]), 'debut'));
+  await t.h.avancer(FIN + 1000);
+  t.suivi.recevoir(depuisEvenement(aFin([9, 3, 1], { status: 'completed' }), 'fin'));
+  await t.h.avancer(10 * 60_000);
+  assert.equal(lectures, 0);
+  assert.equal(t.dernier(), null);
+  assert.deepEqual(t.retires, []);
+});
+
+test('filet : sondage disparu de Twitch, la carte part', async () => {
+  const t = monter({ relire: async () => null });
+  t.suivi.recevoir(depuisEvenement(aFin([2, 1, 0]), 'progression'));
+  await t.h.avancer(FIN + ATTENTE_FIN_MS);
+  assert.equal(t.dernier(), null);
+  assert.deepEqual(t.retires, [['S1', 'retire']]);
+});
+
+test('filet : API muette ou sondage toujours « actif », relances puis carte retiree', async () => {
+  const cas = {
+    muette: async () => {
+      throw new Error('reseau');
+    },
+    actif: async (id) => helix(id, 'ACTIVE', [2, 1, 0]),
+  };
+  for (const [nom, relire] of Object.entries(cas)) {
+    let lectures = 0;
+    const t = monter({ relire: (id) => (lectures++, relire(id)) });
+    t.suivi.recevoir(depuisEvenement(aFin([2, 1, 0]), 'progression'));
+
+    await t.h.avancer(FIN + ATTENTE_FIN_MS + (ESSAIS_MAX - 1) * RELANCE_MS - 1);
+    assert.equal(t.dernier()?.statut, 'actif', nom + ' : encore une chance');
+    await t.h.avancer(1);
+    assert.equal(lectures, ESSAIS_MAX, nom);
+    assert.equal(t.dernier(), null, nom);
+    assert.deepEqual(t.retires, [['S1', 'sans-nouvelles']], nom);
+
+    await t.h.avancer(10 * 60_000);
+    assert.equal(lectures, ESSAIS_MAX, nom + ' : plus aucune relance');
+  }
+});
+
+test('filet : la fin arrive pendant la lecture de l API, rien n est compte deux fois', async () => {
+  // Reponse deja perimee quand elle arrive : resultat, ou sondage deja archive
+  // (qui, pris au pied de la lettre, effacerait le resultat tout juste affiche).
+  for (const reponse of [helix('S1', 'COMPLETED', [9, 3, 1]), null]) {
+    let repondre;
+    const t = monter({
+      relire: () =>
+        new Promise((r) => {
+          repondre = r;
+        }),
+    });
+    t.suivi.recevoir(depuisEvenement(aFin([2, 1, 0]), 'progression'));
+
+    const tic = t.h.avancer(FIN + ATTENTE_FIN_MS); // la lecture part et attend
+    t.suivi.recevoir(depuisEvenement(aFin([9, 3, 1], { status: 'completed' }), 'fin'));
+    repondre(reponse);
+    await tic;
+
+    assert.deepEqual([t.termines, t.retires], [['S1'], []]);
+    assert.equal(t.dernier()?.statut, 'termine', 'le resultat reste a l ecran');
+  }
+});
+
+test('filet : jamais pour une simulation, et muet apres l arret du module', async () => {
+  let lectures = 0;
+  const t = monter({ relire: async () => (lectures++, null) });
+  t.suivi.recevoir(scenarioSimulation({ maintenant: 0 })[1].sondage);
+  await t.h.avancer(10 * 60_000);
+  assert.equal(lectures, 0, 'une simulation n existe pas sur Twitch');
+
+  // Module arrete pendant qu'une lecture de l'API est en route.
+  let repondre;
+  const u = monter({
+    relire: () =>
+      new Promise((r) => {
+        repondre = r;
+      }),
+  });
+  u.suivi.recevoir(depuisEvenement(aFin([2, 1, 0]), 'progression'));
+  const tic = u.h.avancer(FIN + ATTENTE_FIN_MS);
+  u.suivi.arreter();
+  const publies = u.publies.length;
+  repondre(null);
+  await tic;
+  assert.equal(u.publies.length, publies, 'rien ne part vers l overlay apres l arret');
+  assert.deepEqual(u.retires, []);
 });
 
 test('simulation : votes croissants, puis resultat avec un gagnant', () => {
@@ -150,7 +316,7 @@ test('simulation : votes croissants, puis resultat avec un gagnant', () => {
 
 // --- Module ------------------------------------------------------------------------
 
-function contexte({ droits = ['channel:read:polls'], lecture } = {}) {
+function contexte({ droits = ['channel:read:polls'], lecture, parId } = {}) {
   const etats = [];
   const compteurs = {};
   const minuteurs = [];
@@ -172,7 +338,12 @@ function contexte({ droits = ['channel:read:polls'], lecture } = {}) {
       broadcasterId: '42',
       aLeDroit: (d) => droits.includes(d),
       surSondages: (h) => Object.assign(handlers, h),
-      api: { polls: { getPolls: lecture ?? (async () => ({ data: [] })) } },
+      api: {
+        polls: {
+          getPolls: lecture ?? (async () => ({ data: [] })),
+          getPollById: parId ?? (async () => null),
+        },
+      },
     },
   };
   return { ctx, etats, compteurs, minuteurs, handlers, dernier: () => etats.at(-1)?.sondage };
@@ -186,6 +357,41 @@ test('module : un vrai sondage s affiche et compte ses votes une fois', async ()
   await t.handlers.progression(evenement([4, 2, 1]));
   await t.handlers.fin(evenement([6, 2, 1], { status: 'completed' }));
   await t.handlers.fin(evenement([6, 2, 1], { status: 'archived' }));
+  assert.equal(t.dernier().statut, 'termine');
+  assert.deepEqual(t.compteurs, { sondages: 1, votes: 9 });
+});
+
+test('module : sondage retire du chat Twitch, le scoreboard part et ses votes comptent', async () => {
+  const t = contexte();
+  await manifeste.demarrer(t.ctx);
+  await t.handlers.debut(evenement([0, 0, 0]));
+  await t.handlers.progression(evenement([4, 2, 1]));
+  await t.handlers.fin(evenement([4, 2, 1], { status: 'archived' }));
+  assert.equal(t.dernier(), null);
+  assert.deepEqual(t.compteurs, { sondages: 1, votes: 7 });
+});
+
+test('module : fin jamais recue, le filet relit le sondage par l API', async () => {
+  const demandes = [];
+  const t = contexte({
+    parId: async (diffuseur, id) => {
+      demandes.push([diffuseur, id]);
+      return {
+        id,
+        title: 'Quelle voiture ?',
+        status: 'COMPLETED',
+        endDate: new Date(),
+        choices: choixTwitch([6, 2, 1]),
+      };
+    },
+  });
+  await manifeste.demarrer(t.ctx);
+  await t.handlers.progression(evenement([4, 2, 1]));
+
+  const filet = t.minuteurs.at(-1);
+  assert.ok(filet.ms > 60_000, 'rien avant l heure de fin : ' + filet.ms);
+  await filet.fn();
+  assert.deepEqual(demandes, [['42', 'S1']]);
   assert.equal(t.dernier().statut, 'termine');
   assert.deepEqual(t.compteurs, { sondages: 1, votes: 9 });
 });

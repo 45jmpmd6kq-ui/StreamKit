@@ -10,6 +10,15 @@
 // Twitch envoie parfois DEUX fins pour le meme sondage : « completed » (ou
 // « terminated » s'il est clos a la main), puis « archived » quand il sort de
 // l'historique. La seconde ne doit ni rallonger ni couper l'affichage.
+//
+// Mais « archived » peut aussi etre la SEULE fin : sondage arrete et retire du
+// chat d'un coup, sans resultat. La carte part alors avec lui.
+//
+// Et une fin peut se perdre (EventSub reconnecte au mauvais moment) : passe
+// l'heure de fin, un filet redemande le sondage a l'API.
+//
+// Sans ces deux gardes, constate en live chez un streamer : la carte restait
+// figee sur « Cloture… », sans jamais partir.
 
 // Copie volontaire de celle du module Predictions : un module ne depend jamais
 // d'un autre (chacun se desactive seul).
@@ -90,17 +99,32 @@ export function depuisHelix(s) {
   });
 }
 
+// Filet : delai laisse a EventSub apres l'heure de fin avant de demander a
+// l'API, puis relances tant que l'API ne tranche pas. Au bout du compte (une
+// petite minute apres la fin), la carte part quand meme.
+export const ATTENTE_FIN_MS = 10_000;
+export const RELANCE_MS = 15_000;
+export const ESSAIS_MAX = 4;
+
 // publier(s | null), planifier(fn, ms) -> annulation, dureeResultatMs
-// surNouveau(s) une fois par id ; surTermine(s) une fois par id
+// relire(id) -> le sondage selon l'API (null = plus sur Twitch) ; leve sans reponse
+// surNouveau(s) une fois par id ; surTermine(s) une fois par id, avec resultat
+// surRetire(s, raison) une fois par id, parti SANS resultat : 'retire' (retire
+// du chat sur Twitch) ou 'sans-nouvelles' (fin jamais confirmee)
 export function creerSuivi({
   publier,
   planifier,
   dureeResultatMs = 15000,
+  relire = null,
+  maintenant = Date.now,
   surNouveau = () => {},
   surTermine = () => {},
+  surRetire = () => {},
 }) {
   let courant = null;
   let annulerMinuteur = null;
+  let annulerFilet = null;
+  let generationFilet = 0; // un filet rearme ou coupe rend caduc le precedent
   const vus = new Set();
   const finis = new Set();
 
@@ -108,20 +132,67 @@ export function creerSuivi({
     annulerMinuteur?.();
     annulerMinuteur = null;
   };
+  const arreterFilet = () => {
+    generationFilet++;
+    annulerFilet?.();
+    annulerFilet = null;
+  };
   const masquer = () => {
     arreterMinuteur();
     publier(null);
   };
 
+  // Parti sans resultat : la carte quitte l'ecran, et rien ne la fait revenir.
+  function retirer(s, raison) {
+    finis.add(s.id);
+    arreterFilet();
+    courant = null;
+    masquer();
+    surRetire(s, raison);
+  }
+
+  // Pose a chaque etat « actif » : si aucune fin n'est arrivee a l'heure, on
+  // demande a l'API. Une fin normale le coupe avant qu'il ne serve.
+  function armerFilet(s) {
+    arreterFilet();
+    if (s.simulation || s.finA == null) return;
+    const generation = generationFilet;
+    const toujoursUtile = () => generation === generationFilet;
+
+    const essayer = async (essai) => {
+      if (!toujoursUtile()) return;
+      let lu;
+      try {
+        lu = relire ? await relire(s.id) : undefined;
+      } catch {
+        lu = undefined; // pas de reponse : on retentera
+      }
+      if (!toujoursUtile()) return; // la fin est arrivee pendant la lecture
+      if (lu === null) return retirer(s, 'retire');
+      if (estTermine(lu)) return void recevoir(lu);
+      if (essai >= ESSAIS_MAX) return retirer(s, 'sans-nouvelles');
+      annulerFilet = planifier(() => essayer(essai + 1), RELANCE_MS);
+    };
+    annulerFilet = planifier(() => essayer(1), Math.max(0, s.finA - maintenant()) + ATTENTE_FIN_MS);
+  }
+
   function recevoir(s) {
     if (!s) return false;
 
-    // « archived » : le sondage sort de l'historique Twitch. Rien a montrer, et
-    // surtout rien a couper si son resultat est encore a l'ecran.
-    if (s.statut === 'archive') return false;
-
-    if (finis.has(s.id)) return false; // fin rejouee, ou progression tardive
+    // Fin rejouee, progression tardive, ou « archived » apres le resultat :
+    // rien a relancer, et surtout rien a couper si le resultat est a l'ecran.
+    if (finis.has(s.id)) return false;
     if (courant && s.id === courant.id && estTermine(courant)) return false;
+
+    // « archived » sans fin avant lui : arrete et retire du chat d'un coup.
+    if (s.statut === 'archive') {
+      if (courant?.id === s.id) {
+        retirer(s, 'retire');
+        return true;
+      }
+      finis.add(s.id); // jamais affiche : rien a retirer ni a compter
+      return false;
+    }
 
     if (!vus.has(s.id)) {
       vus.add(s.id);
@@ -131,6 +202,7 @@ export function creerSuivi({
     courant = s;
 
     if (estTermine(s)) {
+      arreterFilet();
       finis.add(s.id);
       surTermine(s);
       if (dureeResultatMs <= 0) {
@@ -141,11 +213,18 @@ export function creerSuivi({
       }
       return true;
     }
+    armerFilet(s);
     publier(s);
     return true;
   }
 
-  return { recevoir, masquer, courant: () => courant };
+  // Module arrete : une lecture de l'API encore en route ne republie rien.
+  function arreter() {
+    arreterFilet();
+    arreterMinuteur();
+  }
+
+  return { recevoir, masquer, arreter, courant: () => courant };
 }
 
 // Sondage factice complet, par le meme chemin que les vrais evenements.

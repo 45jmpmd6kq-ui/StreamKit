@@ -133,7 +133,8 @@ tu veux, puis clique sur **Enregistrer** en bas.
   fermeture, résultat) dans l'overlay, sans rien envoyer à Twitch.
 - **Sondages** : rien à créer. Lance tes sondages depuis Twitch comme
   d'habitude : le scoreboard apparaît tout seul, suit les votes, affiche le
-  résultat 15 secondes (réglable), puis disparaît. **Si ta chaîne était déjà
+  résultat 15 secondes (réglable), puis disparaît. Un sondage supprimé du chat
+  avant la fin disparaît aussitôt de l'écran. **Si ta chaîne était déjà
   connectée avant**, reconnecte-la : ce module demande un droit de plus.
   **Simuler un sondage** joue un exemple complet dans l'overlay.
 - **Annonce de pub** : rien à régler pour démarrer. Une minute avant chaque pub

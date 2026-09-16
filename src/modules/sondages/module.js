@@ -134,6 +134,12 @@ export default {
         return () => clearTimeout(t);
       },
       dureeResultatMs: Math.max(0, c.dureeResultatSec) * 1000,
+      // Filet quand la fin n'arrive pas par EventSub. null = plus sur Twitch
+      // (archive, modere, introuvable).
+      relire: async (id) => {
+        const p = await ctx.twitch.api.polls.getPollById(ctx.twitch.broadcasterId, id);
+        return p ? depuisHelix(p) : null;
+      },
       surNouveau: (s) => {
         if (s.simulation) return;
         ctx.compteur.incr('sondages');
@@ -154,6 +160,23 @@ export default {
             s.totalVotes +
             ' votes).'
         );
+      },
+      surRetire: (s, raison) => {
+        if (s.simulation) return;
+        ctx.compteur.incr('votes', s.totalVotes);
+        if (raison === 'retire') {
+          ctx.log.info(
+            'Sondage retiré du chat Twitch sans résultat : « ' +
+              s.titre +
+              ' ». Le scoreboard est retiré aussi.'
+          );
+        } else {
+          ctx.log.warn(
+            'Twitch n’a jamais confirmé la fin du sondage « ' +
+              s.titre +
+              ' » : scoreboard retiré par sécurité.'
+          );
+        }
       },
     });
     ctx._suivi = suivi;
@@ -188,6 +211,7 @@ export default {
       return {
         async arreter() {
           couperSimulation();
+          suivi.arreter();
           publier(null);
         },
       };
@@ -232,6 +256,7 @@ export default {
     return {
       async arreter() {
         couperSimulation();
+        suivi.arreter();
         // Sans ca, l'etat memorise garderait le dernier sondage : une source OBS
         // qui se connecterait plus tard l'afficherait, perime.
         publier(null);
