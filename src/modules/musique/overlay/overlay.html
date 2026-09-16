@@ -11,6 +11,10 @@
         --line: rgba(255, 255, 255, 0.1);
         --muted: #b9b9c6;
         --accent2-texte: #fff; /* texte posé sur la couleur secondaire */
+        /* Ombres des cadres : atténuées avec l'opacité du fond, sinon un fond
+           transparent laisserait un halo sombre autour d'un cadre vide. */
+        --ombre-notif: rgba(0, 0, 0, 0.45);
+        --ombre-liste: rgba(0, 0, 0, 0.4);
       }
       * { box-sizing: border-box; }
       html, body {
@@ -42,7 +46,7 @@
         border-radius: 14px;
         padding: 14px 20px 14px 16px;
         color: #fff;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        box-shadow: 0 10px 30px var(--ombre-notif);
         opacity: 0;
         transform: translateX(-24px);
         transition: opacity 0.35s ease, transform 0.35s ease;
@@ -84,7 +88,7 @@
         color: #fff;
         min-width: 300px;
         max-width: 380px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 10px 30px var(--ombre-liste);
         opacity: 0;
         transition: opacity 0.3s ease;
       }
@@ -207,6 +211,40 @@
       /* Un morceau ou une demande qui arrive glisse en place. */
       .entre { animation: entre 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
       @keyframes entre { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+
+      /* ---- Bloc en taille compacte (réglage « Taille du bloc ») ----
+         Même disposition, resserrée : pochette de 56 px, pas de libellé ni de
+         temps, pseudo à côté de l'artiste, demandes sans vignette, 3 au plus. */
+      .bc-carte { width: 340px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; color: #fff; }
+      .bc-hero { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+      .bc-pochette { flex: none; width: 56px; height: 56px; border-radius: 7px; object-fit: cover; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); }
+      .bc-pochette.sans-image { font-size: 22px; }
+      .bc-meta { flex: 1; min-width: 0; }
+      .bc-l1 { display: flex; align-items: center; gap: 8px; }
+      .bc-titre { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; line-height: 1.25; }
+      .bc-l2 { font-size: 12px; line-height: 1.35; color: var(--muted); }
+      .bc-l2 b { color: var(--accent2); font-weight: 600; }
+      .bc-titre, .bc-l2, .bc-txt, .bc-par { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .bc-barre { margin-top: 7px; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+      .bc-barre i { display: block; width: 0; height: 100%; background: #fff; transition: width 1s linear; }
+      .bc-liste { padding: 3px 12px 6px; border-top: 1px solid var(--line); }
+      .bc-item { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; font-size: 13px; }
+      .bc-item + .bc-item { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+      .bc-num { flex: none; min-width: 10px; color: var(--accent2); font-weight: 700; font-size: 11px; }
+      .bc-txt { flex: 1; min-width: 0; }
+      .bc-txt span { color: var(--muted); font-size: 11.5px; }
+      .bc-par { flex: none; max-width: 92px; font-size: 11px; font-weight: 600; color: var(--accent2); }
+      .bc-item.cancelled .bc-txt { text-decoration: line-through; opacity: 0.5; }
+      .bc-item.cancelled .bc-num { opacity: 0.4; }
+      .bc-plus { padding-top: 2px; font-size: 11px; color: var(--muted); }
+
+      /* Fond très transparent : textes secondaires éclaircis et double ombre,
+         pour qu'ils restent lisibles par-dessus un jeu clair (testé sur un
+         dégradé orange-bleu : le gris et le violet disparaissaient). */
+      body.fond-leger { --muted: #e4e4ec; }
+      body.fond-leger #notif,
+      body.fond-leger #upcoming,
+      body.fond-leger #bloc { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.75); }
     </style>
   </head>
   <body>
@@ -322,6 +360,7 @@
       // Réglage « Afficher le morceau en cours » : la liste est alors coiffée du
       // morceau qui tourne sur Spotify. Coupé, la page reste celle d'avant.
       let modeBloc = false;
+      let compacte = false; // réglage « Taille du bloc »
       let lecture = null; // { uri, name, artists, image, durationMs, progressMs, at, requester }
       let liste = [];
       let dernierHtml = null;
@@ -384,6 +423,7 @@
         // finit par ne plus rien renvoyer du tout, et la liste réapparaîtrait
         // alors qu'il est toujours en pause.
         if (!lecture) return "";
+        if (compacte) return rendreBlocCompact();
         let h =
           '<div class="b-carte">' +
           '<div class="b-hero" data-cle="' + esc("lecture " + lecture.uri) + '">' +
@@ -393,7 +433,7 @@
           '<div class="b-lab"><span class="b-eq"><i></i><i></i><i></i></span>En cours</div>' +
           '<div class="b-titre">' + esc(lecture.name) + "</div>" +
           '<div class="b-artiste">' + esc(lecture.artists) + "</div>" +
-          '<div class="b-prog"><span class="b-ecoule"></span><div class="b-barre"><i></i></div><span>' +
+          '<div class="b-prog"><span class="b-ecoule" data-ecoule></span><div class="b-barre"><i data-prog></i></div><span>' +
           mmss(lecture.durationMs) + "</span></div>" +
           "</div></div>";
         if (liste.length) {
@@ -417,17 +457,52 @@
         return h + "</div>";
       }
 
+      // Taille compacte : même contenu, sans libellé, temps ni vignettes, et 3
+      // demandes au plus pour que le bloc reste petit quand la file s'allonge.
+      function rendreBlocCompact() {
+        let h =
+          '<div class="bc-carte">' +
+          '<div class="bc-hero" data-cle="' + esc("lecture " + lecture.uri) + '">' +
+          pochette(lecture.image, "bc-pochette", lecture.name) +
+          '<div class="bc-meta">' +
+          '<div class="bc-l1"><span class="bc-titre">' + esc(lecture.name) + "</span>" +
+          '<span class="b-eq"><i></i><i></i><i></i></span></div>' +
+          '<div class="bc-l2">' + esc(lecture.artists) +
+          (lecture.requester ? " · par <b>" + esc(lecture.requester) + "</b>" : "") + "</div>" +
+          '<div class="bc-barre"><i data-prog></i></div>' +
+          "</div></div>";
+        if (liste.length) {
+          const reste = liste.length - 3;
+          h +=
+            '<div class="bc-liste">' +
+            liste
+              .slice(0, 3)
+              .map(
+                (it, i) =>
+                  '<div class="bc-item' + (it.cancelled ? " cancelled" : "") + '" data-cle="' + esc("demande " + it.id) + '">' +
+                  '<span class="bc-num">' + (i + 1) + "</span>" +
+                  '<span class="bc-txt">' + esc(it.name) + " <span>— " + esc(it.artists) + "</span></span>" +
+                  '<span class="bc-par">' + (it.cancelled ? "🚫" : esc(it.requester)) + "</span>" +
+                  "</div>"
+              )
+              .join("") +
+            (reste > 0 ? '<div class="bc-plus">+ ' + reste + (reste > 1 ? " autres" : " autre") + "</div>" : "") +
+            "</div>";
+        }
+        return h + "</div>";
+      }
+
       function majProgression(immediat) {
-        const barre = bClip.querySelector(".b-barre i");
-        const ecoule = bClip.querySelector(".b-ecoule");
-        if (!lecture || !barre || !ecoule) return;
+        const barre = bClip.querySelector("[data-prog]");
+        const ecoule = bClip.querySelector("[data-ecoule]"); // absent en taille compacte
+        if (!lecture || !barre) return;
         const pos = position(lecture);
         // Pas de glissement quand la barre repart en arrière ou vient d'être dessinée.
         const sec = immediat || pos < (barre.dataset.pos || 0);
         if (sec) barre.style.transition = "none";
         barre.style.width = (lecture.durationMs ? (pos / lecture.durationMs) * 100 : 0).toFixed(2) + "%";
         barre.dataset.pos = pos;
-        ecoule.textContent = mmss(pos);
+        if (ecoule) ecoule.textContent = mmss(pos);
         if (sec) {
           void barre.offsetWidth;
           barre.style.transition = "";
@@ -510,6 +585,19 @@
           r.setProperty("--accent2", t.accent2);
           r.setProperty("--accent2-texte", texteSur(t.accent2));
         }
+        compacte = t.taille === "compacte";
+
+        // Opacité du fond, en % : 92 est le fond d'origine, et rend donc
+        // exactement les couleurs d'avant le réglage. Le liseré et l'ombre des
+        // cadres s'effacent avec le fond (jamais plus forts qu'à l'origine).
+        const o = Number.isFinite(t.opacite) ? Math.min(100, Math.max(0, t.opacite)) / 100 : 0.92;
+        const k = Math.min(1, o / 0.92);
+        r.setProperty("--bg", "rgba(16, 16, 20, " + o + ")");
+        r.setProperty("--line", "rgba(255, 255, 255, " + (0.1 * k).toFixed(3) + ")");
+        r.setProperty("--ombre-notif", "rgba(0, 0, 0, " + (0.45 * k).toFixed(3) + ")");
+        r.setProperty("--ombre-liste", "rgba(0, 0, 0, " + (0.4 * k).toFixed(3) + ")");
+        document.body.classList.toggle("fond-leger", o < 0.6);
+
         // Le coin de l'URL gagne toujours sur celui des réglages.
         document.body.dataset.corner = coinDemande || t.corner || "top-left";
       }

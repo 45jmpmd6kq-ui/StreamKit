@@ -128,6 +128,39 @@ test('le reglage est coupe par defaut : ceux qui ont deja cale leur source ne vo
   assert.equal(champ.defaut, false);
 });
 
+test('taille compacte et fond d origine par defaut', () => {
+  const champ = (cle) => manifeste.config.champs.find((c) => c.cle === cle);
+
+  const taille = champ('tailleBloc');
+  assert.equal(taille.type, 'choix');
+  assert.equal(taille.defaut, 'compacte');
+  assert.deepEqual(
+    taille.options.map((o) => o.valeur),
+    ['compacte', 'normale']
+  );
+
+  // 92 % : le fond qu'avaient deja les overlays. Un autre defaut changerait
+  // l'ecran de tous les streamers a la mise a jour, reglage jamais touche.
+  const opacite = champ('opaciteFond');
+  assert.equal(opacite.type, 'nombre');
+  assert.equal(opacite.defaut, 92);
+  assert.equal(opacite.min, 0);
+  assert.equal(opacite.max, 100);
+});
+
+test('la taille et l opacite partent a l overlay avec le theme', async () => {
+  fauxSpotify();
+  const parDefaut = contexte();
+  await manifeste.demarrer(parDefaut.ctx);
+  assert.equal(parDefaut.liste().theme.taille, 'compacte');
+  assert.equal(parDefaut.liste().theme.opacite, 92);
+
+  const regle = contexte({ tailleBloc: 'normale', opaciteFond: 40 });
+  await manifeste.demarrer(regle.ctx);
+  assert.equal(regle.liste().theme.taille, 'normale');
+  assert.equal(regle.liste().theme.opacite, 40);
+});
+
 test('reglage coupe : la liste d avant, sans morceau en cours ni releve anticipe', async () => {
   const spotify = fauxSpotify();
   const t = contexte();

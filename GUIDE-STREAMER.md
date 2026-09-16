@@ -112,7 +112,13 @@ tu veux, puis clique sur **Enregistrer** en bas.
   au-dessus des demandes des viewers. Le bloc grandit quand la file se remplit et
   se replie quand elle se vide. Rien à changer dans OBS : c'est la même source.
   Quand la musique est en pause (ou Spotify fermé), tout le bloc disparaît, et
-  il revient en entier dès que la musique reprend.
+  il revient en entier dès que la musique reprend. **Taille du bloc** : compacte
+  (par défaut, 3 demandes affichées au plus) ou normale (grande pochette, temps
+  écoulé, vignettes). **Opacité du fond** : baisse-la pour voir le jeu à travers
+  les annonces et la liste (0 = plus de fond du tout).
+  Après une mise à jour de StreamKit, **actualise la source dans OBS** (clic droit
+  → Propriétés → « Actualiser le cache de la page actuelle ») : une source déjà
+  ouverte garde l'ancien affichage.
 - **Random Car** : dans **Interfaces**, ouvre **Mes voitures** et coche les
   voitures que tu possèdes. Le tirage se fait uniquement parmi elles.
 - **Clips** : par défaut, seuls tes modérateurs peuvent taper `!clip`. Ce qui

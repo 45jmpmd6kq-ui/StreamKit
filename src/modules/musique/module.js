@@ -118,6 +118,29 @@ export default {
         defaut: false,
       },
       {
+        cle: 'tailleBloc',
+        type: 'choix',
+        label: 'Taille du bloc',
+        aide: 'Compacte : petite pochette, 3 demandes affichées au plus. Normale : grande pochette, temps écoulé et vignettes. Sert seulement si le morceau en cours est affiché.',
+        // Compacte par defaut : la normale a ete jugee trop envahissante a
+        // l'ecran, et le bloc etait sorti depuis quelques heures seulement.
+        defaut: 'compacte',
+        options: [
+          { valeur: 'compacte', label: 'Compacte' },
+          { valeur: 'normale', label: 'Normale' },
+        ],
+      },
+      {
+        cle: 'opaciteFond',
+        type: 'nombre',
+        label: 'Opacité du fond (%)',
+        aide: '100 : fond sombre plein. 0 : plus de fond, seuls les textes et les pochettes restent. Vaut pour les annonces et la liste.',
+        // 92 : le fond d'origine des overlays musique, au pourcent pres.
+        defaut: 92,
+        min: 0,
+        max: 100,
+      },
+      {
         cle: 'accent1',
         type: 'couleur',
         label: 'Couleur principale',
@@ -265,7 +288,13 @@ export default {
 
     // --- Overlays : deux vues, le meme etat ---
     const diffuser = (type, data) => VUES.forEach((v) => ctx.overlay.diffuser(v, type, data));
-    const theme = { accent1: c.accent1, accent2: c.accent2, corner: c.corner };
+    const theme = {
+      accent1: c.accent1,
+      accent2: c.accent2,
+      corner: c.corner,
+      taille: c.tailleBloc,
+      opacite: c.opaciteFond,
+    };
 
     // Le morceau que l'overlay affiche en tete du bloc. null : rien ne joue, et
     // l'overlay masque alors tout le bloc ; la file continue d'etre envoyee,
