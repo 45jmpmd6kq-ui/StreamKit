@@ -232,6 +232,89 @@ test('un module dont la sante plante donne une carte « ko », sans etre harcele
 
 // --- Compteurs et decompte des modules -------------------------------------
 
+test('deux modules d un meme jeu ne font qu une carte, une ligne chacun', async () => {
+  // League of Legends a deux modules : deux cartes voisines pour un seul sujet,
+  // que le streamer devait rapprocher du regard. Le socle s'en charge.
+  const suivi = module_('lol-session', {
+    manifeste: {
+      nom: 'Suivi de session',
+      categorie: 'lol',
+      sante: async () => [
+        {
+          id: 'lol',
+          nom: 'League of Legends',
+          etat: 'inactif',
+          detail: 'client fermé',
+          aide: 'Lance le jeu.',
+        },
+      ],
+    },
+  });
+  const moments = module_('lol-moments', {
+    manifeste: {
+      nom: 'Moments forts',
+      categorie: 'lol',
+      sante: async () => [
+        { id: 'lol-partie', nom: 'Partie de LoL', etat: 'inactif', detail: 'pas de partie en cours' },
+      ],
+    },
+  });
+
+  const vue = await monter({ modules: [suivi, moments] }).sante();
+  const lol = carte(vue, 'categorie:lol');
+
+  assert.equal(vue.connexions.filter((c) => c.id.startsWith('categorie:')).length, 1, 'une seule carte');
+  assert.equal(lol.nom, 'League of Legends');
+  // Le nom du module, pas celui de sa carte : sous « League of Legends », c'est
+  // « Suivi de session » qui dit ce que la ligne raconte.
+  assert.deepEqual(
+    lol.lignes.map((l) => l.nom + ' : ' + l.detail),
+    ['Suivi de session : client fermé', 'Moments forts : pas de partie en cours']
+  );
+});
+
+test('une panne dans un groupe ressort sur la carte, avec l aide qui va avec', async () => {
+  // Sinon un module en rade se cache derriere son voisin qui va bien -- et la
+  // vue d'ensemble sert justement a reperer ca avant de partir en live.
+  const suivi = module_('lol-session', {
+    manifeste: {
+      nom: 'Suivi de session',
+      categorie: 'lol',
+      sante: async () => [{ id: 'lol', nom: 'LoL', etat: 'ok', detail: 'Or IV' }],
+    },
+  });
+  const moments = module_('lol-moments', {
+    manifeste: {
+      nom: 'Moments forts',
+      categorie: 'lol',
+      sante: async () => [
+        { id: 'p', nom: 'Partie', etat: 'ko', detail: 'API muette', aide: 'Relance le client.' },
+      ],
+    },
+  });
+
+  const lol = carte(await monter({ modules: [suivi, moments] }).sante(), 'categorie:lol');
+  assert.equal(lol.etat, 'ko');
+  assert.equal(lol.aide, 'Relance le client.');
+});
+
+test('un groupe reduit a un seul module redevient une carte ordinaire', async () => {
+  // Une liste d'une seule ligne n'apprend rien de plus, et perdrait au passage
+  // la provenance affichee en haut a droite de la carte.
+  const seul = module_('lol-session', {
+    manifeste: {
+      nom: 'Suivi de session',
+      categorie: 'lol',
+      sante: async () => [{ id: 'lol', nom: 'League of Legends', etat: 'ok', detail: 'Or IV' }],
+    },
+  });
+
+  const lol = carte(await monter({ modules: [seul] }).sante(), 'categorie:lol');
+  assert.equal(lol.lignes, undefined);
+  assert.equal(lol.detail, 'Or IV');
+  assert.equal(lol.module, 'Suivi de session');
+});
+
 test('les compteurs d un module restent visibles quand il est arrete', async () => {
   const clips = module_('clips', {
     etat: 'arrete',

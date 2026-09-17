@@ -16,11 +16,17 @@
 // Launch.log — leur demander deux fois le meme chemin serait absurde. La
 // structure ci-dessous est prete a accueillir un champ `champs` par categorie.
 
+// `carteUnique` : dans la vue d'ensemble, les modules de cette categorie
+// partagent UNE carte, une ligne chacun. Un jeu est un sujet, pas deux -- League
+// of Legends en a deux modules (suivi de session, moments forts) et faisait deux
+// cartes voisines a rapprocher du regard. Twitch ne l'a pas : le bot musique,
+// les clips et les pubs sont des sujets independants, et la carte Twitch du
+// socle parle deja de la connexion.
 export const CATEGORIES = [
   { id: 'twitch', label: 'Twitch', icone: '🟣', ordre: 10 },
-  { id: 'rocket-league', label: 'Rocket League', icone: '🚀', ordre: 20 },
-  { id: 'lol', label: 'League of Legends', icone: '⚔️', ordre: 30 },
-  { id: 'valorant', label: 'Valorant', icone: '🔫', ordre: 40 },
+  { id: 'rocket-league', label: 'Rocket League', icone: '🚀', ordre: 20, carteUnique: true },
+  { id: 'lol', label: 'League of Legends', icone: '⚔️', ordre: 30, carteUnique: true },
+  { id: 'valorant', label: 'Valorant', icone: '🔫', ordre: 40, carteUnique: true },
   // Fourre-tout volontaire, toujours en dernier : ce qui ne depend d'aucun jeu
   // ni de Twitch (module de demonstration, futurs utilitaires).
   { id: 'outils', label: 'Outils', icone: '🧰', ordre: 90 },

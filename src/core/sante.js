@@ -12,6 +12,7 @@
 // live. Un test fournit les siens, sans Twitch ni OBS. Ce qui ne fait que lire
 // un fichier ou calculer (store, auth, maj) est importe normalement.
 
+import * as categories from './categories.js';
 import * as store from './store.js';
 import * as auth from './auth.js';
 import * as maj from './maj.js';
@@ -19,6 +20,11 @@ import * as maj from './maj.js';
 // Duree pendant laquelle on reutilise la sante declaree par un module (voir
 // plus bas pourquoi).
 export const FRAICHEUR_SANTE_MS = 20000;
+
+// Du plus grave au plus calme. Sert a resumer plusieurs lignes en un seul etat
+// de carte. « inactif » est le plus bas : ce n'est pas une panne, juste un
+// module qu'on n'a pas encore lance.
+const GRAVITE = { ko: 3, attention: 2, ok: 1, inactif: 0 };
 
 // Ce que le streamer lit du lien avec Twitch. Les deux canaux sont
 // INDEPENDANTS : le chat peut tourner pendant qu'EventSub se reconnecte (les
@@ -218,6 +224,11 @@ export function creerSante({
       });
     }
 
+    // Cartes fusionnees des categories `carteUnique` : id de categorie -> carte
+    // deja posee dans `connexions`, que la boucle ci-dessous remplit ligne a
+    // ligne.
+    const groupes = new Map();
+
     // --- Modules : chacun declare ses propres connexions ---
     //
     // Ces sante() parlent au RESEAU : celle du bot musique demande a Spotify
@@ -254,14 +265,67 @@ export function creerSante({
         santeModules.set(m.id, { a: Date.now(), cartes });
       }
 
+      const categorie = categories.resoudre(m.manifeste.categorie);
+
       for (const c of cartes) {
         const enrichi = { ...c, module: m.manifeste.nom };
+
+        // Un jeu est un sujet, pas deux : les categories `carteUnique` fondent
+        // les cartes de leurs modules en une seule, une ligne par module. Sans
+        // ca, League of Legends occupait deux cartes voisines -- « suivi de
+        // session » et « partie en cours » -- que le streamer devait rapprocher
+        // du regard pour savoir ou en etait son jeu.
+        if (categorie.carteUnique) {
+          const groupe = groupes.get(categorie.id);
+          // Le nom de la ligne est celui du MODULE : sous le titre « League of
+          // Legends », « Suivi de session » dit ce que la ligne raconte. Un
+          // module qui declare plusieurs cartes garde les noms de ses cartes,
+          // sinon elles seraient indiscernables.
+          const ligne = {
+            nom: cartes.length > 1 ? c.nom : m.manifeste.nom,
+            etat: c.etat,
+            detail: c.detail || '',
+            aide: c.aide || '',
+          };
+          if (groupe) groupe.lignes.push(ligne);
+          else {
+            const carte = {
+              id: 'categorie:' + categorie.id,
+              nom: categorie.label,
+              etat: c.etat,
+              lignes: [ligne],
+            };
+            groupes.set(categorie.id, carte);
+            // A la place de la premiere carte du groupe : l'ordre de l'ecran ne
+            // depend pas de l'ordre d'allumage des modules.
+            connexions.push(carte);
+          }
+          continue;
+        }
+
         // Un module qui tourne en sait plus que le socle sur son connecteur --
         // l'appareil Spotify actif, par exemple. Sa version remplace la carte
         // generique, a la meme place, au lieu de doubler avec elle.
         const i = connexions.findIndex((x) => x.id === enrichi.id);
         if (i >= 0) connexions[i] = enrichi;
         else connexions.push(enrichi);
+      }
+    }
+
+    // Une carte de groupe porte le PIRE etat de ses lignes : une panne ne se
+    // cache pas derriere un module qui va bien. L'aide montree est celle de
+    // cette ligne -- c'est elle qu'il faut lire en premier.
+    for (const groupe of groupes.values()) {
+      const pire = groupe.lignes.reduce((a, l) => (GRAVITE[l.etat] > GRAVITE[a.etat] ? l : a));
+      groupe.etat = pire.etat;
+      groupe.aide = pire.aide || groupe.lignes.find((l) => l.aide)?.aide || '';
+      // Un seul module allume : une liste d'une ligne n'apprend rien de plus
+      // qu'une carte ordinaire, et en dit meme moins (pas de pastille de
+      // provenance). On revient donc a la carte ordinaire.
+      if (groupe.lignes.length === 1) {
+        groupe.detail = groupe.lignes[0].detail;
+        groupe.module = groupe.lignes[0].nom;
+        delete groupe.lignes;
       }
     }
 

@@ -253,6 +253,35 @@ a.btn {
   color: var(--texte-faible);
   line-height: 1.5;
 }
+/* Une carte qui couvre plusieurs modules d'un meme jeu : une ligne chacun, sa
+   pastille devant. Les lignes remplacent le detail, elles ne s'y ajoutent pas. */
+.carte .lignes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.carte .ligne {
+  display: flex;
+  gap: 0.45rem;
+  align-items: baseline;
+  font-size: 0.88rem;
+}
+/* La pastille s'aligne sur la premiere ligne du texte, pas sur son milieu :
+   un detail qui passe a la ligne ne doit pas la faire descendre. */
+.carte .ligne .point {
+  margin-top: 0.35rem;
+}
+.carte .ligne .l-nom {
+  color: var(--texte);
+  opacity: 0.85;
+}
+.carte .ligne .l-detail {
+  color: var(--texte-doux);
+}
+.carte.inactif .ligne .l-nom {
+  color: var(--texte-doux);
+}
+
 .carte.inactif .carte-detail,
 .carte.inactif .entete .nom {
   color: var(--texte-faible);

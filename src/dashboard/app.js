@@ -56,6 +56,12 @@ function echapper(s) {
   );
 }
 
+// La couleur d'une pastille d'etat. « attention » s'affiche en « attente » :
+// la classe CSS porte le nom de la couleur, pas celui de l'etat.
+function classePastille(etat) {
+  return etat === 'ok' ? 'ok' : etat === 'ko' ? 'ko' : etat === 'attention' ? 'attente' : '';
+}
+
 async function copier(texte) {
   try {
     await navigator.clipboard.writeText(texte);
@@ -497,11 +503,23 @@ function dessinerAccueil() {
           (c) => `
         <div class="carte ${c.etat}">
           <div class="entete">
-            <span class="point ${c.etat === 'ok' ? 'ok' : c.etat === 'ko' ? 'ko' : c.etat === 'attention' ? 'attente' : ''}"></span>
+            <span class="point ${classePastille(c.etat)}"></span>
             <span class="nom">${echapper(c.nom)}</span>
             ${c.module ? `<span class="provenance">${echapper(c.module)}</span>` : ''}
           </div>
-          <div class="carte-detail">${echapper(c.detail || '')}</div>
+          ${
+            c.lignes
+              ? `<div class="lignes">${c.lignes
+                  .map(
+                    (l) => `
+                <div class="ligne">
+                  <span class="point ${classePastille(l.etat)}"></span>
+                  <span><span class="l-nom">${echapper(l.nom)}</span>${l.detail ? ` <span class="l-detail">— ${echapper(l.detail)}</span>` : ''}</span>
+                </div>`
+                  )
+                  .join('')}</div>`
+              : `<div class="carte-detail">${echapper(c.detail || '')}</div>`
+          }
           ${c.aide ? `<div class="aide">${echapper(c.aide)}</div>` : ''}
         </div>`
         )
@@ -631,7 +649,7 @@ function dessinerConnecteurs() {
 
 function carteConnecteur(c) {
   const ouvert = deplies.has(c.id);
-  const pastille = c.etat === 'ok' ? 'ok' : c.etat === 'ko' ? 'ko' : c.etat === 'attention' ? 'attente' : '';
+  const pastille = classePastille(c.etat);
 
   const corps = ouvert
     ? `

@@ -279,6 +279,14 @@ Elle doit donc être rapide et ne jamais lever : une exception est rattrapée et
 affichée comme une connexion en erreur, mais autant écrire le bon message
 soi-même.
 
+**Deux modules d'un même jeu ne font qu'une carte.** Les catégories de jeu
+portent `carteUnique` (voir `core/categories.js`) : le socle fond les cartes de
+leurs modules en une seule, titrée du nom du jeu, avec une ligne par module et
+sa pastille. La carte prend le **pire** état de ses lignes et l'`aide` de
+celle-là — une panne ne se cache pas derrière un module qui va bien. Un seul
+module allumé : la carte redevient ordinaire. Tu n'as rien à faire pour ça,
+`categorie` suffit.
+
 **Choisis `inactif` plutôt que `ko` quand rien n'est cassé.** Le Riot Client
 fermé entre deux sessions de jeu est normal ; le marquer en rouge apprendrait
 seulement au streamer à ignorer les alertes. `ko` est réservé à ce qui devrait
