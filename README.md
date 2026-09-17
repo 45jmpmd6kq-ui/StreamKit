@@ -243,30 +243,37 @@ Quatre pièges rencontrés :
   retélécharger 113 Mo, chaque fichier d’une release porte un champ `digest`
   (sha256) à comparer au `Get-FileHash` local.
 
-  **Reprise à la main : forcer HTTP/1.1.** Revécu en 0.24.1, mesuré cette fois :
-  `curl` avait poussé 243 Ko en cinq minutes, connexion `Established`, zéro octet
-  sur les huit dernières secondes (`Get-CimInstance Win32_Process` donne les
-  compteurs d’E/S sans rien installer). Relancé avec `--http1.1`, le même fichier
-  est parti en **sept secondes à 15 Mo/s**. curl négocie HTTP/2 avec GitHub par
-  défaut et un POST de 113 Mo peut s’y figer sur le contrôle de flux ;
-  `npm run publier` passe, lui, par le module `https` de Node, qui ne fait que du
-  HTTP/1.1 — la parade ne vaut donc que pour l’envoi à la main.
+  **Ce n'est presque jamais toi.** Revecu en 0.24.2, mesure de bout en bout
+  cette fois : cinq 500 d'affilee avec curl, un 500 avec .NET (PowerShell), et
+  une connexion restee ouverte a 0,13 Mo sans plus rien transferer. Le client n'y
+  est pour rien, le protocole non plus -- `--http1.1` avait coincide une fois
+  avec un envoi qui passait, ce n'etait qu'une coincidence.
+
+  Le test qui tranche en trente secondes, sur le brouillon lui-meme :
 
   ```bash
-  # la release existe deja, en brouillon vide sur le tag (piege precedent)
-  curl -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/octet-stream" \
-    --http1.1 --speed-limit 20000 --speed-time 45 \
-    -X POST --data-binary @livraison/StreamKit-Setup-0.24.1.exe \
-    "https://uploads.github.com/repos/<depot>/releases/<id>/assets?name=StreamKit-Setup-0.24.1.exe"
+  head -c 200000 livraison/StreamKit-Setup-0.24.2.exe > essai.bin
+  curl ... "?name=essai-200ko.bin"     # 201 : l'API repond
+  head -c 10000000 livraison/StreamKit-Setup-0.24.2.exe > essai.bin
+  curl ... "?name=essai-10mo.bin"      # 500 « Error saving asset »
   ```
 
-  `--speed-limit 20000 --speed-time 45` est le garde-fou : sous 20 Ko/s pendant
-  45 secondes, curl abandonne au lieu de laisser la connexion pendre. Un envoi
-  qui marche prend moins de dix secondes ; passé une minute, c’est qu’il est
-  bloqué. Enfin, si les trois fichiers laissés par `npm run dist` sont cohérents
-  entre eux — sha512 et taille du `latest.yml` vérifiés contre l’exe présent —
-  les envoyer tels quels évite la reconstruction, donc le piège du `latest.yml`
-  décalé ci-dessus.
+  200 Ko passe et 10 Mo non : c'est chez eux, et leur page d'etat peut afficher
+  « All Systems Operational » pendant ce temps-la. Supprimer les fichiers
+  d'essai du brouillon ensuite.
+
+  Pour les tentatives, `--max-time` et rien d'autre : `--speed-limit` /
+  `--speed-time` ne se declenchent PAS sur une connexion ouverte qui ne
+  transfere rien du tout, curl n'y voit pas un transfert lent. Et supprimer le
+  fichier incomplet entre deux essais, sinon le nom reste pris.
+
+  **Ce qui a fini par marcher : l'interface web.** Ouvrir le brouillon sur
+  github.com, y glisser l'installeur -- un autre chemin d'envoi, qui passe quand
+  l'API refuse. La verification des empreintes et le passage en visible se font
+  ensuite normalement. Enfin, si les trois fichiers laisses par `npm run dist`
+  sont coherents entre eux -- sha512 et taille du `latest.yml` verifies contre
+  l'exe present -- les envoyer tels quels evite la reconstruction, donc le piege
+  du `latest.yml` decale ci-dessus.
 
 Chez le streamer : un bouton « Mettre à jour » apparaît dans la fenêtre. Un
 clic, StreamKit télécharge, se remplace et redémarre — Electron sait remplacer
