@@ -243,6 +243,31 @@ Quatre pièges rencontrés :
   retélécharger 113 Mo, chaque fichier d’une release porte un champ `digest`
   (sha256) à comparer au `Get-FileHash` local.
 
+  **Reprise à la main : forcer HTTP/1.1.** Revécu en 0.24.1, mesuré cette fois :
+  `curl` avait poussé 243 Ko en cinq minutes, connexion `Established`, zéro octet
+  sur les huit dernières secondes (`Get-CimInstance Win32_Process` donne les
+  compteurs d’E/S sans rien installer). Relancé avec `--http1.1`, le même fichier
+  est parti en **sept secondes à 15 Mo/s**. curl négocie HTTP/2 avec GitHub par
+  défaut et un POST de 113 Mo peut s’y figer sur le contrôle de flux ;
+  `npm run publier` passe, lui, par le module `https` de Node, qui ne fait que du
+  HTTP/1.1 — la parade ne vaut donc que pour l’envoi à la main.
+
+  ```bash
+  # la release existe deja, en brouillon vide sur le tag (piege precedent)
+  curl -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/octet-stream" \
+    --http1.1 --speed-limit 20000 --speed-time 45 \
+    -X POST --data-binary @livraison/StreamKit-Setup-0.24.1.exe \
+    "https://uploads.github.com/repos/<depot>/releases/<id>/assets?name=StreamKit-Setup-0.24.1.exe"
+  ```
+
+  `--speed-limit 20000 --speed-time 45` est le garde-fou : sous 20 Ko/s pendant
+  45 secondes, curl abandonne au lieu de laisser la connexion pendre. Un envoi
+  qui marche prend moins de dix secondes ; passé une minute, c’est qu’il est
+  bloqué. Enfin, si les trois fichiers laissés par `npm run dist` sont cohérents
+  entre eux — sha512 et taille du `latest.yml` vérifiés contre l’exe présent —
+  les envoyer tels quels évite la reconstruction, donc le piège du `latest.yml`
+  décalé ci-dessus.
+
 Chez le streamer : un bouton « Mettre à jour » apparaît dans la fenêtre. Un
 clic, StreamKit télécharge, se remplace et redémarre — Electron sait remplacer
 une application en cours d'exécution, contrairement au lancement Node qui
