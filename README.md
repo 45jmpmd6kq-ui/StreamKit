@@ -211,7 +211,7 @@ release à la main en y joignant **l'installeur, `latest.yml` et le `.blockmap`*
 existe ; le `.blockmap` lui permet de ne télécharger que les octets modifiés.
 Sans eux, les streamers ne verront jamais la mise à jour.
 
-Trois pièges rencontrés :
+Quatre pièges rencontrés :
 
 - **Une variable d'environnement définie pendant que l'application tourne n'est
   pas vue du processus en cours.** Il faut relancer, ou la relire depuis le
@@ -229,6 +229,19 @@ Trois pièges rencontrés :
   fichiers. Il ne le publie pas lui-même : vérifier `latest.yml`, l'installeur
   et le `.blockmap`, puis passer `"draft": false`. Bonus : la version n'est
   jamais visible sans ses fichiers.
+
+- **L'envoi d'un fichier peut se bloquer, ou finir en 500.** Vécu en 0.24.0 :
+  `npm run publier` a déposé le `.blockmap`, puis plus rien pendant vingt minutes
+  — connexion ouverte, aucun octet qui circule (les compteurs d’E/S du processus
+  node le montrent tout de suite). Il faut couper et reprendre l’envoi à la main,
+  avec deux précautions. `npm run publier` **reconstruit** l’installeur : le
+  `latest.yml` laissé par `npm run dist` ne lui correspond plus, il faut le
+  régénérer sur l’exe réellement présent dans `livraison` (sha512 en base64 +
+  taille), sinon chaque streamer se verra refuser la mise à jour. Et l’API a
+  répondu « 500 » deux fois avant d’accepter l’installeur : réessayer, en
+  supprimant le fichier incomplet entre deux tentatives. Pour vérifier sans
+  retélécharger 113 Mo, chaque fichier d’une release porte un champ `digest`
+  (sha256) à comparer au `Get-FileHash` local.
 
 Chez le streamer : un bouton « Mettre à jour » apparaît dans la fenêtre. Un
 clic, StreamKit télécharge, se remplace et redémarre — Electron sait remplacer
