@@ -43,7 +43,7 @@
         box-sizing: border-box;
         width: 250px;
         margin: 24px;
-        padding: 14px 18px 13px;
+        padding: 12px 18px 12px;
         border-radius: 18px;
         background: rgba(14, 16, 24, 0.9);
         border: 1px solid rgba(255, 255, 255, 0.09);
@@ -65,11 +65,15 @@
         text-overflow: ellipsis;
       }
 
-      .score { display: flex; align-items: baseline; justify-content: center; gap: 12px; margin: 6px 0 2px; }
-      .gros { font-size: 54px; font-weight: 700; line-height: 1; display: inline-block; }
-      #victoires { color: var(--victoire); }
-      #defaites { color: var(--defaite); }
-      .tiret { font-size: 30px; color: rgba(255, 255, 255, 0.4); }
+      .score { display: flex; align-items: baseline; justify-content: center; gap: 14px; margin: 4px 0 0; }
+      /* Le W et le L collent au chiffre : une ligne de moins qu'avec les mots
+         sous le score, donc une carte plus basse a l'ecran. */
+      .paire { display: inline-flex; align-items: baseline; gap: 3px; }
+      .paire.victoires { color: var(--victoire); }
+      .paire.defaites { color: var(--defaite); }
+      .gros { font-size: 46px; font-weight: 700; line-height: 1; }
+      .lettre { font-size: 20px; font-weight: 700; line-height: 1; opacity: 0.75; }
+      .tiret { font-size: 26px; color: rgba(255, 255, 255, 0.4); }
 
       /* Le chiffre qui vient de bouger saute : on voit tout de suite ce qui a changé. */
       .saut { animation: saut 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
@@ -79,10 +83,8 @@
         100% { transform: scale(1); }
       }
 
-      .legende { display: flex; justify-content: space-between; padding: 0 24px; font-size: 12px; color: var(--gris); }
-
       .serie {
-        margin-top: 10px;
+        margin-top: 8px;
         text-align: center;
         font-size: 14px;
         font-weight: 700;
@@ -97,20 +99,16 @@
     <div id="carte">
       <div class="etiquette" id="etiquette">Session</div>
       <div class="score nb">
-        <span class="gros" id="victoires">0</span>
+        <span class="paire victoires"><span class="gros" id="victoires">0</span><span class="lettre">W</span></span>
         <span class="tiret">–</span>
-        <span class="gros" id="defaites">0</span>
+        <span class="paire defaites"><span class="gros" id="defaites">0</span><span class="lettre">L</span></span>
       </div>
-      <div class="legende"><span id="lib-victoires">victoire</span><span id="lib-defaites">défaite</span></div>
       <div class="serie" id="serie"></div>
     </div>
 
     <script>
       const carte = document.getElementById('carte');
       const $ = (id) => document.getElementById(id);
-
-      // En français, 0 et 1 restent au singulier.
-      const accord = (n, singulier, plurielle) => (n >= 2 ? plurielle : singulier);
 
       function appliquerTheme(t) {
         if (t?.coin) document.body.dataset.coin = t.coin;
@@ -124,9 +122,10 @@
         el.textContent = texte;
         el.dataset.vu = '1';
         if (premier) return;
-        el.classList.remove('saut');
-        void el.offsetWidth; // relance l'animation même si elle vient de jouer
-        el.classList.add('saut');
+        const bloc = el.closest('.paire');
+        bloc.classList.remove('saut');
+        void bloc.offsetWidth; // relance l'animation même si elle vient de jouer
+        bloc.classList.add('saut');
       }
 
       function appliquer(etat) {
@@ -137,8 +136,6 @@
         $('etiquette').textContent = 'Session · ' + (s.libelle || 'Rocket League');
         chiffre($('victoires'), s.victoires);
         chiffre($('defaites'), s.defaites);
-        $('lib-victoires').textContent = accord(s.victoires, 'victoire', 'victoires');
-        $('lib-defaites').textContent = accord(s.defaites, 'défaite', 'défaites');
 
         const serie = $('serie');
         serie.className = 'serie';
