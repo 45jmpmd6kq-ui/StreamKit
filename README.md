@@ -75,8 +75,9 @@ src/
     roue-rl/            roue des voitures Rocket League (portage)
     rl-session/         compteur V/D Rocket League (API de stats officielle + Launch.log)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)
+    lol-session/        suivi de session LoL : bandeau + tableau de bord (API locale du client)
 
-scripts/                génération de l'icône — rien ne part chez le streamer
+scripts/                icône de l'app, emblèmes de rang LoL — rien ne part chez le streamer
 GUIDE-STREAMER.md       LA documentation du streamer : prérequis, installation, dépannage
 ```
 
@@ -307,6 +308,11 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - [x] **Vue d ensemble** : etat de toutes les connexions (Twitch, OBS, Spotify,
       Riot) sur un ecran d accueil, alimente par un hook sante() des modules
 - [ ] Migrer RL-Tracker et RL-Challenge
+- [x] **Suivi de session LoL** : bandeau en partie, tableau de bord entre les
+      parties, reglage « Affichage ». API locale du client (lockfile), LP par
+      difference de rangs, noms et icones de champions via Data Dragon. Verifie
+      de bout en bout contre un faux client ; reste a valider sur le vrai client
+- [ ] Suivi de session LoL valide sur une vraie soiree de classees
 
 ## Pièges rencontrés (à ne pas refaire)
 

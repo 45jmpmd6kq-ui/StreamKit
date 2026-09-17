@@ -336,6 +336,7 @@ test('les pochettes Spotify sont autorisees, pas n importe quelle image', async 
 
   assert.match(imgSrc, /\shttps:\/\/i\.scdn\.co(\s|$)/);
   assert.match(imgSrc, /\shttps:\/\/\*\.spotifycdn\.com(\s|$)/);
+  assert.match(imgSrc, /\shttps:\/\/ddragon\.leagueoflegends\.com(\s|$)/);
   assert.doesNotMatch(imgSrc, /\s(https:|\*)(\s|$)/, 'img-src ne doit pas ouvrir toutes les images');
 });
 

@@ -3,7 +3,7 @@
 StreamKit rassemble des outils pour ton live dans une seule application Windows :
 musique demandée par les viewers, clips au chat, prédictions et sondages Twitch en
 direct à l'écran, annonce des pubs, voiture au hasard et compteur de victoires sur Rocket League, bandeau
-de session Valorant. Tout tourne **sur ton PC** : pas de compte
+de session Valorant, suivi de session League of Legends. Tout tourne **sur ton PC** : pas de compte
 à créer chez nous, pas de serveur, et tes accès restent chez toi.
 
 Compte une vingtaine de minutes la première fois. Ensuite, StreamKit se met à
@@ -25,6 +25,7 @@ veux utiliser.
 | Clips                              | Rien de plus — mais on ne peut clipper que **pendant un live**             |
 | Overlay W/L (Valorant)             | Valorant installé sur le même PC                                           |
 | Compteur de session (Rocket League) | Rocket League installé sur le même PC (Epic ou Steam). **Pas de BakkesMod** : le module passe par l'API officielle du jeu, compatible anti-triche |
+| Suivi de session (League of Legends) | League of Legends installé sur le même PC. Rien à connecter : le module lit le client du jeu, sans clé Riot ni compte à relier |
 
 ---
 
@@ -154,6 +155,19 @@ tu veux, puis clique sur **Enregistrer** en bas.
   partie classée met le compteur à jour. Les matchs privés, les parties hors
   ligne et les replays ne comptent jamais. **Réinitialiser la session** remet le
   compteur à zéro en début de live.
+- **Suivi de session** (League of Legends) : rien à connecter, lance le jeu.
+  Deux éléments, dans la même source OBS : un **bandeau** (rang, LP gagnés sur la
+  session, bilan, série) et un **tableau de bord** (courbe des LP, dernières
+  parties, champions joués, meilleure partie, moyennes). Le réglage **Affichage**
+  choisit ce qui apparaît : les deux (le bandeau en partie, le tableau de bord
+  entre les parties), le bandeau seul, ou le tableau de bord seul. Pendant la
+  sélection des champions, le tableau de bord se cache pour laisser voir les
+  choix. Une partie compte dès qu'elle apparaît dans ton historique ; ses LP
+  s'affichent quelques secondes plus tard, le temps que Riot les publie. Seules
+  les **classées Solo/Duo** comptent par défaut (la Flexible est au choix), et
+  une partie refaite (remake) ne compte jamais. **Afficher un exemple** montre le
+  bandeau et le tableau de bord pendant 30 secondes, pour les placer dans OBS.
+  **Réinitialiser la session** remet tout à zéro en début de live.
 
 ---
 
@@ -162,9 +176,10 @@ tu veux, puis clique sur **Enregistrer** en bas.
 1. Dans StreamKit, ouvre le module. Dans **Overlays OBS**, clique sur **Copier**.
 2. Dans OBS : **Sources** → **+** → **Navigateur**, et colle l'adresse dans
    **URL**. Pour la taille :
-   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Annonce de pub** : la taille de ta scène (par exemple
+   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Annonce de pub, Suivi de session LoL** : la taille de ta scène (par exemple
      1920 × 1080). L'overlay se place tout seul dans le coin choisi dans les
-     réglages du module ;
+     réglages du module (pour le suivi LoL, une position pour le bandeau et une
+     pour le tableau de bord) ;
    - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux.
 3. Pour le placer sans attendre un vrai événement, ajoute `?demo=1` à la fin de
    l'adresse. **Retire-le** une fois que c'est calé.
@@ -210,6 +225,13 @@ Regarde la carte **Rocket League** de la Vue d'ensemble, elle dit quoi faire :
 « jeu lancé, mais l'API ne répond pas » (relance le jeu), ou « joueur non
 identifié » (renseigne ton pseudo en jeu tout en bas des réglages du module).
 Seules les parties **classées** comptent par défaut : c'est réglable.
+
+**Le suivi League of Legends ne bouge pas.**
+Regarde la carte **League of Legends** de la Vue d'ensemble : « client fermé »
+(lance le jeu), ou « League of Legends introuvable » (indique le dossier du jeu
+tout en bas des réglages du module, par exemple `C:\Riot Games\League of Legends`).
+Vérifie aussi **Parties comptées** : une Flexible ne compte pas si le module suit
+la Solo/Duo. Rien à l'écran quand le client est fermé : c'est voulu.
 
 **Le scoreboard de prédiction n'apparaît pas.**
 Clique sur **Simuler une prédiction** dans le module. S'il s'affiche,

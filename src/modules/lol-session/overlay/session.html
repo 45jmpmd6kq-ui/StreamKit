@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — suivi de session League of Legends</title>
+    <style>
+      /* Fond transparent obligatoire : OBS incruste la page telle quelle.
+         Source a la taille de la scene (1920 x 1080) : le bandeau et le tableau
+         de bord se placent dans le coin choisi dans les reglages du module. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      :root {
+        --fond: rgba(6, 12, 20, 0.92);
+        --or: #c8aa6e;
+        --texte: #f0e6d2;
+        --attenue: rgba(240, 230, 210, 0.6);
+        --pale: rgba(240, 230, 210, 0.4);
+        --filet: rgba(240, 230, 210, 0.14);
+        /* Bleu et rouge, comme l'historique de LoL : distinguables aussi en
+           deuteranopie, contrairement au vert et au rouge. */
+        --victoire: #4da3ff;
+        --defaite: #ff5a6e;
+        --serie: #ffc857;
+        /* Bahnschrift est livree avec Windows 10 et 11 : meme famille que les
+           autres overlays StreamKit, sans police a telecharger. */
+        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+      }
+
+      body {
+        font-family: var(--typo);
+        color: var(--texte);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* --- Placement et apparition ------------------------------------------ */
+
+      .element {
+        position: absolute;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+        filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.55));
+      }
+      .element.visible {
+        opacity: 1;
+      }
+      .element[data-coin="top-left"] { top: 24px; left: 24px; }
+      .element[data-coin="top-center"] { top: 24px; left: 50%; transform: translateX(-50%); }
+      .element[data-coin="top-right"] { top: 24px; right: 24px; }
+      .element[data-coin="center"] { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+      .element[data-coin="bottom-left"] { bottom: 24px; left: 24px; }
+      .element[data-coin="bottom-center"] { bottom: 24px; left: 50%; transform: translateX(-50%); }
+      .element[data-coin="bottom-right"] { bottom: 24px; right: 24px; }
+
+      .etiquette {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        line-height: 1;
+        color: var(--attenue);
+        white-space: nowrap;
+      }
+      .victoire { color: var(--victoire); }
+      .defaite { color: var(--defaite); }
+      .neutre { color: var(--attenue); }
+      .tiret { color: var(--pale); }
+
+      /* Le chiffre qui vient de bouger saute : on voit tout de suite ce qui a change. */
+      .saut { animation: saut 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
+      @keyframes saut {
+        0% { transform: scale(1); }
+        35% { transform: scale(1.22); }
+        100% { transform: scale(1); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .saut { animation: none; }
+        .element { transition: none; }
+      }
+
+      /* --- Embleme de rang ----------------------------------------------------- */
+
+      .embleme {
+        position: relative;
+        flex-shrink: 0;
+      }
+      .embleme img,
+      .embleme svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .barre {
+        height: 4px;
+        background: var(--filet);
+      }
+      .barre > div {
+        height: 4px;
+        width: 0;
+        transition: width 0.5s ease;
+      }
+
+      /* --- Bandeau (en partie) ------------------------------------------------- */
+
+      .bandeau {
+        height: 76px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        padding: 0 28px 0 20px;
+        background: var(--fond);
+        border-left: 4px solid var(--or);
+        border-top: 1px solid rgba(200, 170, 110, 0.35);
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%);
+      }
+      .bandeau .sep {
+        width: 1px;
+        height: 38px;
+        margin: 0 20px;
+        flex-shrink: 0;
+        background: var(--filet);
+      }
+      .bandeau .seg {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .bandeau .rang {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+      }
+      /* Largeurs plancher : le bord droit du bandeau ne bouge pas quand un
+         chiffre passe de « 0 LP » a « +124 LP » en plein live. */
+      .bandeau .rang { min-width: 190px; }
+      .bandeau .seg-session { min-width: 96px; }
+      .bandeau .seg-bilan { min-width: 140px; }
+      .bandeau .seg-serie { min-width: 150px; }
+      .bandeau .embleme { width: 46px; height: 46px; }
+      .bandeau .nom-rang {
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .ligne-lp {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .bandeau .barre { width: 64px; }
+      .bandeau .lp {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .bandeau .valeur {
+        display: inline-block;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .bandeau .bilan {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .bandeau .winrate {
+        font-size: 14px;
+        line-height: 1;
+        color: var(--attenue);
+      }
+      .serie {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .serie .texte {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+        color: var(--attenue);
+      }
+      .serie[data-type="V"] .texte { color: var(--serie); }
+      .serie[data-type="D"] .texte { color: var(--defaite); }
+      .flamme { width: 18px; height: 18px; flex-shrink: 0; }
+      .serie:not([data-type="V"]) .flamme { display: none; }
+
+      /* --- Tableau de bord (entre les parties) --------------------------------- */
+
+      .tableau {
+        width: 860px;
+        box-sizing: border-box;
+        padding: 24px 28px 26px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        background: rgba(6, 12, 20, 0.94);
+        border-top: 1px solid rgba(200, 170, 110, 0.6);
+        clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+      }
+      .tableau .entete {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+      .tableau .titre {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+      .tableau .titre .haut {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        line-height: 1;
+        color: var(--or);
+      }
+      .tableau .titre .bas {
+        font-size: 14px;
+        line-height: 1;
+        color: var(--attenue);
+      }
+      .tableau .rang {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .tableau .embleme { width: 48px; height: 48px; }
+      .tableau .nom-rang {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .tableau .barre { width: 80px; }
+      .tableau .lp {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+      }
+      .evolution {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        line-height: 1;
+        padding: 2px 5px;
+        border: 1px solid currentColor;
+      }
+      .evolution[data-sens="promu"] { color: #2ec4a0; }
+      .evolution[data-sens="retrograde"] { color: var(--defaite); }
+
+      .gros {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .gros > div {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 16px;
+        background: rgba(240, 230, 210, 0.05);
+        border-top: 2px solid rgba(240, 230, 210, 0.3);
+      }
+      .gros > div.victoire { background: rgba(77, 163, 255, 0.08); border-top-color: var(--victoire); }
+      .gros > div.defaite { background: rgba(255, 90, 110, 0.08); border-top-color: var(--defaite); }
+      .gros > div.serie-v { background: rgba(255, 200, 87, 0.07); border-top-color: var(--serie); }
+      .gros .chiffre {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .gros .unite { font-size: 18px; font-weight: 600; }
+      .gros .tiret { font-size: 28px; }
+      .gros .flamme { width: 30px; height: 30px; align-self: center; }
+      .gros .serie-v .chiffre { color: var(--serie); }
+      .gros .serie-d .chiffre { color: var(--defaite); }
+      .gros :not(.serie-v) > .chiffre .flamme { display: none; }
+
+      .milieu {
+        display: grid;
+        grid-template-columns: 380px minmax(0, 1fr);
+        gap: 32px;
+      }
+      .milieu > div {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .courbe {
+        display: block;
+        width: 380px;
+        height: 160px;
+      }
+
+      .parties {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .partie {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 26px;
+        padding-left: 8px;
+        border-left: 2px solid var(--defaite);
+      }
+      .partie.gagnee { border-left-color: var(--victoire); }
+      .partie .nom {
+        width: 96px;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .partie .kda { width: 86px; font-size: 14px; line-height: 1; white-space: nowrap; }
+      .partie .duree { width: 44px; font-size: 12px; line-height: 1; color: var(--attenue); }
+      .partie .lp-partie { margin-left: auto; font-size: 14px; font-weight: 700; line-height: 1; }
+
+      .tuile {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        font-weight: 700;
+        line-height: 1;
+        color: #fff;
+        background: linear-gradient(135deg, #3b4a5e 0%, #1a2230 100%);
+      }
+      .tuile img { display: block; width: 100%; height: 100%; }
+      .tuile.p22 { width: 22px; height: 22px; font-size: 9px; }
+
+      .bas-tableau {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(240, 230, 210, 0.12);
+      }
+      .bas-tableau > div {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .puce {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 10px 3px 3px;
+        background: rgba(240, 230, 210, 0.06);
+        font-size: 13px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .puce .nom { font-weight: 600; }
+      .puce .score { font-weight: 700; }
+      .meilleure .kda { font-size: 14px; font-weight: 600; line-height: 1; white-space: nowrap; }
+      .meilleure .ratio { font-size: 12px; line-height: 1; color: var(--attenue); white-space: nowrap; }
+
+      .moyennes {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .moyennes > div {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .moyennes .valeur {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Bandeau : rang, LP de la session, bilan, serie. -->
+    <div class="element" id="bandeau" data-coin="top-left">
+      <div class="bandeau">
+        <div class="rang">
+          <div class="embleme" id="b-embleme"></div>
+          <div class="seg">
+            <span class="nom-rang" id="b-nom">—</span>
+            <div class="ligne-lp">
+              <div class="barre" id="b-barre"><div></div></div>
+              <span class="lp" id="b-lp"></span>
+            </div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="seg seg-session">
+          <span class="etiquette">Session</span>
+          <span class="valeur neutre" id="b-session">0 LP</span>
+        </div>
+        <div class="sep"></div>
+        <div class="seg seg-bilan">
+          <span class="etiquette">Bilan</span>
+          <div class="bilan">
+            <span class="valeur" id="b-bilan"
+              ><span class="victoire" id="b-v">0V</span><span class="tiret"> – </span
+              ><span class="defaite" id="b-d">0D</span></span
+            >
+            <span class="winrate" id="b-winrate"></span>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="seg seg-serie">
+          <span class="etiquette">Série</span>
+          <div class="serie" id="b-serie" data-type="">
+            <svg class="flamme" viewBox="0 0 24 24" fill="none" stroke="#FFC857" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3c.8 3 4.5 5 4.5 10a4.5 4.5 0 0 1-9 0c0-2.3 1.1-3.8 2.3-4.9.3 1.6 1.1 2.5 2.2 3-.5-2.9-.4-5.4 0-8.1z" />
+            </svg>
+            <span class="texte" id="b-serie-texte">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tableau de bord : le recap de la session. -->
+    <div class="element" id="tableau" data-coin="center">
+      <div class="tableau">
+        <div class="entete">
+          <div class="titre">
+            <span class="haut">Récap de session</span>
+            <span class="bas" id="t-sous-titre"></span>
+          </div>
+          <div class="rang">
+            <div class="embleme" id="t-embleme"></div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span class="nom-rang" id="t-nom">—</span>
+              <div class="ligne-lp">
+                <div class="barre" id="t-barre"><div></div></div>
+                <span class="lp" id="t-lp"></span>
+                <span class="evolution" id="t-evolution" hidden></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gros">
+          <div id="t-bloc-lp">
+            <div class="chiffre"><span id="t-lp-session">0</span><span class="unite">LP</span></div>
+            <span class="etiquette">Sur la session</span>
+          </div>
+          <div>
+            <div class="chiffre">
+              <span class="victoire" id="t-v">0</span><span class="tiret">–</span><span class="defaite" id="t-d">0</span>
+            </div>
+            <span class="etiquette" id="t-bilan-etiquette">Bilan</span>
+          </div>
+          <div id="t-bloc-serie">
+            <div class="chiffre">
+              <svg class="flamme" viewBox="0 0 24 24" fill="none" stroke="#FFC857" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3c.8 3 4.5 5 4.5 10a4.5 4.5 0 0 1-9 0c0-2.3 1.1-3.8 2.3-4.9.3 1.6 1.1 2.5 2.2 3-.5-2.9-.4-5.4 0-8.1z" />
+              </svg>
+              <span id="t-serie">0</span>
+            </div>
+            <span class="etiquette" id="t-serie-etiquette">Série</span>
+          </div>
+        </div>
+
+        <div class="milieu">
+          <div>
+            <span class="etiquette">Évolution des LP</span>
+            <svg class="courbe" id="t-courbe" viewBox="0 0 380 160"></svg>
+          </div>
+          <div>
+            <span class="etiquette">Parties</span>
+            <div class="parties" id="t-parties"></div>
+          </div>
+        </div>
+
+        <div class="bas-tableau">
+          <div>
+            <span class="etiquette">Champions</span>
+            <div style="display: flex; gap: 8px" id="t-champions"></div>
+          </div>
+          <div class="meilleure" id="t-meilleure"></div>
+        </div>
+
+        <div class="moyennes">
+          <div><span class="etiquette">KDA</span><span class="valeur" id="t-kda">—</span></div>
+          <div><span class="etiquette">CS/min</span><span class="valeur" id="t-cs">—</span></div>
+          <div><span class="etiquette">KP</span><span class="valeur" id="t-kp">—</span></div>
+          <div><span class="etiquette">Vision/min</span><span class="valeur" id="t-vision">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+
+      // Chemin construit depuis location.pathname : un relatif remplacerait le
+      // dernier segment de l'URL et taperait /overlay/lol-session/flux.
+      const BASE = location.pathname.replace(/\/$/, "");
+
+      // Ce qui part dans innerHTML passe par ici, meme ce qui « ne peut etre
+      // qu'un nombre » : ces valeurs arrivent du client LoL via le module.
+      function esc(s) {
+        return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      }
+
+      const COINS = ["top-left", "top-center", "top-right", "center", "bottom-left", "bottom-center", "bottom-right"];
+      const coin = (valeur, defaut) => (COINS.includes(valeur) ? valeur : defaut);
+
+      // Change un texte, et le fait sauter s'il a vraiment bouge.
+      function texte(el, valeur, sauter = false) {
+        const t = String(valeur ?? "");
+        if (el.textContent === t) return;
+        const premier = el.dataset.vu !== "1";
+        el.textContent = t;
+        el.dataset.vu = "1";
+        if (!sauter || premier) return;
+        el.classList.remove("saut");
+        void el.offsetWidth; // relance l'animation meme si elle vient de jouer
+        el.classList.add("saut");
+      }
+
+      const classeSigne = (s) => (s > 0 ? "victoire" : s < 0 ? "defaite" : "neutre");
+
+      // --- Embleme ---------------------------------------------------------------
+
+      // Dessin de secours, teinte a la couleur du rang : sans palier (non classe,
+      // placements), ou si l'image ne charge pas.
+      const EMBLEME_SECOURS =
+        '<svg viewBox="0 0 56 56"><polygon points="28,2 51,15 51,41 28,54 5,41 5,15" fill="#0a1a17" stroke="currentColor" stroke-width="2"></polygon>' +
+        '<polygon points="28,15 39,28 28,41 17,28" fill="currentColor"></polygon></svg>';
+
+      function embleme(conteneur, rang) {
+        const palier = /^[a-z]+$/.test(rang.palier || "") ? rang.palier : "";
+        if (conteneur.dataset.palier === palier && conteneur.firstChild) return;
+        conteneur.dataset.palier = palier;
+        conteneur.style.color = rang.couleur || "";
+        if (!palier) {
+          conteneur.innerHTML = EMBLEME_SECOURS;
+          return;
+        }
+        const img = document.createElement("img");
+        img.alt = "";
+        img.addEventListener("error", () => {
+          conteneur.innerHTML = EMBLEME_SECOURS;
+        });
+        img.src = BASE + "/rangs/" + palier + ".png";
+        conteneur.replaceChildren(img);
+      }
+
+      function rangDans(prefixe, rang) {
+        embleme($(prefixe + "-embleme"), rang);
+        texte($(prefixe + "-nom"), rang.nom || "—");
+        texte($(prefixe + "-lp"), rang.lp || "");
+        const barre = $(prefixe + "-barre");
+        barre.hidden = rang.progression == null;
+        barre.firstElementChild.style.width = Math.round((rang.progression || 0) * 100) + "%";
+        barre.firstElementChild.style.background = rang.couleur || "";
+      }
+
+      // --- Tuile de champion : icone, ou initiales si elle ne charge pas ---------
+
+      function tuile(c) {
+        const icone = /^https:\/\/ddragon\.leagueoflegends\.com\//.test(c.icone || "") ? c.icone : "";
+        return (
+          '<div class="tuile p22" data-initiales="' + esc(c.initiales) + '">' +
+          (icone ? '<img alt="" src="' + esc(icone) + '">' : esc(c.initiales)) +
+          "</div>"
+        );
+      }
+
+      function brancherTuiles(conteneur) {
+        for (const img of conteneur.querySelectorAll(".tuile img")) {
+          img.addEventListener("error", () => {
+            const t = img.parentElement;
+            t.textContent = t.dataset.initiales || "?";
+          });
+        }
+      }
+
+      // --- Bandeau ---------------------------------------------------------------
+
+      function rendreBandeau(etat) {
+        rangDans("b", etat.rang || {});
+        const bilan = etat.bilan || {};
+        const lp = bilan.lp || { texte: "0 LP", signe: 0 };
+        const session = $("b-session");
+        texte(session, lp.texte, true);
+        session.className = "valeur " + classeSigne(lp.signe);
+        texte($("b-v"), (bilan.victoires || 0) + "V", true);
+        texte($("b-d"), (bilan.defaites || 0) + "D", true);
+        texte($("b-winrate"), bilan.winrate || "");
+        const serie = bilan.serie || {};
+        $("b-serie").dataset.type = serie.type || "";
+        texte($("b-serie-texte"), serie.texte || "—");
+      }
+
+      // --- Tableau de bord ---------------------------------------------------------
+
+      const X0 = 44;
+      const X1 = 344;
+      const Y0 = 24;
+      const Y1 = 140;
+
+      function rendreCourbe(courbe) {
+        const svg = $("t-courbe");
+        if (!courbe || !Array.isArray(courbe.points) || courbe.points.length < 2) {
+          svg.innerHTML =
+            '<text x="190" y="84" fill="#F0E6D2" fill-opacity="0.45" text-anchor="middle" font-size="12">' +
+            esc("La courbe apparaît après une partie classée") +
+            "</text>";
+          return;
+        }
+        const px = (p) => (X0 + Number(p.x) * (X1 - X0)).toFixed(1);
+        const py = (y) => (Y0 + Number(y) * (Y1 - Y0)).toFixed(1);
+        const pts = courbe.points.map((p) => px(p) + "," + py(p.y)).join(" ");
+        const premier = courbe.points[0];
+        const dernier = courbe.points[courbe.points.length - 1];
+
+        let s =
+          '<line x1="' + X0 + '" y1="' + Y1 + '" x2="364" y2="' + Y1 + '" stroke="#F0E6D2" stroke-opacity="0.18"></line>';
+        for (const seuil of (courbe.seuils || []).slice(0, 3)) {
+          const y = py(seuil.y);
+          s +=
+            '<line x1="' + X0 + '" y1="' + y + '" x2="364" y2="' + y + '" stroke="#C8AA6E" stroke-dasharray="4 4"></line>' +
+            '<text x="' + X0 + '" y="' + (Number(y) - 6).toFixed(1) + '" fill="#C8AA6E" font-size="10" letter-spacing="1.5">' + esc(seuil.nom) + "</text>";
+        }
+        s +=
+          '<text x="364" y="' + (Y1 - 8) + '" fill="#F0E6D2" fill-opacity="0.45" font-size="10" letter-spacing="1.5" text-anchor="end">' + esc(courbe.zone) + "</text>" +
+          '<polygon points="' + px(premier) + "," + Y1 + " " + pts + " " + px(dernier) + "," + Y1 + '" fill="#4DA3FF" fill-opacity="0.12"></polygon>' +
+          '<polyline points="' + pts + '" fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linejoin="round"></polyline>';
+
+        const etiquettes = courbe.points.length <= 12;
+        courbe.points.forEach((p, i) => {
+          const dernierPoint = i === courbe.points.length - 1;
+          const couleur = p.victoire == null ? "#0B1420" : p.victoire ? "#4DA3FF" : "#FF5A6E";
+          const contour = p.victoire == null || dernierPoint ? ' stroke="#F0E6D2" stroke-width="2"' : "";
+          s += '<circle cx="' + px(p) + '" cy="' + py(p.y) + '" r="' + (dernierPoint ? 6 : 4) + '" fill="' + couleur + '"' + contour + "></circle>";
+          if (etiquettes) {
+            const legende = p.victoire == null ? "Début" : String(i + (premier.victoire == null ? 0 : 1));
+            s += '<text x="' + px(p) + '" y="156" fill="#F0E6D2" fill-opacity="0.45" font-size="10" text-anchor="' + (i === 0 ? "start" : "middle") + '">' + esc(legende) + "</text>";
+          }
+        });
+        // LP actuels pres du dernier point, du cote ou il y a de la place.
+        const yFin = Number(py(dernier.y));
+        s += '<text x="364" y="' + (yFin < 70 ? yFin + 24 : yFin - 12).toFixed(1) + '" fill="#F0E6D2" font-size="12" font-weight="700" text-anchor="end">' + esc(courbe.fin) + "</text>";
+        svg.innerHTML = s;
+      }
+
+      function rendreTableau(etat) {
+        const t = etat.tableau || {};
+        const bilan = etat.bilan || {};
+        rangDans("t", etat.rang || {});
+        texte($("t-sous-titre"), t.sousTitre || "");
+
+        const evo = $("t-evolution");
+        const sens = etat.rang?.evolution;
+        evo.hidden = sens !== "promu" && sens !== "retrograde";
+        evo.dataset.sens = sens || "";
+        evo.textContent = sens === "promu" ? "PROMU" : sens === "retrograde" ? "RÉTROGRADÉ" : "";
+
+        const lp = bilan.lp || { texte: "0 LP", signe: 0 };
+        texte($("t-lp-session"), String(lp.texte).replace(/\s*LP$/, ""));
+        $("t-bloc-lp").className = lp.signe > 0 ? "victoire" : lp.signe < 0 ? "defaite" : "";
+        $("t-bloc-lp").querySelector(".chiffre").className = "chiffre " + classeSigne(lp.signe);
+
+        texte($("t-v"), bilan.victoires || 0);
+        texte($("t-d"), bilan.defaites || 0);
+        texte($("t-bilan-etiquette"), bilan.winrate ? "Bilan · " + bilan.winrate + " de victoires" : "Bilan");
+
+        const serie = bilan.serie || {};
+        texte($("t-serie"), serie.n || 0);
+        $("t-bloc-serie").className = serie.type === "V" ? "serie-v" : serie.type === "D" ? "serie-d" : "";
+        texte(
+          $("t-serie-etiquette"),
+          serie.type === "V" && serie.n > 1 ? "Victoires d’affilée"
+            : serie.type === "D" && serie.n > 1 ? "Défaites d’affilée"
+            : "Série"
+        );
+
+        rendreCourbe(t.courbe);
+
+        const parties = $("t-parties");
+        parties.innerHTML = (t.parties || [])
+          .map(
+            (p) =>
+              '<div class="partie' + (p.victoire ? " gagnee" : "") + '">' +
+              tuile(p) +
+              '<span class="nom">' + esc(p.nom) + "</span>" +
+              '<span class="kda">' + esc(p.kda) + "</span>" +
+              '<span class="duree">' + esc(p.duree) + "</span>" +
+              '<span class="lp-partie ' + classeSigne(p.signe) + '">' + esc(p.lp) + "</span>" +
+              "</div>"
+          )
+          .join("");
+        brancherTuiles(parties);
+
+        const champions = $("t-champions");
+        champions.innerHTML = (t.champions || [])
+          .map(
+            (c) =>
+              '<div class="puce">' + tuile(c) +
+              '<span class="nom">' + esc(c.nom) + "</span>" +
+              '<span class="score"><span class="victoire">' + esc(c.victoires) + '</span><span class="tiret">–</span><span class="defaite">' + esc(c.defaites) + "</span></span>" +
+              "</div>"
+          )
+          .join("");
+        brancherTuiles(champions);
+
+        const meilleure = $("t-meilleure");
+        meilleure.innerHTML = t.meilleure
+          ? '<span class="etiquette">Meilleure partie</span>' + tuile(t.meilleure) +
+            '<span class="kda">' + esc(t.meilleure.kda) + "</span>" +
+            '<span class="ratio">' + esc(t.meilleure.ratio) + "</span>"
+          : "";
+        brancherTuiles(meilleure);
+
+        const m = t.moyennes || {};
+        texte($("t-kda"), m.kda || "—");
+        texte($("t-cs"), m.csMin || "—");
+        texte($("t-kp"), m.kp || "—");
+        texte($("t-vision"), m.visionMin || "—");
+      }
+
+      // --- Etat complet ------------------------------------------------------------
+
+      // Le tableau de bord reconstruit ses listes : on ne le fait que si ce qu'il
+      // affiche a change, pas a chaque etat recu.
+      let signatureTableau = "";
+
+      function appliquer(etat) {
+        if (!etat) return;
+        const theme = etat.theme || {};
+        const visible = etat.visible || {};
+        const bandeau = $("bandeau");
+        const tableau = $("tableau");
+        bandeau.dataset.coin = coin(theme.coinBandeau, "top-left");
+        tableau.dataset.coin = coin(theme.coinTableau, "center");
+
+        rendreBandeau(etat);
+        const signature = JSON.stringify([etat.rang, etat.bilan, etat.tableau]);
+        if (signature !== signatureTableau) {
+          signatureTableau = signature;
+          rendreTableau(etat);
+        }
+
+        bandeau.classList.toggle("visible", !!visible.bandeau);
+        tableau.classList.toggle("visible", !!visible.tableau);
+      }
+
+      function masquer() {
+        $("bandeau").classList.remove("visible");
+        $("tableau").classList.remove("visible");
+      }
+
+      // ?demo=1 : une session d'exemple, le temps de placer la source dans OBS
+      // sans lancer une partie. A retirer une fois cale. (Le bouton « Afficher un
+      // exemple » du module fait la meme chose sans toucher a l'adresse.)
+      const DEMO = {
+        theme: { coinBandeau: "top-left", coinTableau: "center" },
+        visible: { bandeau: true, tableau: true },
+        rang: { nom: "Émeraude II", palier: "emerald", lp: "2 LP", progression: 0.02, couleur: "#2EC4A0", evolution: "promu" },
+        bilan: {
+          lp: { texte: "+61 LP", signe: 1 },
+          victoires: 4,
+          defaites: 2,
+          winrate: "67\u202f%",
+          serie: { type: "V", n: 3, texte: "3 victoires" },
+        },
+        tableau: {
+          sousTitre: "Classée Solo/Duo · 6 parties · 3 h 24",
+          courbe: {
+            points: [
+              { x: 0, y: 0.712, victoire: null },
+              { x: 0.167, y: 0.903, victoire: false },
+              { x: 0.333, y: 0.661, victoire: true },
+              { x: 0.5, y: 0.843, victoire: false },
+              { x: 0.667, y: 0.591, victoire: true },
+              { x: 0.833, y: 0.359, victoire: true },
+              { x: 1, y: 0.097, victoire: true },
+            ],
+            seuils: [{ y: 0.117, nom: "ÉMERAUDE II" }],
+            zone: "ÉMERAUDE III",
+            fin: "2 LP",
+          },
+          parties: [
+            { nom: "Syndra", icone: "", initiales: "SY", victoire: true, kda: "9 / 2 / 12", duree: "27:20", lp: "+26", signe: 1 },
+            { nom: "Ahri", icone: "", initiales: "AH", victoire: true, kda: "11 / 3 / 7", duree: "33:48", lp: "+23", signe: 1 },
+            { nom: "Ahri", icone: "", initiales: "AH", victoire: true, kda: "6 / 1 / 9", duree: "28:33", lp: "+25", signe: 1 },
+            { nom: "Orianna", icone: "", initiales: "OR", victoire: false, kda: "2 / 5 / 8", duree: "26:45", lp: "\u221218", signe: -1 },
+            { nom: "Ahri", icone: "", initiales: "AH", victoire: true, kda: "8 / 2 / 11", duree: "31:02", lp: "+24", signe: 1 },
+            { nom: "Syndra", icone: "", initiales: "SY", victoire: false, kda: "3 / 6 / 4", duree: "29:10", lp: "\u221219", signe: -1 },
+          ],
+          champions: [
+            { nom: "Ahri", icone: "", initiales: "AH", victoires: 3, defaites: 0 },
+            { nom: "Syndra", icone: "", initiales: "SY", victoires: 1, defaites: 1 },
+            { nom: "Orianna", icone: "", initiales: "OR", victoires: 0, defaites: 1 },
+          ],
+          meilleure: { nom: "Ahri", icone: "", initiales: "AH", kda: "6 / 1 / 9", ratio: "KDA 15" },
+          moyennes: { kda: "4,74", csMin: "7,4", kp: "61\u202f%", visionMin: "1,0" },
+        },
+      };
+
+      if (new URLSearchParams(location.search).has("demo")) {
+        appliquer(DEMO);
+      } else {
+        const flux = new EventSource(BASE + "/flux");
+        flux.addEventListener("etat", (m) => appliquer(JSON.parse(m.data)));
+        // EventSource se reconnecte seul ; on ne masque que si le flux est perdu.
+        flux.addEventListener("error", () => {
+          if (flux.readyState === EventSource.CLOSED) masquer();
+        });
+      }
+    </script>
+  </body>
+</html>

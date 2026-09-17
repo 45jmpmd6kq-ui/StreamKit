@@ -125,8 +125,9 @@ function csp(nonce) {
     // icones de rang du bandeau Valorant, servies par l'editeur du jeu ;
     // i.scdn.co et *.spotifycdn.com pour les pochettes du bot musique : Spotify
     // sert les memes images sur les deux, et ses propres services renvoient
-    // deja le second (constate en septembre 2026).
-    "img-src 'self' data: https://media.valorant-api.com https://i.scdn.co https://*.spotifycdn.com",
+    // deja le second (constate en septembre 2026) ; ddragon.leagueoflegends.com
+    // pour les icones de champions du suivi de session LoL (le CDN de Riot).
+    "img-src 'self' data: https://media.valorant-api.com https://i.scdn.co https://*.spotifycdn.com https://ddragon.leagueoflegends.com",
     // fetch et EventSource des overlays : tout est local, rien ne sort.
     "connect-src 'self'",
     "object-src 'none'",
