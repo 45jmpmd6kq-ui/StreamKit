@@ -144,11 +144,55 @@ La CI (`.github\workflows\ci.yml`) rejoue tout ça sous Windows à chaque
 poussée, et reconstruit l'installeur sur `main`. Elle ne publie jamais :
 `--publish never` est explicite, une release ne part qu'à la main.
 
+## Tester sur son PC avant de publier
+
+Le streamer ne reçoit pas une branche : il reçoit la release GitHub marquée
+« Latest », que son application consulte. Une branche seule ne le protège donc
+de rien — c'est la **publication** qui doit attendre le test.
+
+| Branche | Contenu |
+|---|---|
+| `main` | Exactement ce qu'ont les streamers : la dernière version publiée. |
+| `test` | Le travail en cours. Tout développement commence ici. |
+
+```bash
+git switch test
+# développement, npm test, npm run lint, commits
+npm version minor --no-git-tag-version    # ou patch : le numéro qui SERA publié, sans tag
+git commit -m 0.23.0 package.json package-lock.json
+npm run dist                               # livraison\StreamKit-Setup-0.23.0.exe, rien n'est publié
+```
+
+Sur le PC de test : quitter StreamKit (icône près de l'horloge ▸ Quitter), puis
+lancer l'installeur. Il remplace l'application et garde les réglages, qui vivent
+dans `%APPDATA%\StreamKit`. Un bug ? On corrige sur `test`, on relance
+`npm run dist` — même numéro tant que rien n'est publié — et on réinstalle.
+
+Une fois validé :
+
+```bash
+git switch main
+git merge --ff-only test                   # main rattrape test, sans commit de fusion
+git tag -a v0.23.0 -m 0.23.0               # sur le commit TESTÉ
+git push origin main --follow-tags
+# puis « Publier une mise à jour » ci-dessous, depuis main
+git switch test
+```
+
+- **On ne publie que le commit testé.** `npm run publier` reconstruit
+  l'installeur : parti d'un autre commit, il livrerait ce que personne n'a
+  essayé.
+- **Pas de numéro de pré-version** (`0.23.0-beta.1`). `comparer()` le juge égal
+  à `0.23.0` : le PC de test ne verrait jamais le bouton pour passer à la
+  version publiée. Le numéro définitif sert pendant tout le test.
+- **Correctif urgent** (bug vu en plein live) : il peut partir de `main`
+  directement, en renonçant au test. Ensuite `git switch test` puis
+  `git merge main`, sinon la prochaine fusion `--ff-only` sera refusée.
+
 ## Publier une mise à jour
 
 ```bash
-npm version patch          # ou minor / major
-git push --follow-tags
+# sur main, au commit testé, tagué et poussé (section précédente)
 # créer la release en BROUILLON, vide, sur le tag (voir le troisième piège)
 npm run publier            # build + envoi des fichiers dans ce brouillon
 # vérifier les 3 fichiers, puis publier le brouillon

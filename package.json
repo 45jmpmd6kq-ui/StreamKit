@@ -12,7 +12,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "eslint . --fix && prettier --write .",
     "icone": "node scripts/faire-icone.mjs",
-    "dist": "electron-builder --win",
+    "dist": "electron-builder --win --publish never",
     "publier": "electron-builder --win --publish always"
   },
   "engines": {
