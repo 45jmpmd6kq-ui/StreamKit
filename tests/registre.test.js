@@ -34,6 +34,7 @@ test('les modules du depot sont tous decouverts', () => {
   assert.deepEqual(ids, [
     'clips',
     'exemple',
+    'lol-moments',
     'lol-session',
     'musique',
     'predictions',

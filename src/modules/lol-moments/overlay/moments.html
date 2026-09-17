@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — moments forts League of Legends</title>
+    <style>
+      /* Fond transparent obligatoire : OBS incruste la page telle quelle.
+         Source a la taille de la scene (1920 x 1080). Deux formats (maquette C) :
+         les CARTES sur le cote pour ce qui arrive en plein combat, l'ANNONCE au
+         centre pour ce qui le cloture. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      :root {
+        --fond: rgba(6, 12, 20, 0.92);
+        --fond-annonce: rgba(6, 12, 20, 0.94);
+        --texte: #f0e6d2;
+        --attenue: rgba(240, 230, 210, 0.62);
+        --defaite: #ff5a6e;
+        /* Meme famille que le suivi de session : livree avec Windows 10 et 11. */
+        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+      }
+
+      body {
+        font-family: var(--typo);
+        color: var(--texte);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* --- Accents : un par famille de moment ------------------------------------
+         Pas de color-mix() : le navigateur d'OBS est parfois trop ancien. */
+      .accent-or { --accent: #c8aa6e; --clair: #f3dfa8; --ombre: #5e4418; --lueur: rgba(200, 170, 110, 0.55); --filet: rgba(200, 170, 110, 0.35); --nul: rgba(200, 170, 110, 0); --halo: rgba(200, 170, 110, 0.22); --eclat: rgba(243, 223, 168, 0.32); }
+      .accent-rouge { --accent: #ff5a6e; --clair: #ffd3d9; --ombre: #5c1822; --lueur: rgba(255, 90, 110, 0.5); --filet: rgba(255, 90, 110, 0.35); --nul: rgba(255, 90, 110, 0); --halo: rgba(255, 90, 110, 0.18); --eclat: rgba(255, 211, 217, 0.3); }
+      .accent-violet { --accent: #a67cff; --clair: #e3d4ff; --ombre: #3a2566; --lueur: rgba(166, 124, 255, 0.55); --filet: rgba(166, 124, 255, 0.35); --nul: rgba(166, 124, 255, 0); --halo: rgba(166, 124, 255, 0.2); --eclat: rgba(227, 212, 255, 0.3); }
+      .accent-orange { --accent: #ff8a4c; --clair: #ffd9c2; --ombre: #5a2a10; --lueur: rgba(255, 138, 76, 0.5); --filet: rgba(255, 138, 76, 0.35); --nul: rgba(255, 138, 76, 0); --halo: rgba(255, 138, 76, 0.2); --eclat: rgba(255, 217, 194, 0.3); }
+      .accent-bleu { --accent: #4da3ff; --clair: #cfe6ff; --ombre: #173a66; --lueur: rgba(77, 163, 255, 0.5); --filet: rgba(77, 163, 255, 0.35); --nul: rgba(77, 163, 255, 0); --halo: rgba(77, 163, 255, 0.2); --eclat: rgba(207, 230, 255, 0.3); }
+      .accent-vert { --accent: #7fd13b; --clair: #dcf5c4; --ombre: #2c4d12; --lueur: rgba(127, 209, 59, 0.5); --filet: rgba(127, 209, 59, 0.35); --nul: rgba(127, 209, 59, 0); --halo: rgba(127, 209, 59, 0.18); --eclat: rgba(220, 245, 196, 0.3); }
+      .accent-cyan { --accent: #5ce1e6; --clair: #d2f8f9; --ombre: #134d50; --lueur: rgba(92, 225, 230, 0.5); --filet: rgba(92, 225, 230, 0.35); --nul: rgba(92, 225, 230, 0); --halo: rgba(92, 225, 230, 0.18); --eclat: rgba(210, 248, 249, 0.3); }
+      .accent-ciel { --accent: #9fd4f0; --clair: #e3f3fb; --ombre: #25506a; --lueur: rgba(159, 212, 240, 0.5); --filet: rgba(159, 212, 240, 0.35); --nul: rgba(159, 212, 240, 0); --halo: rgba(159, 212, 240, 0.18); --eclat: rgba(227, 243, 251, 0.3); }
+      .accent-terre { --accent: #c89b5a; --clair: #f0dcbc; --ombre: #4d3415; --lueur: rgba(200, 155, 90, 0.5); --filet: rgba(200, 155, 90, 0.35); --nul: rgba(200, 155, 90, 0); --halo: rgba(200, 155, 90, 0.2); --eclat: rgba(240, 220, 188, 0.3); }
+      .accent-ancestral { --accent: #b8e0ff; --clair: #eef8ff; --ombre: #2d4a63; --lueur: rgba(184, 224, 255, 0.55); --filet: rgba(184, 224, 255, 0.35); --nul: rgba(184, 224, 255, 0); --halo: rgba(184, 224, 255, 0.2); --eclat: rgba(238, 248, 255, 0.32); }
+      .accent-serie { --accent: #ffc857; --clair: #ffe7ad; --ombre: #5c4210; --lueur: rgba(255, 200, 87, 0.55); --filet: rgba(255, 200, 87, 0.35); --nul: rgba(255, 200, 87, 0); --halo: rgba(255, 200, 87, 0.2); --eclat: rgba(255, 231, 173, 0.32); }
+
+      /* --- Medaillon : icone du champion, ou pictogramme ------------------------ */
+
+      .medaillon {
+        width: 76px;
+        height: 76px;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        border-radius: 50%;
+        border: 2px solid var(--accent);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #10151c;
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 22px;
+        font-weight: 700;
+      }
+      /* Les icones de Data Dragon ont un liseré sombre : un leger zoom le cache. */
+      .medaillon img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.1); }
+      .medaillon svg { width: 50%; height: 50%; color: var(--clair); }
+
+      /* --- Victimes : icones grisees et barrees --------------------------------- */
+
+      .victimes { display: flex; gap: 4px; flex-shrink: 0; }
+      .victime {
+        position: relative;
+        width: 24px;
+        height: 24px;
+        box-sizing: border-box;
+        overflow: hidden;
+        border: 1px solid rgba(255, 90, 110, 0.6);
+        background: #1a1f27;
+      }
+      .victime .fond {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        filter: grayscale(0.7) brightness(0.7);
+        font-size: 9px;
+        font-weight: 700;
+        color: rgba(240, 230, 210, 0.85);
+      }
+      .victime .fond img { width: 100%; height: 100%; object-fit: cover; }
+      .victime::after {
+        content: "";
+        position: absolute;
+        left: -6px;
+        top: 11px;
+        width: 36px;
+        height: 2px;
+        transform: rotate(-45deg);
+        background: var(--defaite);
+      }
+      .victime.nouvelle { animation: pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+      @keyframes pop {
+        from { opacity: 0; transform: scale(0.4); }
+        to { opacity: 1; transform: scale(1); }
+      }
+
+      /* --- Cartes (en plein combat) --------------------------------------------- */
+
+      .cartes {
+        --glisse: -56px;
+        position: absolute;
+        width: 480px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .cartes[data-position="sous-bandeau"] { top: 124px; left: 24px; }
+      .cartes[data-position="top-left"] { top: 24px; left: 24px; }
+      .cartes[data-position="top-right"] { top: 64px; right: 24px; --glisse: 56px; }
+      .cartes[data-position="left"] { top: 50%; left: 24px; transform: translateY(-50%); }
+      .cartes[data-position="bottom-left"] { bottom: 200px; left: 24px; flex-direction: column-reverse; }
+
+      .carte {
+        position: relative;
+        height: 104px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
+        animation: carte-entree 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      }
+      .carte.sortie { animation: carte-sortie 0.4s ease-in both; }
+      @keyframes carte-entree {
+        from { opacity: 0; transform: translateX(var(--glisse)); }
+        to { opacity: 1; transform: none; }
+      }
+      @keyframes carte-sortie {
+        from { opacity: 1; transform: none; }
+        to { opacity: 0; transform: translateX(var(--glisse)); }
+      }
+
+      .carte-corps {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        box-sizing: border-box;
+        padding: 0 22px 0 14px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: var(--fond);
+        border-left: 4px solid var(--accent);
+        border-top: 1px solid var(--filet);
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%);
+      }
+      .carte-textes { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-width: 0; }
+      .carte-titre {
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+        color: var(--clair);
+        text-shadow: 0 0 18px var(--lueur);
+        transform-origin: left center;
+      }
+      /* Le multikill monte en grade : le nouveau titre saute. */
+      .carte-titre.saut { animation: saut 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+      @keyframes saut {
+        0% { transform: scale(1.3); }
+        100% { transform: scale(1); }
+      }
+      .carte-ligne { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .carte-detail {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--attenue);
+      }
+      /* Temps d'affichage restant. */
+      .temps {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--accent);
+        transform-origin: left center;
+        animation: temps 6s linear both;
+      }
+      @keyframes temps {
+        from { transform: scaleX(1); }
+        to { transform: scaleX(0); }
+      }
+
+      /* --- Annonce (fin de combat, moment rare) --------------------------------- */
+
+      .annonce {
+        position: absolute;
+        left: 50%;
+        width: 1040px;
+        height: 150px;
+        margin-left: -520px;
+        opacity: 0;
+        filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.55));
+      }
+      .annonce[data-position="haut"] { top: 250px; }
+      .annonce[data-position="centre"] { top: 465px; }
+      .annonce[data-position="bas"] { top: 700px; }
+      .annonce.joue { animation: annonce 4.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+      @keyframes annonce {
+        0% { opacity: 0; transform: scaleX(0.3); }
+        8% { opacity: 1; transform: scaleX(1.02); }
+        11% { opacity: 1; transform: scaleX(1); }
+        85% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(1.04); }
+      }
+
+      .filet {
+        position: absolute;
+        left: -90px;
+        right: -90px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--nul) 0%, var(--accent) 20%, var(--clair) 50%, var(--accent) 80%, var(--nul) 100%);
+      }
+      .filet.haut { top: 0; }
+      .filet.bas { bottom: 0; }
+
+      .annonce-corps {
+        position: absolute;
+        top: 4px;
+        right: 0;
+        bottom: 4px;
+        left: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+        padding: 0 60px 0 52px;
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        background: radial-gradient(460px 120px at 45% 50%, var(--halo) 0%, var(--nul) 70%), var(--fond-annonce);
+        clip-path: polygon(30px 0, calc(100% - 30px) 0, 100% 50%, calc(100% - 30px) 100%, 30px 100%, 0 50%);
+      }
+      .annonce .medaillon { width: 104px; height: 104px; border-width: 3px; font-size: 30px; }
+      .annonce .medaillon.mini { width: 64px; height: 64px; border-width: 2px; font-size: 20px; }
+      .annonce-textes { display: flex; flex-direction: column; gap: 14px; flex-grow: 1; min-width: 0; }
+      .annonce-titre {
+        font-size: 72px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+        color: var(--clair);
+        text-shadow: 0 0 28px var(--lueur), 0 3px 0 var(--ombre);
+      }
+      .annonce.long .annonce-titre { font-size: 60px; }
+      .annonce.joue .annonce-titre { animation: titre 4.6s ease-out both; }
+      @keyframes titre {
+        0%, 5% { opacity: 0; letter-spacing: 0.45em; }
+        16%, 100% { opacity: 1; letter-spacing: 0.12em; }
+      }
+      .annonce-detail {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: rgba(240, 230, 210, 0.7);
+      }
+      .annonce .victimes { gap: 6px; }
+      .annonce .victime { width: 44px; height: 44px; }
+      .annonce .victime .fond { font-size: 14px; }
+      .annonce .victime::after { left: -10px; top: 20px; width: 64px; }
+      .annonce.joue .victime { animation: victime 0.5s ease-out both; animation-delay: calc(0.45s + var(--i) * 0.1s); }
+      @keyframes victime {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: none; }
+      }
+      .eclat {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 140px;
+        height: 100%;
+        opacity: 0;
+        background: linear-gradient(90deg, var(--nul) 0%, var(--eclat) 50%, var(--nul) 100%);
+      }
+      .annonce.joue .eclat { animation: eclat 4.6s ease-in-out both; }
+      @keyframes eclat {
+        0%, 16% { opacity: 0; transform: translateX(-200px) skewX(-20deg); }
+        20% { opacity: 1; }
+        36%, 100% { opacity: 0; transform: translateX(1160px) skewX(-20deg); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .carte,
+        .carte.sortie,
+        .carte-titre.saut,
+        .victime.nouvelle,
+        .temps,
+        .annonce.joue,
+        .annonce.joue .annonce-titre,
+        .annonce.joue .eclat,
+        .annonce.joue .victime {
+          animation: none;
+        }
+        .annonce.joue { opacity: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cartes" class="cartes" data-position="sous-bandeau"></div>
+    <div id="annonce" class="annonce" data-position="haut"></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+
+      // Chemin construit depuis location.pathname : un relatif remplacerait le
+      // dernier segment de l'URL et taperait /overlay/lol-moments/flux.
+      const BASE = location.pathname.replace(/\/$/, "");
+
+      // Ce qui part dans innerHTML passe par ici : les noms viennent du jeu.
+      function esc(s) {
+        return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      }
+
+      const DUREE_CARTE_MS = 6000; // aligne sur l'animation .temps
+      const DUREE_ANNONCE_MS = 4600; // aligne sur l'animation .annonce
+      const MAX_CARTES = 3;
+      const MAX_ATTENTE = 4;
+
+      const ACCENTS = ["or", "rouge", "violet", "orange", "bleu", "vert", "cyan", "ciel", "terre", "ancestral", "serie"];
+      const accent = (a) => (ACCENTS.includes(a) ? a : "or");
+
+      const ICONES = {
+        oeil:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+        flamme:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M12 3c.8 3 4.5 5 4.5 10a4.5 4.5 0 0 1-9 0c0-2.3 1.1-3.8 2.3-4.9.3 1.6 1.1 2.5 2.2 3-.5-2.9-.4-5.4 0-8.1z"></path></svg>',
+      };
+
+      // Seules les icones de champion de Data Dragon passent ; sinon, les initiales.
+      const imageSure = (url) =>
+        /^https:\/\/ddragon\.leagueoflegends\.com\/cdn\/[\w.]+\/img\/champion\/[A-Za-z0-9]+\.png$/.test(url || "") ? url : "";
+
+      function visuel(c) {
+        const img = imageSure(c?.icone);
+        return img ? '<img alt="" src="' + esc(img) + '" data-initiales="' + esc(c.initiales) + '">' : esc(c?.initiales || "?");
+      }
+
+      function medaillon(v, classe = "medaillon") {
+        const contenu = v.embleme && v.embleme !== "portrait" && ICONES[v.embleme] ? ICONES[v.embleme] : visuel(v.champion);
+        return '<div class="' + classe + '">' + contenu + "</div>";
+      }
+
+      const tuile = (c, i, nouvelle) =>
+        '<div class="victime' + (nouvelle ? " nouvelle" : "") + '" style="--i:' + i + '"><div class="fond">' + visuel(c) + "</div></div>";
+
+      const victimes = (liste, deja = Infinity) =>
+        (Array.isArray(liste) ? liste : []).slice(0, 5).map((c, i) => tuile(c, i, i >= deja)).join("");
+
+      // Icone qui ne charge pas (hors ligne, champion tout neuf) : les initiales.
+      function brancherImages(el) {
+        for (const img of el.querySelectorAll("img[data-initiales]")) {
+          img.addEventListener("error", () => {
+            if (img.parentElement) img.parentElement.textContent = img.dataset.initiales || "?";
+          });
+        }
+      }
+
+      function rejouer(el, classe) {
+        el.classList.remove(classe);
+        void el.offsetWidth; // relance l'animation meme si elle vient de jouer
+        el.classList.add(classe);
+      }
+
+      // --- Cartes ----------------------------------------------------------------
+
+      const cartes = $("cartes");
+      const parGroupe = new Map(); // « multikill » -> la carte qui monte en grade
+
+      function retirerCarte(el) {
+        if (!el || el.dataset.sortie) return;
+        el.dataset.sortie = "1";
+        clearTimeout(el._minuteur);
+        if (el.dataset.groupe && parGroupe.get(el.dataset.groupe) === el) parGroupe.delete(el.dataset.groupe);
+        el.classList.add("sortie");
+        setTimeout(() => el.remove(), 450);
+      }
+
+      function minuter(el) {
+        clearTimeout(el._minuteur);
+        el._minuteur = setTimeout(() => retirerCarte(el), DUREE_CARTE_MS);
+        rejouer(el.querySelector(".temps"), "temps");
+      }
+
+      function afficherCarte(v) {
+        const existante = v.groupe ? parGroupe.get(v.groupe) : null;
+        if (existante) {
+          monterEnGrade(existante, v);
+          return;
+        }
+        const el = document.createElement("div");
+        el.className = "carte accent-" + accent(v.accent);
+        if (v.groupe) {
+          el.dataset.groupe = v.groupe;
+          parGroupe.set(v.groupe, el);
+        }
+        el.innerHTML =
+          '<div class="carte-corps">' +
+          medaillon(v) +
+          '<div class="carte-textes">' +
+          '<div class="carte-titre">' + esc(v.titre) + "</div>" +
+          '<div class="carte-ligne"><span class="carte-detail">' + esc(v.detail) + '</span><div class="victimes">' + victimes(v.victimes) + "</div></div>" +
+          "</div>" +
+          '<div class="temps"></div>' +
+          "</div>";
+        brancherImages(el);
+        cartes.prepend(el);
+        // Au-dela de trois cartes, les plus anciennes s'effacent.
+        const vivantes = [...cartes.children].filter((c) => !c.dataset.sortie);
+        for (const vieille of vivantes.slice(MAX_CARTES)) retirerCarte(vieille);
+        minuter(el);
+      }
+
+      function monterEnGrade(el, v) {
+        const titre = el.querySelector(".carte-titre");
+        if (titre.textContent !== String(v.titre ?? "")) {
+          titre.textContent = String(v.titre ?? "");
+          rejouer(titre, "saut");
+        }
+        el.querySelector(".carte-detail").textContent = String(v.detail ?? "");
+        const liste = el.querySelector(".victimes");
+        liste.innerHTML = victimes(v.victimes, liste.children.length);
+        brancherImages(liste);
+        // Deplacer un element relance son animation d'entree : seulement s'il le faut.
+        if (cartes.firstElementChild !== el) cartes.prepend(el);
+        minuter(el);
+      }
+
+      // --- Annonces --------------------------------------------------------------
+
+      const annonce = $("annonce");
+      const attente = [];
+      let enCours = false;
+
+      function jouerAnnonce(v) {
+        attente.push(v);
+        if (attente.length > MAX_ATTENTE) attente.shift();
+        if (!enCours) suivante();
+      }
+
+      function suivante() {
+        annonce.classList.remove("joue");
+        const v = attente.shift();
+        if (!v) {
+          enCours = false;
+          return;
+        }
+        enCours = true;
+        const droite = Array.isArray(v.victimes) && v.victimes.length
+          ? '<div class="victimes">' + victimes(v.victimes) + "</div>"
+          : v.embleme && v.embleme !== "portrait" && v.champion
+            ? medaillon({ champion: v.champion }, "medaillon mini")
+            : "";
+        annonce.className = "annonce accent-" + accent(v.accent) + (String(v.titre ?? "").length > 10 ? " long" : "");
+        annonce.innerHTML =
+          '<div class="filet haut"></div>' +
+          '<div class="annonce-corps"><div class="eclat"></div>' +
+          medaillon(v) +
+          '<div class="annonce-textes"><div class="annonce-titre">' + esc(v.titre) + '</div><div class="annonce-detail">' + esc(v.detail) + "</div></div>" +
+          droite +
+          "</div>" +
+          '<div class="filet bas"></div>';
+        brancherImages(annonce);
+        rejouer(annonce, "joue");
+        setTimeout(suivante, DUREE_ANNONCE_MS + 150);
+      }
+
+      // --- Aiguillage ------------------------------------------------------------
+
+      function moment(v) {
+        if (!v || typeof v !== "object") return;
+        if (v.format === "annonce") {
+          // Le pentakill cloture le combat : sa carte s'efface, l'annonce prend le relais.
+          if (v.groupe) retirerCarte(parGroupe.get(v.groupe));
+          jouerAnnonce(v);
+        } else {
+          afficherCarte(v);
+        }
+      }
+
+      // Fin de partie : les cartes s'en vont. L'annonce en cours va a son terme
+      // (un pentakill sur la derniere action merite d'etre vu).
+      function effacer() {
+        for (const el of [...cartes.children]) retirerCarte(el);
+        attente.length = 0;
+      }
+
+      const POSITIONS_ANNONCE = ["haut", "centre", "bas"];
+      const POSITIONS_CARTES = ["sous-bandeau", "top-left", "top-right", "left", "bottom-left"];
+
+      function theme(t) {
+        annonce.dataset.position = POSITIONS_ANNONCE.includes(t?.positionAnnonce) ? t.positionAnnonce : "haut";
+        cartes.dataset.position = POSITIONS_CARTES.includes(t?.positionCartes) ? t.positionCartes : "sous-bandeau";
+      }
+
+      const lire = (e) => {
+        try {
+          return JSON.parse(e.data);
+        } catch {
+          return null;
+        }
+      };
+
+      // --- ?demo=1 : une sequence en boucle, pour placer la source dans OBS -------
+
+      const AHRI = { nom: "Ahri", initiales: "AH" };
+      const RIVAUX = [
+        { nom: "Zed", initiales: "ZE" },
+        { nom: "Lee Sin", initiales: "LE" },
+        { nom: "Darius", initiales: "DA" },
+        { nom: "Thresh", initiales: "TH" },
+        { nom: "Lux", initiales: "LU" },
+      ];
+      const multi = (titre, n, format) => ({
+        format,
+        groupe: "multikill",
+        titre,
+        detail: "Ahri · 23:" + (30 + n * 2),
+        accent: "or",
+        embleme: "portrait",
+        champion: AHRI,
+        victimes: RIVAUX.slice(0, n),
+      });
+      const DEMO = [
+        [0, { format: "carte", titre: "Premier sang", detail: "Sur Zed · 3:12", accent: "rouge", embleme: "portrait", champion: AHRI, victimes: RIVAUX.slice(0, 1) }],
+        [3000, multi("Double kill", 2, "carte")],
+        [4400, multi("Triple kill", 3, "carte")],
+        [5800, multi("Quadra kill", 4, "carte")],
+        [7600, multi("Pentakill", 5, "annonce")],
+        [14000, { format: "annonce", titre: "Nashor volé", detail: "Ahri · 27:05", accent: "violet", embleme: "oeil", champion: AHRI }],
+        [20000, { format: "carte", titre: "Ace", detail: "Par Jinx · 27:10", accent: "bleu", embleme: "portrait", champion: { nom: "Jinx", initiales: "JI" } }],
+      ];
+
+      function demo() {
+        for (const [apres, v] of DEMO) setTimeout(() => moment(v), apres);
+        setTimeout(demo, 27000);
+      }
+
+      if (new URLSearchParams(location.search).has("demo")) {
+        theme({});
+        demo();
+      } else {
+        const flux = new EventSource(BASE + "/flux");
+        flux.addEventListener("etat", (e) => theme(lire(e)?.theme));
+        flux.addEventListener("moment", (e) => moment(lire(e)));
+        flux.addEventListener("effacer", effacer);
+      }
+    </script>
+  </body>
+</html>

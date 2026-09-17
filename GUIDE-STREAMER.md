@@ -3,7 +3,7 @@
 StreamKit rassemble des outils pour ton live dans une seule application Windows :
 musique demandée par les viewers, clips au chat, prédictions et sondages Twitch en
 direct à l'écran, annonce des pubs, voiture au hasard et compteur de victoires sur Rocket League, bandeau
-de session Valorant, suivi de session League of Legends. Tout tourne **sur ton PC** : pas de compte
+de session Valorant, suivi de session et moments forts League of Legends. Tout tourne **sur ton PC** : pas de compte
 à créer chez nous, pas de serveur, et tes accès restent chez toi.
 
 Compte une vingtaine de minutes la première fois. Ensuite, StreamKit se met à
@@ -26,6 +26,7 @@ veux utiliser.
 | Overlay W/L (Valorant)             | Valorant installé sur le même PC                                           |
 | Compteur de session (Rocket League) | Rocket League installé sur le même PC (Epic ou Steam). **Pas de BakkesMod** : le module passe par l'API officielle du jeu, compatible anti-triche |
 | Suivi de session (League of Legends) | League of Legends installé sur le même PC. Rien à connecter : le module lit le client du jeu, sans clé Riot ni compte à relier |
+| Moments forts (League of Legends) | League of Legends installé sur le même PC. Twitch seulement pour les messages dans le chat et les clips (un clip ne se crée que **pendant un live**) |
 
 ---
 
@@ -168,6 +169,19 @@ tu veux, puis clique sur **Enregistrer** en bas.
   une partie refaite (remake) ne compte jamais. **Afficher un exemple** montre le
   bandeau et le tableau de bord pendant 30 secondes, pour les placer dans OBS.
   **Réinitialiser la session** remet tout à zéro en début de live.
+- **Moments forts** (League of Legends) : rien à connecter, lance une partie.
+  Premier sang, double, triple et quadra kill, et ace de ton équipe s'affichent en
+  **carte** sur le côté : pendant un combat, la même carte monte en grade (double,
+  triple, quadra). Pentakill, dragon, Héraut ou Nashor **volé par toi**, et
+  légendaire (8 kills sans mourir) passent en **annonce** au centre. Chaque moment
+  se règle à part : ignoré, à l'écran, à l'écran + message dans le chat, ou à
+  l'écran + message + clip (par défaut : clip pour le quadra, le penta et les
+  vols). Le clip part 5 secondes après le moment, avec un titre du genre
+  « Pentakill · Ahri · 23:41 », et seulement pendant un live ; un pentakill juste
+  après un quadra ne donne qu'un clip. Le mode streamer du jeu ne gêne pas. Si la
+  Vue d'ensemble demande de reconnecter ta chaîne, fais-le : le module a besoin
+  du droit de créer des clips. **Afficher un exemple** joue une séquence complète
+  (25 secondes) pour placer la source dans OBS, sans rien écrire dans le chat.
 
 ---
 
@@ -176,10 +190,11 @@ tu veux, puis clique sur **Enregistrer** en bas.
 1. Dans StreamKit, ouvre le module. Dans **Overlays OBS**, clique sur **Copier**.
 2. Dans OBS : **Sources** → **+** → **Navigateur**, et colle l'adresse dans
    **URL**. Pour la taille :
-   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Annonce de pub, Suivi de session LoL** : la taille de ta scène (par exemple
+   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Annonce de pub, Suivi de session LoL, Moments forts LoL** : la taille de ta scène (par exemple
      1920 × 1080). L'overlay se place tout seul dans le coin choisi dans les
      réglages du module (pour le suivi LoL, une position pour le bandeau et une
-     pour le tableau de bord) ;
+     pour le tableau de bord ; pour les moments forts, une pour les cartes et une
+     pour les annonces) ;
    - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux.
 3. Pour le placer sans attendre un vrai événement, ajoute `?demo=1` à la fin de
    l'adresse. **Retire-le** une fois que c'est calé.
@@ -232,6 +247,14 @@ Regarde la carte **League of Legends** de la Vue d'ensemble : « client fermé �
 tout en bas des réglages du module, par exemple `C:\Riot Games\League of Legends`).
 Vérifie aussi **Parties comptées** : une Flexible ne compte pas si le module suit
 la Solo/Duo. Rien à l'écran quand le client est fermé : c'est voulu.
+
+**Les moments forts LoL n'apparaissent pas.**
+Clique sur **Afficher un exemple** dans le module. S'il s'affiche, la source OBS
+est bonne : regarde alors, pendant une partie, la carte **Partie de League of
+Legends** de la Vue d'ensemble, qui doit dire « en partie » avec ton champion.
+Seuls **tes** moments comptent (et l'ace de ton équipe), et un moment réglé sur
+« Ignoré » ne s'affiche pas. Pas de clip : tu n'étais pas en live, ou ta chaîne
+doit être reconnectée.
 
 **Le scoreboard de prédiction n'apparaît pas.**
 Clique sur **Simuler une prédiction** dans le module. S'il s'affiche,

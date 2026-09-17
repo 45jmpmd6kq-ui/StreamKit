@@ -76,6 +76,7 @@ src/
     rl-session/         compteur V/D Rocket League (API de stats officielle + Launch.log)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)
     lol-session/        suivi de session LoL : bandeau + tableau de bord (API locale du client)
+    lol-moments/        moments forts LoL : cartes et annonces, chat, clips (API de la partie, port 2999)
 
 scripts/                icône de l'app, emblèmes de rang LoL — rien ne part chez le streamer
 GUIDE-STREAMER.md       LA documentation du streamer : prérequis, installation, dépannage
@@ -313,6 +314,12 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       difference de rangs, noms et icones de champions via Data Dragon. Verifie
       de bout en bout contre un faux client ; reste a valider sur le vrai client
 - [ ] Suivi de session LoL valide sur une vraie soiree de classees
+- [x] **Moments forts LoL** : premier sang, double a quadra kill et ace en carte
+      (la carte du combat monte en grade), pentakill, objectif vole et legendaire
+      en annonce ; message et clip au choix par moment. API de la partie en cours
+      (Live Client Data, port 2999), mode streamer compris. Verifie contre un faux
+      jeu ; reste a valider en vraie partie
+- [ ] Moments forts LoL valides en vraie partie (noms des evenements, clip en live)
 
 ## Pièges rencontrés (à ne pas refaire)
 
