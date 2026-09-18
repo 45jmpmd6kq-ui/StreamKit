@@ -81,7 +81,14 @@ function contexte({ config, portJeu, minuteurManuel = false }) {
   };
 }
 
-const REGLAGES = { chauffe: true, texteChauffe: 'Soyez sympas, je me réveille', overtime: true, pouls: true };
+const REGLAGES = {
+  chauffe: true,
+  texteChauffe: 'Soyez sympas, je me réveille',
+  pastilleChauffe: true,
+  overtime: true,
+  pastilleOvertime: true,
+  pouls: true,
+};
 
 // Envoie comme le vrai jeu : Data en CHAINE JSON, messages colles et coupes.
 function envoyer(socket, evenements) {
@@ -215,6 +222,29 @@ test('reglages coupes : rien a l ecran, mais la chauffe compte comme jouee', asy
     // La rallumer en plein live n'annonce pas une chauffe a la partie suivante.
     const [sante] = await manifeste.sante(t.ctx);
     assert.equal(sante.detail, 'connecté');
+  } finally {
+    await instance?.arreter();
+    t.couper();
+    jeu.fermer();
+  }
+});
+
+test('pastilles gardees ou non : le reglage part a l overlay', async () => {
+  const jeu = await fauxJeu();
+  const t = contexte({
+    config: { ...REGLAGES, pastilleChauffe: false, pastilleOvertime: true },
+    portJeu: jeu.port,
+  });
+  let instance;
+  try {
+    instance = await manifeste.demarrer(t.ctx);
+    // C'est l'overlay qui applique le reglage : ?demo=1 montre ainsi la meme
+    // chose que le live. L'etat, lui, dit toujours ce qui est en cours.
+    assert.deepEqual(t.etats.at(-1)[1].garder, { chauffe: false, overtime: true });
+    await attendre(() => jeu.connexions.length === 1, 'connexion au faux jeu');
+    envoyer(jeu.connexions[0], debut('G1'));
+    await attendre(() => t.moments().includes('chauffe'), 'l annonce part quand meme');
+    assert.deepEqual(t.pastilles(), { chauffe: true, overtime: false });
   } finally {
     await instance?.arreter();
     t.couper();

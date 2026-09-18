@@ -482,7 +482,8 @@
       const MAX_ATTENTE = 3;
 
       const TEXTE_DEFAUT = "On se chauffe, soyez indulgents";
-      let options = { texte: TEXTE_DEFAUT, pouls: true };
+      // garder : la pastille reste-t-elle apres l'annonce (reglage du module) ?
+      let options = { texte: TEXTE_DEFAUT, pouls: true, garder: { chauffe: true, overtime: true } };
       let voulu = { chauffe: false, overtime: false }; // pastilles demandees par le module
       let enCours = null; // l'annonce qui joue : les pastilles attendent qu'elle se replie
       const attente = [];
@@ -501,10 +502,11 @@
         el._minuteur = setTimeout(() => el.classList.remove("visible", "sortie"), 300);
       }
 
+      // Le pouls suit la prolongation, pastille gardee ou non : chacun son reglage.
       function majPastilles() {
         const libre = !enCours;
-        montrer($("pastille-chauffe"), libre && voulu.chauffe);
-        montrer($("pastille-overtime"), libre && voulu.overtime);
+        montrer($("pastille-chauffe"), libre && voulu.chauffe && options.garder.chauffe);
+        montrer($("pastille-overtime"), libre && voulu.overtime && options.garder.overtime);
         $("vignette").classList.toggle("visible", libre && voulu.overtime && options.pouls);
       }
 
@@ -546,7 +548,11 @@
       // pastilles : false en demo, ou l'exemple decide seul de ce qui s'affiche.
       function appliquer(e, { pastilles = true } = {}) {
         if (!e || typeof e !== "object") return;
-        options = { texte: typeof e.texte === "string" ? e.texte : TEXTE_DEFAUT, pouls: e.pouls !== false };
+        options = {
+          texte: typeof e.texte === "string" ? e.texte : TEXTE_DEFAUT,
+          pouls: e.pouls !== false,
+          garder: { chauffe: e.garder?.chauffe !== false, overtime: e.garder?.overtime !== false },
+        };
         if (pastilles) voulu = { chauffe: !!e.pastilles?.chauffe, overtime: !!e.pastilles?.overtime };
         majPastilles();
       }

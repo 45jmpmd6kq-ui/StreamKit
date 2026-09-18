@@ -48,9 +48,23 @@ export default {
         max: 80,
       },
       {
+        cle: 'pastilleChauffe',
+        type: 'bool',
+        label: 'Garder la pastille « CHAUFFE » jusqu’à la fin de la partie',
+        aide: 'Éteint : l’annonce seule, puis plus rien à l’écran.',
+        defaut: true,
+      },
+      {
         cle: 'overtime',
         type: 'bool',
         label: 'Annoncer l’overtime',
+        defaut: true,
+      },
+      {
+        cle: 'pastilleOvertime',
+        type: 'bool',
+        label: 'Garder la pastille « OVERTIME » jusqu’au but en or',
+        aide: 'Éteint : l’annonce seule. Le pouls, lui, a son propre réglage.',
         defaut: true,
       },
       {
@@ -151,6 +165,10 @@ export default {
       ctx.overlay.etat('moments', {
         texte: c.texteChauffe,
         pouls: c.pouls,
+        // Garder la pastille apres l'annonce : c'est l'overlay qui l'applique,
+        // pour que ?demo=1 montre la meme chose que le live.
+        garder: { chauffe: c.pastilleChauffe, overtime: c.pastilleOvertime },
+        // Ce qui est en cours dans la partie (ou dans l'exemple).
         pastilles: {
           chauffe: exemple.chauffe || (c.chauffe && det.enChauffe()),
           overtime: exemple.overtime || (c.overtime && det.enOvertime()),

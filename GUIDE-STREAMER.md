@@ -163,10 +163,12 @@ tu veux, puis clique sur **Enregistrer** en bas.
   annoncée au premier coup d'envoi de ta première partie avec ton texte, puis
   une pastille « CHAUFFE » jusqu'à la fin de cette partie ; l'**overtime**, annoncé
   dès que la prolongation commence, puis une pastille « OVERTIME » et un pouls
-  rouge sur les bords de l'écran jusqu'au but en or. La chauffe revient après
-  3 h sans jouer ; entre deux lives rapprochés, **Réarmer la game de chauffe** la
-  relance. L'entraînement libre et les replays ne comptent pas. **Afficher un
-  exemple** joue les deux (16 secondes) pour placer la source dans OBS.
+  rouge sur les bords de l'écran jusqu'au but en or. Chaque pastille a son
+  interrupteur : éteinte, il ne reste que l'annonce (le pouls a le sien). La
+  chauffe revient après 3 h sans jouer ; entre deux lives rapprochés, **Réarmer
+  la game de chauffe** la relance. L'entraînement libre et les replays ne
+  comptent pas. **Afficher un exemple** joue les deux (16 secondes) pour placer la
+  source dans OBS.
 - **Suivi de session** (League of Legends) : rien à connecter, lance le jeu.
   Deux éléments, dans la même source OBS : un **bandeau** (rang, LP gagnés sur la
   session, bilan, série) et un **tableau de bord** (courbe des LP, dernières
