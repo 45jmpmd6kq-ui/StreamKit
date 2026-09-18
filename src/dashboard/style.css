@@ -728,6 +728,16 @@ input[type="color"] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.overlay-ligne .taille {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--texte-doux);
+}
+.overlay-ligne .taille b {
+  font-weight: 600;
+  color: var(--texte);
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---------- Tiroir du journal ---------- */
 

@@ -200,7 +200,8 @@ tu veux, puis clique sur **Enregistrer** en bas.
 
 1. Dans StreamKit, ouvre le module. Dans **Overlays OBS**, clique sur **Copier**.
 2. Dans OBS : **Sources** → **+** → **Navigateur**, et colle l'adresse dans
-   **URL**. Pour la taille :
+   **URL**. Règle **Largeur** et **Hauteur** comme indiqué sous l'adresse, dans
+   StreamKit. Pour la taille :
    - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Moments forts RL, Annonce de pub, Suivi de session LoL, Moments forts LoL** : la taille de ta scène (par exemple
      1920 × 1080). L'overlay se place tout seul dans le coin choisi dans les
      réglages du module (pour le suivi LoL, une position pour le bandeau et une

@@ -78,6 +78,17 @@ test('un overlay declare pointe sur un fichier qui existe', async () => {
   }
 });
 
+test('la taille de chaque source OBS part au dashboard', () => {
+  // Sans taille declaree, la source prend la scene : le dashboard le dit.
+  // Le bandeau Valorant est le seul overlay a taille fixe.
+  for (const m of registre.liste()) {
+    for (const o of registre.vue(m.id).overlays) {
+      const attendue = m.id === 'valorant' ? { largeur: 900, hauteur: 70 } : null;
+      assert.deepEqual(o.taille, attendue, m.id + ' › ' + o.chemin);
+    }
+  }
+});
+
 test('une action mise en bouton existe vraiment', () => {
   // libellesActions fabrique les boutons du dashboard. Un libelle sans action
   // derriere donnerait un bouton qui ne fait rien.

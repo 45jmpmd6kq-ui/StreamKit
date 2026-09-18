@@ -237,6 +237,15 @@ export function scopesRequis({ tousLesModules = false } = {}) {
   return [...set].sort();
 }
 
+// Taille de la source OBS d'un overlay : { largeur, hauteur } quand le module en
+// declare une, null sinon -- la source prend alors la taille de la scene, le cas
+// de presque tous les overlays (ils se placent dans le coin choisi).
+function tailleSource(t) {
+  const largeur = Number(t?.largeur);
+  const hauteur = Number(t?.hauteur);
+  return largeur > 0 && hauteur > 0 ? { largeur, hauteur } : null;
+}
+
 // Vue destinee au dashboard (sans instance ni fonctions, avec secrets masques).
 export function vue(id) {
   const m = modules.get(id);
@@ -276,6 +285,7 @@ export function vue(id) {
       nom: o.nom,
       description: o.description ?? '',
       url: '/overlay/' + m.id + '/' + o.chemin,
+      taille: tailleSource(o.taille),
     })),
     // Interfaces sur mesure du module (voir MODULES.md). Le dashboard y met un
     // bouton ; ce ne sont pas des overlays, elles ne vont pas dans OBS.

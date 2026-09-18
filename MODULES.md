@@ -39,7 +39,7 @@ export default {
 
   config: { version: 1, champs: [ /* voir plus bas */ ] },
   migrations: {},
-  overlays: [ { chemin: 'vue', nom: 'Ma vue', fichier: 'vue.html' } ],
+  overlays: [ { chemin: 'vue', nom: 'Ma vue', fichier: 'vue.html' } ],   // + taille, voir « Les overlays »
   pages:    [ { chemin: 'reglage', nom: 'Mon écran', fichier: 'reglage.html' } ],
 
   libellesActions: { tester: 'Tester' },   // ← ce qui devient un bouton
@@ -215,6 +215,15 @@ Trois règles apprises sur les projets précédents :
 Dans OBS : Source ▸ Navigateur ▸ `http://127.0.0.1:47455/overlay/<module>/<vue>`
 (`127.0.0.1` plutôt que `localhost` : le navigateur d'OBS préfère parfois l'IPv6
 et n'affiche alors rien).
+
+**La taille de la source.** Par défaut, un overlay prend toute la scène et se
+place tout seul dans le coin choisi dans les réglages : le dashboard affiche
+alors « 1920 × 1080 — celle de ta scène » sous l'adresse. Un overlay à taille
+fixe la déclare, et c'est elle que le dashboard affiche :
+
+```js
+overlays: [{ chemin: 'bandeau', nom: 'Bandeau', fichier: 'bandeau.html', taille: { largeur: 900, hauteur: 70 } }]
+```
 
 ## Les actions, et lesquelles deviennent des boutons
 

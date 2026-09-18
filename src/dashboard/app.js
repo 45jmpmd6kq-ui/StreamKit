@@ -342,6 +342,14 @@ async function chargerModules() {
   remplirFiltreSources();
 }
 
+// Taille à donner à la source Navigateur dans OBS. Sans taille déclarée,
+// l'overlay prend toute la scène et se place tout seul dans son coin.
+function tailleOverlay(t) {
+  if (t)
+    return `<div class="taille">Taille dans OBS : <b>${Number(t.largeur)} × ${Number(t.hauteur)}</b></div>`;
+  return '<div class="taille">Taille dans OBS : <b>1920 × 1080</b> — celle de ta scène</div>';
+}
+
 function pointDeModule(m) {
   if (!m.actif) return '<span class="point"></span>';
   if (m.etat === 'demarre') return '<span class="point ok"></span>';
@@ -867,7 +875,7 @@ function dessinerDetail() {
       m.overlays.length
         ? `<div class="section"><h3>Overlays OBS</h3>
              <p style="color:var(--texte-doux);font-size:.9rem;margin:-.35rem 0 .85rem">
-               Dans OBS : <b>Sources ▸ + ▸ Navigateur</b>, puis colle l'adresse.
+               Dans OBS : <b>Sources ▸ + ▸ Navigateur</b>, colle l'adresse et règle la taille indiquée.
                Ajoute <code>?demo=1</code> pour placer la source, et retire-le ensuite.
              </p>
              ${m.overlays
@@ -876,6 +884,7 @@ function dessinerDetail() {
                     <div class="infos">
                       <div class="nom">${echapper(o.nom)}</div>
                       <code>http://127.0.0.1:${etat.general?.port ?? location.port}${o.url}</code>
+                      ${tailleOverlay(o.taille)}
                     </div>
                     <button class="btn petit" data-copier-url="${o.url}">Copier</button>
                     <a class="btn petit" href="${o.url}?demo=1" target="_blank" rel="noreferrer">Aperçu</a>

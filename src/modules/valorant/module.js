@@ -95,6 +95,8 @@ export default {
       nom: 'Bandeau de session',
       description: 'Rang, RR de session, bilan V/D et série.',
       fichier: 'bandeau.html',
+      // Le seul overlay a taille fixe : on deplace la source elle-meme dans OBS.
+      taille: { largeur: 900, hauteur: 70 },
     },
   ],
 
