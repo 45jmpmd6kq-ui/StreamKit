@@ -134,6 +134,13 @@ export const iniDe = (installation) => join(installation.dossier, 'TAGame', 'Con
 export const iniUtilisateur = (cheminLaunchLog) =>
   cheminLaunchLog ? join(dirname(dirname(cheminLaunchLog)), 'Config', 'TAStatsAPI.ini') : null;
 
+// Les fichiers de reglage de l'API : celui de chaque installation, puis la copie
+// utilisateur. Les deux modules Rocket League y lisent le meme port.
+export async function fichiersApi(cheminLaunchLog) {
+  const installations = await trouverInstallations();
+  return [...installations.map(iniDe), iniUtilisateur(cheminLaunchLog)].filter(Boolean);
+}
+
 // Etat de l'API d'apres les fichiers : { active, port, fichiers }.
 export function etatApi(fichiers) {
   const lus = fichiers

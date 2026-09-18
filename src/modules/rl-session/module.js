@@ -11,17 +11,10 @@
 //
 // Aucun droit Twitch : le module tourne meme sans chaine connectee.
 
-import { creerClient, PORT_PAR_DEFAUT } from './flux.js';
+import { abonner, PORT_PAR_DEFAUT } from './flux.js';
 import { creerSuiviParties } from './partie.js';
 import { creerLecteur, creerSuiviFichier, nomPlaylist, trouverLaunchLog } from './journal-jeu.js';
-import {
-  activerFichiers,
-  etatApi,
-  iniDe,
-  iniUtilisateur,
-  jeuLance,
-  trouverInstallations,
-} from './installation.js';
+import { activerFichiers, etatApi, fichiersApi, jeuLance } from './installation.js';
 import { accepter, ajouter, bilan, debutSession } from './session.js';
 
 // Evenements qui racontent la vie d'une partie : on les trace (niveau debug)
@@ -35,9 +28,7 @@ const EVENEMENTS_TRACES = new Set([
 ]);
 
 async function fichiersIni(ctx) {
-  const installations = await trouverInstallations();
-  const launchLog = await trouverLaunchLog(ctx.config.cheminLaunchLog);
-  return [...installations.map(iniDe), iniUtilisateur(launchLog)].filter(Boolean);
+  return fichiersApi(await trouverLaunchLog(ctx.config.cheminLaunchLog));
 }
 
 export default {
@@ -345,9 +336,10 @@ export default {
       },
     });
 
-    const client = creerClient({
+    // Connexion partagee avec les moments forts (voir abonner dans flux.js).
+    const client = abonner({
       port: Number(c.port) > 0 ? Number(c.port) : diag.port,
-      planifier: (fn, ms) => ctx.minuteur.delai(fn, ms),
+      surErreur: (e) => ctx.log.warn('Message du jeu mal traité : ' + (e?.message || e)),
       surEtat: (connecte) => {
         if (connecte) {
           ctx.log.ok('Connecté à Rocket League.');
@@ -375,7 +367,6 @@ export default {
         if (m.evenement === 'MatchDestroyed') lecteur.oublierPlaylist();
       },
     });
-    client.demarrer();
 
     // Hors connexion, on regarde de temps en temps si le jeu tourne, pour
     // donner le bon conseil (« lance le jeu » / « relance-le »).

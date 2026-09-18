@@ -12,7 +12,7 @@ import { mkdtempSync, writeFileSync, appendFileSync, readFileSync, existsSync, r
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { decouper, lireMessage, creerClient } from '../src/modules/rl-session/flux.js';
+import { decouper, lireMessage, creerClient, abonner } from '../src/modules/rl-session/flux.js';
 import { creerSuiviParties, trouverJoueur } from '../src/modules/rl-session/partie.js';
 import { creerLecteur, creerSuiviFichier } from '../src/modules/rl-session/journal-jeu.js';
 import { lireIni, activerIni, activerFichiers, etatApi } from '../src/modules/rl-session/installation.js';
@@ -103,6 +103,47 @@ test('client TCP : jeu ferme puis relance -> reconnexion automatique', async () 
   await attendre(() => connexions.length === 2 && client.estConnecte());
   assert.deepEqual(etats, [true, false, true]);
   client.arreter();
+  serveur.close();
+});
+
+// Le compteur et les moments forts ecoutent le meme jeu : une connexion pour
+// deux, et le bug de l'un ne prive pas l'autre de ses messages.
+test('connexion partagee : un seul client pour deux modules, qui recoivent tout', async () => {
+  const { serveur, connexions, port } = await serveurTcp();
+  const envoyer = (Event, Data) => connexions[0].write(JSON.stringify({ Event, Data: JSON.stringify(Data) }));
+  const recus = { a: [], b: [] };
+  const etats = { a: [], b: [] };
+  const a = abonner({ port, surMessage: (m) => recus.a.push(m.evenement), surEtat: (c) => etats.a.push(c) });
+  await attendre(() => etats.a.includes(true));
+
+  const erreurs = [];
+  const b = abonner({
+    port,
+    surMessage: (m) => {
+      recus.b.push(m.evenement);
+      throw new Error('bug du second module');
+    },
+    surEtat: (c) => etats.b.push(c),
+    surErreur: (e) => erreurs.push(e.message),
+  });
+  await attendre(() => etats.b.includes(true)); // la connexion etait deja ouverte
+  assert.equal(connexions.length, 1, 'une seule connexion au jeu');
+
+  envoyer('GoalScored', { Scorer: { Name: 'Élodie' } });
+  await attendre(() => recus.a.length === 1 && recus.b.length === 1);
+  assert.deepEqual(erreurs, ['bug du second module'], 'l’exception revient a son module');
+
+  b.arreter();
+  envoyer('MatchEnded', { WinnerTeamNum: 1 });
+  await attendre(() => recus.a.length === 2);
+  assert.equal(recus.b.length, 1, 'le second ne recoit plus rien');
+  assert.equal(a.estConnecte(), true);
+
+  const fermee = new Promise((ok) => {
+    connexions[0].once('close', ok);
+  });
+  a.arreter();
+  await fermee; // le dernier desabonnement ferme la connexion
   serveur.close();
 });
 

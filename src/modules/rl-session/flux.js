@@ -152,3 +152,70 @@ export function creerClient({
     estConnecte: () => connecte,
   };
 }
+
+// Une seule connexion par port, partagee par les modules Rocket League.
+//
+// Le compteur de session et les moments forts ecoutent le meme jeu. Rien ne
+// dit que l'API accepte deux clients a la fois (sa documentation est muette) :
+// on n'ouvre donc qu'une connexion, et chaque module s'y abonne. Elle vit tant
+// qu'un module l'ecoute.
+//
+// Ses tentatives de reconnexion passent par setTimeout et non par un
+// ctx.minuteur : elle n'appartient a aucun module -- celui qui l'a ouverte peut
+// s'arreter pendant que l'autre l'ecoute encore. Le dernier desabonnement les
+// coupe. Un module qui leve une exception ne prive pas l'autre du message :
+// elle lui revient par surErreur.
+const partagees = new Map(); // port -> { client, abonnes, minuteur }
+
+function ouvrirPartagee(port, creerSocket) {
+  const p = { abonnes: new Set(), minuteur: null, client: null };
+  const chacun = (fn) => {
+    for (const a of [...p.abonnes]) {
+      try {
+        fn(a);
+      } catch (e) {
+        a.surErreur(e);
+      }
+    }
+  };
+  p.client = creerClient({
+    port,
+    surMessage: (m) => chacun((a) => a.surMessage(m)),
+    surEtat: (connecte) => chacun((a) => a.surEtat(connecte)),
+    planifier: (fn, ms) => {
+      p.minuteur = setTimeout(fn, ms);
+    },
+    ...(creerSocket ? { creerSocket } : {}),
+  });
+  partagees.set(port, p);
+  p.client.demarrer();
+  return p;
+}
+
+export function abonner({
+  port = PORT_PAR_DEFAUT,
+  surMessage,
+  surEtat = () => {},
+  surErreur = () => {},
+  creerSocket,
+}) {
+  const p = partagees.get(port) ?? ouvrirPartagee(port, creerSocket);
+  const abonne = { surMessage, surEtat, surErreur };
+  p.abonnes.add(abonne);
+  // Deja connectee : le nouveau venu l'apprend comme s'il avait vu la connexion.
+  if (p.client.estConnecte()) {
+    queueMicrotask(() => {
+      if (p.abonnes.has(abonne) && p.client.estConnecte()) surEtat(true);
+    });
+  }
+
+  return {
+    estConnecte: () => p.client.estConnecte(),
+    arreter() {
+      if (!p.abonnes.delete(abonne) || p.abonnes.size) return;
+      p.client.arreter();
+      clearTimeout(p.minuteur);
+      if (partagees.get(port) === p) partagees.delete(port);
+    },
+  };
+}
