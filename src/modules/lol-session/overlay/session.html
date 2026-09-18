@@ -758,14 +758,18 @@
       // affiche a change, pas a chaque etat recu.
       let signatureTableau = "";
 
+      // Les coins choisis dans les reglages du module.
+      function placer(theme) {
+        $("bandeau").dataset.coin = coin(theme?.coinBandeau, "top-left");
+        $("tableau").dataset.coin = coin(theme?.coinTableau, "center");
+      }
+
       function appliquer(etat) {
         if (!etat) return;
-        const theme = etat.theme || {};
         const visible = etat.visible || {};
         const bandeau = $("bandeau");
         const tableau = $("tableau");
-        bandeau.dataset.coin = coin(theme.coinBandeau, "top-left");
-        tableau.dataset.coin = coin(theme.coinTableau, "center");
+        placer(etat.theme);
 
         rendreBandeau(etat);
         const signature = JSON.stringify([etat.rang, etat.bilan, etat.tableau]);
@@ -787,7 +791,6 @@
       // sans lancer une partie. A retirer une fois cale. (Le bouton « Afficher un
       // exemple » du module fait la meme chose sans toucher a l'adresse.)
       const DEMO = {
-        theme: { coinBandeau: "top-left", coinTableau: "center" },
         visible: { bandeau: true, tableau: true },
         rang: { nom: "Émeraude II", palier: "emerald", lp: "2 LP", progression: 0.02, couleur: "#2EC4A0", evolution: "promu" },
         bilan: {
@@ -831,10 +834,15 @@
         },
       };
 
+      const flux = new EventSource(BASE + "/flux");
+
       if (new URLSearchParams(location.search).has("demo")) {
+        // En demo on n'ecoute que le theme : l'exemple suit les coins des
+        // reglages des qu'on les enregistre, et l'etat reel (client ferme, rien a
+        // montrer) ne l'efface pas.
+        flux.addEventListener("etat", (m) => placer(JSON.parse(m.data).theme));
         appliquer(DEMO);
       } else {
-        const flux = new EventSource(BASE + "/flux");
         flux.addEventListener("etat", (m) => appliquer(JSON.parse(m.data)));
         // EventSource se reconnecte seul ; on ne masque que si le flux est perdu.
         flux.addEventListener("error", () => {

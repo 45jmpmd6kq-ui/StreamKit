@@ -566,12 +566,15 @@
         setTimeout(demo, 27000);
       }
 
+      // En demo aussi, le flux donne les positions : l'exemple suit les reglages
+      // des qu'on les enregistre. Les vrais moments, eux, ne s'y melent pas.
+      const flux = new EventSource(BASE + "/flux");
+      flux.addEventListener("etat", (e) => theme(lire(e)?.theme));
+
       if (new URLSearchParams(location.search).has("demo")) {
         theme({});
         demo();
       } else {
-        const flux = new EventSource(BASE + "/flux");
-        flux.addEventListener("etat", (e) => theme(lire(e)?.theme));
         flux.addEventListener("moment", (e) => moment(lire(e)));
         flux.addEventListener("effacer", effacer);
       }

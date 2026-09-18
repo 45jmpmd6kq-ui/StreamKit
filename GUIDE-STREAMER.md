@@ -197,7 +197,11 @@ tu veux, puis clique sur **Enregistrer** en bas.
      pour les annonces) ;
    - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux.
 3. Pour le placer sans attendre un vrai événement, ajoute `?demo=1` à la fin de
-   l'adresse. **Retire-le** une fois que c'est calé.
+   l'adresse (collé, sans espace). Tant que l'exemple est à l'écran, change la
+   position dans les réglages du module et clique **Enregistrer** : l'exemple se
+   déplace aussitôt. **Retire** `?demo=1` une fois que c'est calé. Pour le suivi de
+   session et les moments forts LoL, le bouton **Afficher un exemple** du module
+   montre aussi un exemple, sans toucher à l'adresse.
 
 Pour vérifier : dans **Vue d'ensemble**, la carte **OBS** compte les sources
 connectées.
