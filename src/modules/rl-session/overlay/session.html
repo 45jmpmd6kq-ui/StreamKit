@@ -133,7 +133,7 @@
           serie.classList.add(s.serie.victoire ? 'victoires' : 'defaites');
           serie.textContent = s.serie.victoire
             ? '🔥 ' + s.serie.n + ' victoires d’affilée'
-            : s.serie.n + ' défaites d’affilée';
+            : '📉 ' + s.serie.n + ' défaites d’affilée';
         } else {
           serie.textContent = 'Dernière partie : ' + (s.serie.victoire ? 'victoire' : 'défaite');
         }
