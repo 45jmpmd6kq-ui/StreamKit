@@ -65,11 +65,8 @@ export function debutSession({ mode = 'launch', lanceA, reinitA = 0, maintenant 
   return Math.max(depart, reinitA || 0);
 }
 
-// Libelle court pour l'overlay : « Classé 3v3 » quand toute la session s'est
-// jouee dans la meme playlist, sinon le nom du filtre.
-const LIBELLES_FILTRE = { classe: 'Classé', enligne: 'En ligne', toutes: 'Toutes parties' };
-
-export function bilan(historique, depuis, filtre = 'classe') {
+// Bilan de la session : victoires, defaites et serie en cours.
+export function bilan(historique, depuis) {
   const parties = historique.filter((p) => p.a >= depuis);
   const victoires = parties.filter((p) => p.victoire).length;
 
@@ -77,18 +74,11 @@ export function bilan(historique, depuis, filtre = 'classe') {
   const derniere = parties[parties.length - 1] ?? null;
   for (let i = parties.length - 1; i >= 0 && parties[i].victoire === derniere.victoire; i--) serie++;
 
-  const playlists = new Set(parties.map((p) => p.playlist));
-  const libelle =
-    playlists.size === 1 && PLAYLISTS[[...playlists][0]]
-      ? nomPlaylist([...playlists][0])
-      : (LIBELLES_FILTRE[filtre] ?? 'Session');
-
   return {
     victoires,
     defaites: parties.length - victoires,
     parties: parties.length,
     serie: derniere ? { victoire: derniere.victoire, n: serie } : null,
-    libelle,
     depuis,
   };
 }

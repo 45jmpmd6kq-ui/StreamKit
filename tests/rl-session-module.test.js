@@ -144,7 +144,6 @@ test('une soiree : classe gagne, prive ignore, classe perdu', async () => {
     // 1. Classe 3v3, victoire 3-1.
     envoyer(connexions[0], partie('G1', { equipe: 0, score: [3, 1], gagnant: 0 }));
     await attendre(() => t.session()?.victoires === 1, 'victoire comptee');
-    assert.equal(t.session().libelle, 'Classé 3v3');
     appendFileSync(launchLog, '[0572.42] ScriptLog: Match Ended - [Reservation: , MatchID: ]\r\n');
 
     // 2. Match prive : aucune ligne de file d'attente, donc pas de playlist.
@@ -166,7 +165,6 @@ test('une soiree : classe gagne, prive ignore, classe perdu', async () => {
     const s = t.session();
     assert.deepEqual([s.victoires, s.defaites, s.parties], [1, 1, 2]);
     assert.deepEqual(s.serie, { victoire: false, n: 1 });
-    assert.equal(s.libelle, 'Classé', 'deux playlists classees dans la session');
     assert.deepEqual(t.compteurs, { victoires: 1, defaites: 1 });
     assert.equal(t.memoire().historique.length, 2, 'la session survit a un redemarrage');
 

@@ -280,7 +280,7 @@ export default {
     const sauver = () => ctx.etat.sauver({ historique, reinitA });
 
     const depuis = () => debutSession({ mode: c.sessionMode, lanceA, reinitA });
-    const calculer = () => bilan(historique, depuis(), c.filtre);
+    const calculer = () => bilan(historique, depuis());
     const pousser = () => ctx.overlay.etat('session', { theme: { coin: c.coin }, session: calculer() });
     pousser();
 

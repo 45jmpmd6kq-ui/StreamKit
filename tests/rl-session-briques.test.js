@@ -402,25 +402,21 @@ test('filtre : classe seulement ecarte non classe, prive et playlist inconnue', 
   assert.match(accepter(r(13), { format: '1' }).raison, /3v3/);
 });
 
-test('bilan : victoires, defaites, serie en cours et libelle', () => {
+test('bilan : victoires, defaites et serie en cours', () => {
   const h = [];
   const t0 = 1_000_000;
   [true, false, true, true, true].forEach((v, i) => ajouter(h, { victoire: v, playlist: 13 }, t0 + i));
   const b = bilan(h, t0);
   assert.deepEqual([b.victoires, b.defaites, b.serie], [4, 1, { victoire: true, n: 3 }]);
-  assert.equal(b.libelle, 'Classé 3v3');
 
   ajouter(h, { victoire: false, playlist: 11 }, t0 + 9);
-  const melange = bilan(h, t0);
-  assert.equal(melange.libelle, 'Classé', 'deux playlists : le nom du filtre');
-  assert.deepEqual(melange.serie, { victoire: false, n: 1 });
+  assert.deepEqual(bilan(h, t0).serie, { victoire: false, n: 1 });
 
   assert.deepEqual(bilan(h, t0 + 100), {
     victoires: 0,
     defaites: 0,
     parties: 0,
     serie: null,
-    libelle: 'Classé',
     depuis: t0 + 100,
   });
 });

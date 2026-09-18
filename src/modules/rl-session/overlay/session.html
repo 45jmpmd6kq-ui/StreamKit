@@ -17,7 +17,6 @@
       :root {
         --victoire: #3ddc84;
         --defaite: #ff4d5e;
-        --violet: #c3a6ff;
         --or: #ffd24a;
         --gris: #a8a8bd;
         /* Bahnschrift est livrée avec Windows 10 et 11 : même famille que le
@@ -43,7 +42,9 @@
         box-sizing: border-box;
         width: 250px;
         margin: 24px;
-        padding: 12px 18px 12px;
+        /* Pas de titre : le haut des chiffres et le pied de la serie sont a la
+           meme distance du bord (17 px), d'ou le haut a 13 et le bas a 12. */
+        padding: 13px 18px 12px;
         border-radius: 18px;
         background: rgba(14, 16, 24, 0.9);
         border: 1px solid rgba(255, 255, 255, 0.09);
@@ -54,18 +55,7 @@
       }
       #carte.visible { opacity: 1; transform: none; }
 
-      .etiquette {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        color: var(--violet);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .score { display: flex; align-items: baseline; justify-content: center; gap: 14px; margin: 4px 0 0; }
+      .score { display: flex; align-items: baseline; justify-content: center; gap: 14px; }
       /* Le W et le L collent au chiffre : une ligne de moins qu'avec les mots
          sous le score, donc une carte plus basse a l'ecran. */
       .paire { display: inline-flex; align-items: baseline; gap: 3px; }
@@ -97,7 +87,6 @@
   </head>
   <body data-coin="top-left">
     <div id="carte">
-      <div class="etiquette" id="etiquette">Session</div>
       <div class="score nb">
         <span class="paire victoires"><span class="gros" id="victoires">0</span><span class="lettre">W</span></span>
         <span class="tiret">–</span>
@@ -133,7 +122,6 @@
         const s = etat?.session;
         if (!s) return;
 
-        $('etiquette').textContent = 'Session · ' + (s.libelle || 'Rocket League');
         chiffre($('victoires'), s.victoires);
         chiffre($('defaites'), s.defaites);
 
@@ -164,7 +152,7 @@
       if (demo) {
         flux.addEventListener('etat', (m) => appliquerTheme(JSON.parse(m.data).theme));
         appliquer({
-          session: { victoires: 7, defaites: 3, libelle: 'Classé 3v3', serie: { victoire: true, n: 3 } },
+          session: { victoires: 7, defaites: 3, serie: { victoire: true, n: 3 } },
         });
       } else {
         flux.addEventListener('etat', (m) => appliquer(JSON.parse(m.data)));
