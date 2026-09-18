@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — moments forts Rocket League</title>
+    <style>
+      /* Fond transparent obligatoire : OBS incruste la page telle quelle.
+         Source a la taille de la scene (1920 x 1080). Tout se cale sous le
+         tableau de score du jeu, en haut au centre (maquette C) : l'annonce entre
+         le score et le compte a rebours, puis une pastille qui reste. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      :root {
+        --fond: rgba(8, 12, 20, 0.93);
+        --froid: #4da3ff;
+        --tiede: #ffb347;
+        --chaud: #ff5a3c;
+        --braise: #ff7a3c;
+        --rouge: #ff4a3d;
+        --creme: #fff3e6;
+        --peche: #ffe3d1;
+        /* Bahnschrift est livree avec Windows 10 et 11 : meme famille que les
+           autres overlays StreamKit, sans police a telecharger. */
+        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+      }
+
+      body {
+        font-family: var(--typo);
+        color: #fff;
+      }
+
+      /* --- Annonces (3,8 s) ------------------------------------------------------ */
+
+      #annonces {
+        position: absolute;
+        top: 126px;
+        left: 50%;
+        width: 1140px;
+        height: 225px;
+        margin-left: -570px;
+      }
+      .annonce {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        opacity: 0;
+        filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.55));
+      }
+      .annonce.joue {
+        animation: annonce 3.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        transform-origin: 50% 0;
+      }
+      /* Elle apparait, tient, puis se replie vers le score : la pastille prend
+         le relais. */
+      @keyframes annonce {
+        0% { opacity: 0; transform: scaleX(0.3); }
+        11% { opacity: 1; transform: scaleX(1.02); }
+        16% { opacity: 1; transform: scale(1); }
+        84% { opacity: 1; transform: translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-60px) scale(0.3); }
+      }
+      .overtime.joue {
+        animation-name: annonce-choc;
+      }
+      @keyframes annonce-choc {
+        0% { opacity: 0; transform: scale(1.8); }
+        10% { opacity: 1; transform: scale(0.95); }
+        14% { opacity: 1; transform: scale(1.03); }
+        18% { opacity: 1; transform: scale(1); }
+        84% { opacity: 1; transform: translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-60px) scale(0.3); }
+      }
+
+      .filet {
+        position: absolute;
+        left: -60px;
+        right: -60px;
+        height: 3px;
+      }
+      .filet.haut { top: 0; }
+      .filet.bas { bottom: 0; }
+      .chauffe .filet {
+        background: linear-gradient(90deg, rgba(77, 163, 255, 0) 0%, var(--froid) 20%, var(--tiede) 50%, var(--chaud) 80%, rgba(255, 90, 60, 0) 100%);
+      }
+      .overtime .filet {
+        background: linear-gradient(90deg, rgba(255, 90, 50, 0) 0%, #ff5a32 20%, #ffd2b8 50%, #ff5a32 80%, rgba(255, 90, 50, 0) 100%);
+      }
+
+      .corps {
+        position: absolute;
+        top: 6px;
+        right: 0;
+        bottom: 6px;
+        left: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        background: var(--fond);
+        clip-path: polygon(42px 0, calc(100% - 42px) 0, 100% 50%, calc(100% - 42px) 100%, 42px 100%, 0 50%);
+      }
+      .chauffe .corps { padding: 0 84px; gap: 45px; }
+      .overtime .corps { padding: 0 96px; gap: 51px; }
+
+      /* Thermometre : le mercure monte du bleu au rouge. */
+      .thermo { position: relative; width: 66px; height: 165px; flex-shrink: 0; }
+      .thermo .tube {
+        position: absolute;
+        left: 20px;
+        top: 0;
+        width: 27px;
+        height: 123px;
+        box-sizing: border-box;
+        border: 4px solid rgba(255, 255, 255, 0.85);
+        border-bottom: none;
+        border-radius: 14px 14px 0 0;
+        overflow: hidden;
+      }
+      .thermo .mercure {
+        position: absolute;
+        left: 4px;
+        right: 4px;
+        bottom: 0;
+        height: 10%;
+        border-radius: 4px 4px 0 0;
+        background: var(--froid);
+      }
+      .thermo .bulbe {
+        position: absolute;
+        left: 6px;
+        top: 111px;
+        width: 54px;
+        height: 54px;
+        box-sizing: border-box;
+        border-radius: 50%;
+        border: 4px solid rgba(255, 255, 255, 0.85);
+        background: var(--froid);
+      }
+      .joue .mercure { animation: mercure 3.8s ease-in-out both; }
+      .joue .bulbe { animation: bulbe 3.8s ease-in-out both; }
+      @keyframes mercure {
+        0%, 14% { height: 10%; background: var(--froid); }
+        34% { background: var(--tiede); }
+        55%, 100% { height: 92%; background: var(--chaud); }
+      }
+      @keyframes bulbe {
+        0%, 14% { background: var(--froid); }
+        34% { background: var(--tiede); }
+        55%, 100% { background: var(--chaud); }
+      }
+
+      .textes { display: flex; flex-direction: column; min-width: 0; flex-grow: 1; }
+      .chauffe .textes { gap: 15px; }
+      .overtime .textes { gap: 18px; }
+      .surtitre {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.24em;
+        line-height: 1;
+        white-space: nowrap;
+        color: var(--tiede);
+      }
+      .titre {
+        font-weight: 700;
+        font-style: italic;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      /* 76 px : « GAME DE CHAUFFE » tient dans sa colonne, a cote des ondes. */
+      .chauffe .titre {
+        font-size: 76px;
+        letter-spacing: 0.06em;
+        color: var(--creme);
+        text-shadow: 0 0 36px rgba(255, 140, 60, 0.55);
+      }
+      .chauffe.joue .titre { animation: titre 3.8s ease-out both; }
+      @keyframes titre {
+        0%, 5% { opacity: 0; letter-spacing: 0.4em; }
+        28%, 100% { opacity: 1; letter-spacing: 0.06em; }
+      }
+      /* Le texte du streamer : deux lignes au plus, puis des points de suspension. */
+      .texte {
+        font-size: 30px;
+        line-height: 1.15;
+        color: rgba(243, 238, 230, 0.88);
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+      }
+      /* Texte vide : la ligne disparait, et son espace avec elle. */
+      .texte[hidden] { display: none; }
+      .vagues { width: 60px; height: 96px; flex-shrink: 0; opacity: 0; }
+      .joue .vagues { animation: vagues-porte 3.8s linear both; }
+      @keyframes vagues-porte {
+        0%, 52% { opacity: 0; }
+        60%, 100% { opacity: 1; }
+      }
+      .vagues svg { display: block; animation: vagues 1.4s ease-in-out infinite; }
+      @keyframes vagues {
+        0% { opacity: 0; transform: translateY(9px); }
+        40% { opacity: 1; }
+        100% { opacity: 0; transform: translateY(-15px); }
+      }
+
+      .overtime .titre {
+        font-size: 120px;
+        letter-spacing: 0.08em;
+        color: var(--peche);
+        animation: lueur 1.2s ease-in-out infinite;
+      }
+      @keyframes lueur {
+        0%, 100% { text-shadow: 0 0 27px rgba(255, 90, 50, 0.45), 0 4px 0 #5c1a10; }
+        50% { text-shadow: 0 0 51px rgba(255, 90, 50, 0.9), 0 4px 0 #5c1a10; }
+      }
+      .soustitre {
+        font-size: 27px;
+        font-weight: 700;
+        letter-spacing: 0.26em;
+        line-height: 1;
+        white-space: nowrap;
+        color: #ff9f7a;
+      }
+      /* La secousse suit l'impact du titre. */
+      .joue .secousse { animation: secousse 3.8s linear both; }
+      @keyframes secousse {
+        0%, 17% { transform: translate(0, 0); }
+        19% { transform: translate(-12px, 3px); }
+        21% { transform: translate(10px, -3px); }
+        23% { transform: translate(-7px, 2px); }
+        25% { transform: translate(6px, 0); }
+        27% { transform: translate(-3px, 0); }
+        29%, 100% { transform: translate(0, 0); }
+      }
+      .secousse { position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
+      .eclat {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 210px;
+        height: 100%;
+        opacity: 0;
+        background: linear-gradient(90deg, rgba(255, 210, 184, 0) 0%, rgba(255, 210, 184, 0.3) 50%, rgba(255, 210, 184, 0) 100%);
+      }
+      .joue .eclat { animation: eclat 3.8s ease-in-out both; }
+      @keyframes eclat {
+        0%, 20% { opacity: 0; transform: translateX(-300px) skewX(-20deg); }
+        26% { opacity: 1; }
+        45%, 100% { opacity: 0; transform: translateX(1350px) skewX(-20deg); }
+      }
+      .chrono { display: block; flex-shrink: 0; }
+      .aiguille { animation: aiguille 1s steps(12) infinite; transform-origin: 42px 50px; }
+      @keyframes aiguille {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      /* --- Pastilles : elles restent (chauffe : la partie ; overtime : la
+         prolongation). Cote a cote si les deux arrivent dans la meme partie. */
+
+      #pastilles {
+        position: absolute;
+        top: 102px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+      }
+      .pastille {
+        display: none;
+        height: 51px;
+        box-sizing: border-box;
+        padding: 0 30px;
+        align-items: center;
+        border-radius: 26px;
+        background: var(--fond);
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .pastille.visible {
+        display: flex;
+        animation: pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+      }
+      .pastille.sortie { animation: sortie 0.3s ease-in both; }
+      @keyframes pop {
+        0% { opacity: 0; transform: scale(0.6); }
+        70% { opacity: 1; transform: scale(1.06); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+      @keyframes sortie {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.8); }
+      }
+      .pastille.chauffe {
+        gap: 13px;
+        border: 3px solid var(--braise);
+        box-shadow: 0 0 24px rgba(255, 122, 60, 0.45);
+        letter-spacing: 0.16em;
+        color: var(--tiede);
+      }
+      .pastille.overtime {
+        gap: 15px;
+        border: 3px solid var(--rouge);
+        box-shadow: 0 0 24px rgba(255, 74, 61, 0.45);
+        font-style: italic;
+        letter-spacing: 0.14em;
+        color: var(--peche);
+      }
+      .mini-thermo { position: relative; width: 18px; height: 33px; flex-shrink: 0; }
+      .mini-thermo .tube {
+        position: absolute;
+        left: 4px;
+        top: 0;
+        width: 10px;
+        height: 23px;
+        box-sizing: border-box;
+        border: 3px solid rgba(255, 255, 255, 0.85);
+        border-bottom: none;
+        border-radius: 5px 5px 0 0;
+        overflow: hidden;
+      }
+      .mini-thermo .tube div { position: absolute; left: 0; right: 0; bottom: 0; height: 90%; background: var(--chaud); }
+      .mini-thermo .bulbe {
+        position: absolute;
+        left: 0;
+        top: 15px;
+        width: 18px;
+        height: 18px;
+        box-sizing: border-box;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.85);
+        background: var(--chaud);
+      }
+      .point {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: var(--rouge);
+        animation: point 1.2s ease-out infinite;
+      }
+      @keyframes point {
+        0% { opacity: 0.35; transform: scale(0.8); }
+        10% { opacity: 1; transform: scale(1.2); }
+        20% { opacity: 0.5; transform: scale(0.9); }
+        30% { opacity: 1; transform: scale(1.15); }
+        50%, 100% { opacity: 0.35; transform: scale(0.8); }
+      }
+
+      /* --- Pouls sur les bords, pendant la prolongation ---------------------------- */
+
+      #vignette {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+        pointer-events: none;
+      }
+      #vignette.visible { opacity: 1; }
+      #vignette div {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        box-shadow: inset 0 0 225px 36px rgba(255, 40, 40, 0.6);
+        animation: coeur 1.2s ease-out infinite;
+      }
+      @keyframes coeur {
+        0% { opacity: 0; }
+        10% { opacity: 0.9; }
+        20% { opacity: 0.25; }
+        30% { opacity: 0.75; }
+        50%, 100% { opacity: 0; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .annonce.joue,
+        .overtime.joue,
+        .joue .mercure,
+        .joue .bulbe,
+        .chauffe.joue .titre,
+        .joue .secousse,
+        .joue .eclat,
+        .vagues svg,
+        .aiguille,
+        .point,
+        .pastille.visible,
+        #vignette div {
+          animation: none;
+        }
+        .annonce.joue { opacity: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="vignette"><div></div></div>
+
+    <div id="annonces">
+      <div class="annonce chauffe" id="annonce-chauffe">
+        <div class="filet haut"></div>
+        <div class="corps">
+          <div class="thermo">
+            <div class="tube"><div class="mercure"></div></div>
+            <div class="bulbe"></div>
+          </div>
+          <div class="textes">
+            <div class="surtitre">PREMIÈRE PARTIE DE LA SESSION</div>
+            <div class="titre">GAME DE CHAUFFE</div>
+            <div class="texte" id="texte-chauffe"></div>
+          </div>
+          <div class="vagues">
+            <svg width="60" height="96" viewBox="0 0 40 64">
+              <path d="M10 58 C 4 50, 16 44, 10 36 S 16 22, 10 14" fill="none" stroke="#ffb347" stroke-width="3" stroke-linecap="round"></path>
+              <path d="M24 60 C 18 52, 30 46, 24 38 S 30 24, 24 16" fill="none" stroke="#ff7a3c" stroke-width="3" stroke-linecap="round"></path>
+              <path d="M36 54 C 31 47, 40 42, 36 35 S 40 24, 36 18" fill="none" stroke="#ffb347" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="filet bas"></div>
+      </div>
+
+      <div class="annonce overtime" id="annonce-overtime">
+        <div class="secousse">
+          <div class="filet haut"></div>
+          <div class="corps">
+            <div class="eclat"></div>
+            <svg class="chrono" width="126" height="138" viewBox="0 0 84 92">
+              <rect x="34" y="0" width="16" height="9" rx="3" fill="#ff7a4d"></rect>
+              <circle cx="42" cy="50" r="36" fill="none" stroke="#ff7a4d" stroke-width="5"></circle>
+              <g class="aiguille"><line x1="42" y1="50" x2="42" y2="24" stroke="#ffe3d1" stroke-width="5" stroke-linecap="round"></line></g>
+              <circle cx="42" cy="50" r="5" fill="#ffe3d1"></circle>
+            </svg>
+            <div class="textes">
+              <div class="titre">OVERTIME</div>
+              <div class="soustitre">PROCHAIN BUT GAGNANT</div>
+            </div>
+          </div>
+          <div class="filet bas"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pastilles">
+      <div class="pastille chauffe" id="pastille-chauffe">
+        <div class="mini-thermo">
+          <div class="tube"><div></div></div>
+          <div class="bulbe"></div>
+        </div>
+        CHAUFFE
+      </div>
+      <div class="pastille overtime" id="pastille-overtime">
+        <span class="point"></span>
+        OVERTIME
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+
+      // Chemin construit depuis location.pathname : un relatif remplacerait le
+      // dernier segment de l'URL et taperait /overlay/rl-moments/flux.
+      const BASE = location.pathname.replace(/\/$/, "");
+
+      const DUREE_ANNONCE_MS = 3800; // aligne sur l'animation .annonce
+      const MAX_ATTENTE = 3;
+
+      const TEXTE_DEFAUT = "On se chauffe, soyez indulgents";
+      let options = { texte: TEXTE_DEFAUT, pouls: true };
+      let voulu = { chauffe: false, overtime: false }; // pastilles demandees par le module
+      let enCours = null; // l'annonce qui joue : les pastilles attendent qu'elle se replie
+      const attente = [];
+
+      // Une pastille qui part s'efface au lieu de disparaitre d'un coup.
+      function montrer(el, oui) {
+        const visible = el.classList.contains("visible") && !el.classList.contains("sortie");
+        if (oui === visible) return;
+        clearTimeout(el._minuteur);
+        if (oui) {
+          el.classList.remove("sortie");
+          el.classList.add("visible");
+          return;
+        }
+        el.classList.add("sortie");
+        el._minuteur = setTimeout(() => el.classList.remove("visible", "sortie"), 300);
+      }
+
+      function majPastilles() {
+        const libre = !enCours;
+        montrer($("pastille-chauffe"), libre && voulu.chauffe);
+        montrer($("pastille-overtime"), libre && voulu.overtime);
+        $("vignette").classList.toggle("visible", libre && voulu.overtime && options.pouls);
+      }
+
+      function rejouer(el, classe) {
+        el.classList.remove(classe);
+        void el.offsetWidth; // relance l'animation meme si elle vient de jouer
+        el.classList.add(classe);
+      }
+
+      function suivante() {
+        const m = attente.shift();
+        if (!m) {
+          enCours = null;
+          majPastilles();
+          return;
+        }
+        enCours = m.type;
+        majPastilles();
+        if (m.type === "chauffe") {
+          const texte = String(m.texte ?? options.texte ?? "").trim();
+          $("texte-chauffe").textContent = texte;
+          $("texte-chauffe").hidden = !texte;
+        }
+        const el = $(m.type === "chauffe" ? "annonce-chauffe" : "annonce-overtime");
+        rejouer(el, "joue");
+        setTimeout(() => {
+          el.classList.remove("joue");
+          suivante();
+        }, DUREE_ANNONCE_MS);
+      }
+
+      function moment(m) {
+        if (!m || (m.type !== "chauffe" && m.type !== "overtime")) return;
+        attente.push(m);
+        if (attente.length > MAX_ATTENTE) attente.shift();
+        if (!enCours) suivante();
+      }
+
+      // pastilles : false en demo, ou l'exemple decide seul de ce qui s'affiche.
+      function appliquer(e, { pastilles = true } = {}) {
+        if (!e || typeof e !== "object") return;
+        options = { texte: typeof e.texte === "string" ? e.texte : TEXTE_DEFAUT, pouls: e.pouls !== false };
+        if (pastilles) voulu = { chauffe: !!e.pastilles?.chauffe, overtime: !!e.pastilles?.overtime };
+        majPastilles();
+      }
+
+      const lire = (e) => {
+        try {
+          return JSON.parse(e.data);
+        } catch {
+          return null;
+        }
+      };
+
+      // ?demo=1 : la chauffe puis l'overtime, en boucle, pour placer la source
+      // dans OBS. Le flux sert quand meme : le texte et le pouls des reglages
+      // s'y voient des qu'on les enregistre.
+      const demo = new URLSearchParams(location.search).has("demo");
+      const flux = new EventSource(BASE + "/flux");
+      flux.addEventListener("etat", (e) => appliquer(lire(e), { pastilles: !demo }));
+
+      if (demo) {
+        const poser = (chauffe, overtime) => {
+          voulu = { chauffe, overtime };
+          majPastilles();
+        };
+        const boucle = () => {
+          poser(true, false);
+          moment({ type: "chauffe" });
+          setTimeout(() => poser(false, false), 7000);
+          setTimeout(() => {
+            poser(false, true);
+            moment({ type: "overtime" });
+          }, 8000);
+          setTimeout(() => poser(false, false), 15000);
+        };
+        boucle();
+        setInterval(boucle, 16000);
+      } else {
+        flux.addEventListener("moment", (e) => moment(lire(e)));
+      }
+    </script>
+  </body>
+</html>

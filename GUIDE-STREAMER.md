@@ -2,7 +2,7 @@
 
 StreamKit rassemble des outils pour ton live dans une seule application Windows :
 musique demandée par les viewers, clips au chat, prédictions et sondages Twitch en
-direct à l'écran, annonce des pubs, voiture au hasard et compteur de victoires sur Rocket League, bandeau
+direct à l'écran, annonce des pubs, voiture au hasard, compteur de victoires et moments forts sur Rocket League, bandeau
 de session Valorant, suivi de session et moments forts League of Legends. Tout tourne **sur ton PC** : pas de compte
 à créer chez nous, pas de serveur, et tes accès restent chez toi.
 
@@ -25,6 +25,7 @@ veux utiliser.
 | Clips                              | Rien de plus — mais on ne peut clipper que **pendant un live**             |
 | Overlay W/L (Valorant)             | Valorant installé sur le même PC                                           |
 | Compteur de session (Rocket League) | Rocket League installé sur le même PC (Epic ou Steam). **Pas de BakkesMod** : le module passe par l'API officielle du jeu, compatible anti-triche |
+| Moments forts (Rocket League) | La même API que le compteur de session, à activer une fois (bouton dans le module **Compteur de session**, même s'il reste éteint). Rien sur Twitch |
 | Suivi de session (League of Legends) | League of Legends installé sur le même PC. Rien à connecter : le module lit le client du jeu, sans clé Riot ni compte à relier |
 | Moments forts (League of Legends) | League of Legends installé sur le même PC. Twitch seulement pour les messages dans le chat et les clips (un clip ne se crée que **pendant un live**) |
 
@@ -156,6 +157,16 @@ tu veux, puis clique sur **Enregistrer** en bas.
   partie classée met le compteur à jour. Les matchs privés, les parties hors
   ligne et les replays ne comptent jamais. **Réinitialiser la session** remet le
   compteur à zéro en début de live.
+- **Moments forts** (Rocket League) : même API que le compteur de session (si ce
+  n'est pas déjà fait, active-la depuis le module **Compteur de session**, puis
+  relance le jeu). Deux moments, sous le score du jeu : la **game de chauffe**,
+  annoncée au premier coup d'envoi de ta première partie avec ton texte, puis
+  une pastille « CHAUFFE » jusqu'à la fin de cette partie ; l'**overtime**, annoncé
+  dès que la prolongation commence, puis une pastille « OVERTIME » et un pouls
+  rouge sur les bords de l'écran jusqu'au but en or. La chauffe revient après
+  3 h sans jouer ; entre deux lives rapprochés, **Réarmer la game de chauffe** la
+  relance. L'entraînement libre et les replays ne comptent pas. **Afficher un
+  exemple** joue les deux (16 secondes) pour placer la source dans OBS.
 - **Suivi de session** (League of Legends) : rien à connecter, lance le jeu.
   Deux éléments, dans la même source OBS : un **bandeau** (rang, LP gagnés sur la
   session, bilan, série) et un **tableau de bord** (courbe des LP, dernières
@@ -190,7 +201,7 @@ tu veux, puis clique sur **Enregistrer** en bas.
 1. Dans StreamKit, ouvre le module. Dans **Overlays OBS**, clique sur **Copier**.
 2. Dans OBS : **Sources** → **+** → **Navigateur**, et colle l'adresse dans
    **URL**. Pour la taille :
-   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Annonce de pub, Suivi de session LoL, Moments forts LoL** : la taille de ta scène (par exemple
+   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Moments forts RL, Annonce de pub, Suivi de session LoL, Moments forts LoL** : la taille de ta scène (par exemple
      1920 × 1080). L'overlay se place tout seul dans le coin choisi dans les
      réglages du module (pour le suivi LoL, une position pour le bandeau et une
      pour le tableau de bord ; pour les moments forts, une pour les cartes et une
@@ -200,8 +211,8 @@ tu veux, puis clique sur **Enregistrer** en bas.
    l'adresse (collé, sans espace). Tant que l'exemple est à l'écran, change la
    position dans les réglages du module et clique **Enregistrer** : l'exemple se
    déplace aussitôt. **Retire** `?demo=1` une fois que c'est calé. Pour le suivi de
-   session et les moments forts LoL, le bouton **Afficher un exemple** du module
-   montre aussi un exemple, sans toucher à l'adresse.
+   session LoL et les moments forts (LoL et Rocket League), le bouton **Afficher
+   un exemple** du module montre aussi un exemple, sans toucher à l'adresse.
 
 Pour vérifier : dans **Vue d'ensemble**, la carte **OBS** compte les sources
 connectées.

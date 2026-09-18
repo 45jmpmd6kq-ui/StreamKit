@@ -365,6 +365,14 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       (Live Client Data, port 2999), mode streamer compris. Verifie contre un faux
       jeu ; reste a valider en vraie partie
 - [ ] Moments forts LoL valides en vraie partie (noms des evenements, clip en live)
+- [x] **Moments forts RL** : game de chauffe (premier coup d'envoi apres 3 h sans
+      jouer, texte du streamer) et overtime (`Game.bOvertime`), une annonce puis
+      une pastille, pouls rouge sur les bords en prolongation. Une seule connexion
+      a l'API du jeu, partagee avec le compteur de session (`abonner` dans
+      `rl-session/flux.js`). Verifie contre un faux jeu ; reste a valider en vraie
+      partie
+- [ ] Moments forts RL valides en vraie partie (coup d'envoi, overtime,
+      entrainement libre ignore)
 
 ## Pièges rencontrés (à ne pas refaire)
 

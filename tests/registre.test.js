@@ -39,6 +39,7 @@ test('les modules du depot sont tous decouverts', () => {
     'musique',
     'predictions',
     'pub',
+    'rl-moments',
     'rl-session',
     'roue-rl',
     'sondages',
