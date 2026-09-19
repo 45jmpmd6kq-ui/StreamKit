@@ -180,18 +180,23 @@ tu veux, puis clique sur **Enregistrer** en bas.
   comptent pas. **Afficher un exemple** joue les deux (16 secondes) pour placer la
   source dans OBS.
 - **Suivi de session** (League of Legends) : rien à connecter, lance le jeu.
-  Deux éléments, dans la même source OBS : un **bandeau** (rang, LP gagnés sur la
-  session, bilan, série) et un **tableau de bord** (courbe des LP, dernières
-  parties, champions joués, meilleure partie, moyennes). Le réglage **Affichage**
-  choisit ce qui apparaît : les deux (le bandeau en partie, le tableau de bord
-  entre les parties), le bandeau seul, ou le tableau de bord seul. Pendant la
-  sélection des champions, le tableau de bord se cache pour laisser voir les
-  choix. Une partie compte dès qu'elle apparaît dans ton historique ; ses LP
-  s'affichent quelques secondes plus tard, le temps que Riot les publie. Seules
-  les **classées Solo/Duo** comptent par défaut (la Flexible est au choix), et
-  une partie refaite (remake) ne compte jamais. **Afficher un exemple** montre le
-  bandeau et le tableau de bord pendant 30 secondes, pour les placer dans OBS.
-  **Réinitialiser la session** remet tout à zéro en début de live.
+  Deux sources OBS, à ajouter selon ce que tu veux montrer : le **bandeau**
+  (rang, LP gagnés sur la session, bilan, série) et le **tableau de bord**
+  (courbe des LP, dernières parties, champions joués, meilleure partie,
+  moyennes). Chacune a sa taille (voir la partie 5), et tu la places où tu veux,
+  scène par scène. Le tableau de bord s'affiche entre les parties et se cache
+  pendant la sélection des champions, pour laisser voir les choix. Le réglage
+  **Bandeau** : **seulement en partie** (entre les parties, il laisse la place au
+  tableau de bord) ou **tout le temps**, dès que le client est ouvert — à choisir
+  si tu n'utilises pas le tableau de bord. Une partie compte dès qu'elle apparaît
+  dans ton historique ; ses LP s'affichent quelques secondes plus tard, le temps
+  que Riot les publie. Seules les **classées Solo/Duo** comptent par défaut (la
+  Flexible est au choix), et une partie refaite (remake) ne compte jamais.
+  **Afficher un exemple** montre le bandeau et le tableau de bord pendant 30
+  secondes, chacun dans sa source, pour les placer dans OBS. **Réinitialiser la
+  session** remet tout à zéro en début de live. Tu avais l'ancienne source unique
+  (adresse finissant par `/session`) ? Elle marche encore, bandeau en haut à
+  gauche et tableau de bord au centre, mais remplace-la par les deux nouvelles.
 - **Moments forts** (League of Legends) : rien à connecter, lance une partie.
   Premier sang, double, triple et quadra kill, et ace de ton équipe s'affichent en
   **carte** sur le côté : pendant un combat, la même carte monte en grade (double,
@@ -214,16 +219,19 @@ tu veux, puis clique sur **Enregistrer** en bas.
 2. Dans OBS : **Sources** → **+** → **Navigateur**, et colle l'adresse dans
    **URL**. Règle **Largeur** et **Hauteur** comme indiqué sous l'adresse, dans
    StreamKit. Pour la taille :
-   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Moments forts RL, Annonce de pub, Suivi de session LoL, Moments forts LoL** : la taille de ta scène (par exemple
+   - **Bot Musique, Random Car, Clips, Prédictions, Sondages, Compteur de session, Moments forts RL, Annonce de pub, Moments forts LoL** : la taille de ta scène (par exemple
      1920 × 1080). L'overlay se place tout seul dans le coin choisi dans les
-     réglages du module (pour le suivi LoL, une position pour le bandeau et une
-     pour le tableau de bord ; pour les moments forts, une pour les cartes et une
-     pour les annonces) ;
-   - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux.
+     réglages du module (pour les moments forts LoL, une position pour les cartes
+     et une pour les annonces) ;
+   - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux ;
+   - **Suivi de session LoL** : le bandeau en 840 × 150, le tableau de bord en
+     920 × 620, puis déplace chaque source où tu veux (et agrandis-la ou
+     réduis-la à ton goût).
 3. Pour le placer sans attendre un vrai événement, ajoute `?demo=1` à la fin de
    l'adresse (collé, sans espace). Tant que l'exemple est à l'écran, change la
    position dans les réglages du module et clique **Enregistrer** : l'exemple se
-   déplace aussitôt. **Retire** `?demo=1` une fois que c'est calé. Pour le suivi de
+   déplace aussitôt (pour le suivi de session LoL, déplace directement la source
+   dans OBS). **Retire** `?demo=1` une fois que c'est calé. Pour le suivi de
    session LoL et les moments forts (LoL et Rocket League), le bouton **Afficher
    un exemple** du module montre aussi un exemple, sans toucher à l'adresse.
 

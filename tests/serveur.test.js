@@ -16,6 +16,7 @@ import http from 'node:http';
 
 const { creerServeur, ecouter } = await import('../src/core/serveur.js');
 const { preparerDossiers } = await import('../src/core/paths.js');
+const { default: suiviLoL } = await import('../src/modules/lol-session/module.js');
 
 preparerDossiers();
 
@@ -31,6 +32,9 @@ const app = {
     // dossier-servi-comme-fichier ne voudraient dire quoi que ce soit.
     // roue-rl porte overlay/cars/, le dossier des 137 icones de voitures.
     get: (id) => {
+      // Le suivi LoL avec ses vrais overlays : deux adresses pour une page, et
+      // une ancienne adresse masquee.
+      if (id === 'lol-session') return { id, dossier: id, manifeste: { overlays: suiviLoL.overlays } };
       if (!['musique', 'roue-rl'].includes(id)) return undefined;
       // roue-rl declare son vrai overlay : c'est lui qui porte un <script>
       // inline, donc lui qui a besoin d'un nonce.
@@ -352,6 +356,18 @@ test('un overlay recoit un nonce, different a chaque chargement', async () => {
 
   assert.notEqual(n1, n2, 'deux chargements ne doivent pas partager le meme nonce');
   assert.ok(premier.corps.includes('<script nonce="' + n1 + '">'), 'le script inline doit etre autorise');
+});
+
+test('deux sources pour une page, et l ancienne adresse toujours servie', async () => {
+  // Le suivi de session LoL : /bandeau et /tableau servent la meme page, qui lit
+  // son adresse ; /session, l'ancienne source unique, masquee du dashboard,
+  // repond encore. Une vue inconnue, non.
+  for (const vue of ['bandeau', 'tableau', 'session']) {
+    const r = await requete({ chemin: '/overlay/lol-session/' + vue });
+    assert.equal(r.code, 200, vue);
+    assert.ok(r.corps.includes('document.body.dataset.vue = VUE'), vue);
+  }
+  assert.equal((await requete({ chemin: '/overlay/lol-session/autre' })).code, 404);
 });
 
 test('un fichier statique porte une CSP sans nonce et nosniff', async () => {

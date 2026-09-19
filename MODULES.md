@@ -241,6 +241,21 @@ fixe la déclare, et c'est elle que le dashboard affiche :
 overlays: [{ chemin: 'bandeau', nom: 'Bandeau', fichier: 'bandeau.html', taille: { largeur: 900, hauteur: 70 } }]
 ```
 
+**Plusieurs sources, une page.** Deux overlays peuvent servir le même `fichier` :
+la page lit son adresse (`location.pathname`, dernier segment) pour savoir quoi
+montrer. Chaque adresse a son propre flux : le module envoie l'état à chacune
+(`ctx.overlay.etat(vue, …)` par vue). C'est ce que fait le suivi de session LoL,
+dont le bandeau et le tableau de bord sont deux sources de `session.html`.
+
+**Une adresse qu'on retire se masque, elle ne se supprime pas.** Un streamer l'a
+peut-être collée dans OBS : la supprimer éteindrait sa source à la mise à jour,
+sans un mot. `masque: true` la garde servie, mais le dashboard ne la propose
+plus :
+
+```js
+{ chemin: 'session', nom: 'Ancienne source unique', fichier: 'session.html', masque: true }
+```
+
 ## Les actions, et lesquelles deviennent des boutons
 
 Une action est une fonction appelable en `POST /api/modules/<id>/action/<nom>`.

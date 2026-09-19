@@ -280,13 +280,17 @@ export function vue(id) {
       .map(([nom, label]) => ({ nom, label })),
     champs: m.champs,
     reglages: schema.masquerSecrets(m.champs, reglages),
-    overlays: (m.manifeste.overlays ?? []).map((o) => ({
-      chemin: o.chemin,
-      nom: o.nom,
-      description: o.description ?? '',
-      url: '/overlay/' + m.id + '/' + o.chemin,
-      taille: tailleSource(o.taille),
-    })),
+    // Un overlay `masque` reste servi (une ancienne adresse deja collee dans OBS
+    // ne doit pas s'eteindre a la mise a jour) mais n'est plus propose.
+    overlays: (m.manifeste.overlays ?? [])
+      .filter((o) => !o.masque)
+      .map((o) => ({
+        chemin: o.chemin,
+        nom: o.nom,
+        description: o.description ?? '',
+        url: '/overlay/' + m.id + '/' + o.chemin,
+        taille: tailleSource(o.taille),
+      })),
     // Interfaces sur mesure du module (voir MODULES.md). Le dashboard y met un
     // bouton ; ce ne sont pas des overlays, elles ne vont pas dans OBS.
     pages: (m.manifeste.pages ?? []).map((p) => ({

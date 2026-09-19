@@ -91,11 +91,9 @@ function contexte({ dossierJeu, memoire = null, reglages = {} }) {
   };
   const ctx = {
     config: {
-      affichage: 'deux',
+      bandeau: 'partie',
       file: 'solo',
       sessionMode: 'launch',
-      coinBandeau: 'top-left',
-      coinTableau: 'center',
       dossierJeu,
       ...reglages,
     },
@@ -173,6 +171,16 @@ test('une partie gagnee, de la file d attente au tableau de bord', async (t) => 
   assert.equal(v.tableau.parties[0].lp, '…', 'LP pas encore publies');
   assert.equal(c.compteurs.victoires, 1);
   assert.ok(c.journal.some(([, m]) => m === 'Victoire (6/2/8) — comptée.'));
+
+  // Chaque changement part aux deux sources, et a l'ancienne source unique
+  // pour qui l'a encore dans OBS : le meme etat, chaque page n'en montre que
+  // sa part.
+  const dernier = c.etats.slice(-3);
+  assert.deepEqual(
+    dernier.map(([vue]) => vue),
+    ['bandeau', 'tableau', 'session']
+  );
+  assert.ok(dernier.every(([, data]) => data === v));
 
   // Un tour sans changement ne renvoie rien a l'overlay.
   const envois = c.etats.length;

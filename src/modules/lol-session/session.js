@@ -157,20 +157,19 @@ export function courbe(joues) {
   };
 }
 
-// Qui s'affiche, selon le reglage « Affichage » et la phase du client :
-//   deux     le bandeau en partie, le tableau de bord entre les parties
-//   bandeau  le bandeau tout le temps, jamais le tableau de bord
-//   tableau  le tableau de bord entre les parties, rien pendant la partie
+// Qui s'affiche, chacun dans sa source OBS :
+//   tableau de bord  entre les parties (cache pendant la selection des
+//                    champions et la partie) ;
+//   bandeau          selon le reglage « Bandeau » : 'partie', il laisse la place
+//                    au tableau de bord entre les parties ; 'toujours', il reste.
 //
 // Client ferme : rien. Le streamer est passe a autre chose, un recap LoL fige
 // par-dessus un autre jeu n'aurait pas de sens. Le tableau de bord attend aussi
-// une premiere partie : vide, il n'aurait rien a raconter.
-export function visibilite({ affichage = 'deux', phase = '', clientOuvert = false, nbParties = 0 }) {
+// une premiere partie : vide, il n'aurait rien a raconter -- et le bandeau reste
+// alors, meme en 'partie'.
+export function visibilite({ bandeau = 'partie', phase = '', clientOuvert = false, nbParties = 0 }) {
   if (!clientOuvert) return { bandeau: false, tableau: false };
   const enPartie = PHASES_EN_PARTIE.has(phase);
   const tableau = !enPartie && nbParties > 0;
-
-  if (affichage === 'bandeau') return { bandeau: true, tableau: false };
-  if (affichage === 'tableau') return { bandeau: false, tableau };
-  return { bandeau: !tableau, tableau };
+  return { bandeau: bandeau === 'toujours' || !tableau, tableau };
 }

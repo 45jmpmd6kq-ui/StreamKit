@@ -80,13 +80,30 @@ test('un overlay declare pointe sur un fichier qui existe', async () => {
 
 test('la taille de chaque source OBS part au dashboard', () => {
   // Sans taille declaree, la source prend la scene : le dashboard le dit.
-  // Le bandeau Valorant est le seul overlay a taille fixe.
+  // Seuls ces overlays-la ont une taille fixe.
+  const TAILLES = {
+    'valorant › bandeau': { largeur: 900, hauteur: 70 },
+    'lol-session › bandeau': { largeur: 840, hauteur: 150 },
+    'lol-session › tableau': { largeur: 920, hauteur: 620 },
+  };
   for (const m of registre.liste()) {
     for (const o of registre.vue(m.id).overlays) {
-      const attendue = m.id === 'valorant' ? { largeur: 900, hauteur: 70 } : null;
-      assert.deepEqual(o.taille, attendue, m.id + ' › ' + o.chemin);
+      const nom = m.id + ' › ' + o.chemin;
+      assert.deepEqual(o.taille, TAILLES[nom] ?? null, nom);
     }
   }
+});
+
+test('une ancienne adresse d overlay reste servie, mais n est plus proposee', () => {
+  // Le suivi de session LoL tenait dans une source jusqu'a la 0.25 : qui l'a
+  // encore dans OBS ne doit pas la voir s'eteindre a la mise a jour, mais le
+  // dashboard ne propose plus que les deux nouvelles.
+  const m = registre.get('lol-session');
+  assert.ok(m.manifeste.overlays.some((o) => o.chemin === 'session' && o.masque));
+  assert.deepEqual(
+    registre.vue('lol-session').overlays.map((o) => o.chemin),
+    ['bandeau', 'tableau']
+  );
 });
 
 test('une action mise en bouton existe vraiment', () => {

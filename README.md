@@ -75,7 +75,7 @@ src/
     roue-rl/            roue des voitures Rocket League (portage)
     rl-session/         compteur V/D Rocket League (API de stats officielle + Launch.log)
     valorant/           bandeau de session Valorant (réécriture Python -> Node)
-    lol-session/        suivi de session LoL : bandeau + tableau de bord (API locale du client)
+    lol-session/        suivi de session LoL : bandeau et tableau de bord, deux sources (API locale du client)
     lol-moments/        moments forts LoL : cartes et annonces, chat, clips (API de la partie, port 2999)
 
 scripts/                icône de l'app, emblèmes de rang LoL — rien ne part chez le streamer
@@ -355,9 +355,14 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       Riot) sur un ecran d accueil, alimente par un hook sante() des modules
 - [ ] Migrer RL-Tracker et RL-Challenge
 - [x] **Suivi de session LoL** : bandeau en partie, tableau de bord entre les
-      parties, reglage « Affichage ». API locale du client (lockfile), LP par
-      difference de rangs, noms et icones de champions via Data Dragon. Verifie
-      de bout en bout contre un faux client ; reste a valider sur le vrai client
+      parties. API locale du client (lockfile), LP par difference de rangs, noms
+      et icones de champions via Data Dragon. Verifie de bout en bout contre un
+      faux client ; reste a valider sur le vrai client
+- [x] **Suivi de session LoL en deux sources OBS** (demande du user, 19/09) :
+      bandeau 840 x 150 et tableau de bord 920 x 620, places librement dans OBS
+      (une page, deux adresses) ; reglage « Bandeau » (en partie / tout le temps)
+      a la place de « Affichage » et des deux positions (migration v2).
+      L'ancienne source unique reste servie, masquee du dashboard (`masque`)
 - [ ] Suivi de session LoL valide sur une vraie soiree de classees
 - [x] **Moments forts LoL** : premier sang, double a quadra kill et ace en carte
       (la carte du combat monte en grade), pentakill, objectif vole et legendaire

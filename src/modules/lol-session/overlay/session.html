@@ -5,8 +5,9 @@
     <title>StreamKit — suivi de session League of Legends</title>
     <style>
       /* Fond transparent obligatoire : OBS incruste la page telle quelle.
-         Source a la taille de la scene (1920 x 1080) : le bandeau et le tableau
-         de bord se placent dans le coin choisi dans les reglages du module. */
+         Une page, trois adresses (voir la fin des styles) : /bandeau et /tableau,
+         une source chacune a la taille de son element ; /session, l'ancienne
+         source unique a la taille de la scene. */
       html,
       body {
         margin: 0;
@@ -58,6 +59,24 @@
       .element[data-coin="bottom-left"] { bottom: 24px; left: 24px; }
       .element[data-coin="bottom-center"] { bottom: 24px; left: 50%; transform: translateX(-50%); }
       .element[data-coin="bottom-right"] { bottom: 24px; right: 24px; }
+
+      /* /bandeau et /tableau : leur seul element, en haut a gauche de leur source,
+         que le streamer place ou il veut dans OBS. Les 24 px de marge sont
+         l'ecart au bord qu'avaient les coins ; la source a de quoi loger l'ombre
+         a droite et en bas. /session, l'ancienne source unique, garde les deux
+         elements dans leurs coins. */
+      body[data-vue="bandeau"] #tableau,
+      body[data-vue="tableau"] #bandeau {
+        display: none;
+      }
+      body[data-vue="bandeau"] #bandeau,
+      body[data-vue="tableau"] #tableau {
+        top: 24px;
+        left: 24px;
+        right: auto;
+        bottom: auto;
+        transform: none;
+      }
 
       .etiquette {
         font-size: 10px;
@@ -528,6 +547,13 @@
       // dernier segment de l'URL et taperait /overlay/lol-session/flux.
       const BASE = location.pathname.replace(/\/$/, "");
 
+      // Quelle source OBS on est : le dernier segment de l'adresse. Toute autre
+      // valeur (l'ancienne /session) montre les deux elements.
+      const VUE = BASE.split("/").pop();
+      document.body.dataset.vue = VUE;
+      const avecBandeau = VUE !== "tableau";
+      const avecTableau = VUE !== "bandeau";
+
       // Ce qui part dans innerHTML passe par ici, meme ce qui « ne peut etre
       // qu'un nombre » : ces valeurs arrivent du client LoL via le module.
       function esc(s) {
@@ -758,7 +784,8 @@
       // affiche a change, pas a chaque etat recu.
       let signatureTableau = "";
 
-      // Les coins choisis dans les reglages du module.
+      // Coins de l'ancienne source unique : ceux d'avant la separation, le module
+      // n'envoyant plus de positions. Sans effet sur /bandeau et /tableau.
       function placer(theme) {
         $("bandeau").dataset.coin = coin(theme?.coinBandeau, "top-left");
         $("tableau").dataset.coin = coin(theme?.coinTableau, "center");
@@ -767,19 +794,20 @@
       function appliquer(etat) {
         if (!etat) return;
         const visible = etat.visible || {};
-        const bandeau = $("bandeau");
-        const tableau = $("tableau");
         placer(etat.theme);
 
-        rendreBandeau(etat);
-        const signature = JSON.stringify([etat.rang, etat.bilan, etat.tableau]);
-        if (signature !== signatureTableau) {
-          signatureTableau = signature;
-          rendreTableau(etat);
+        // Chaque source ne dessine que ce qu'elle montre.
+        if (avecBandeau) rendreBandeau(etat);
+        if (avecTableau) {
+          const signature = JSON.stringify([etat.rang, etat.bilan, etat.tableau]);
+          if (signature !== signatureTableau) {
+            signatureTableau = signature;
+            rendreTableau(etat);
+          }
         }
 
-        bandeau.classList.toggle("visible", !!visible.bandeau);
-        tableau.classList.toggle("visible", !!visible.tableau);
+        $("bandeau").classList.toggle("visible", avecBandeau && !!visible.bandeau);
+        $("tableau").classList.toggle("visible", avecTableau && !!visible.tableau);
       }
 
       function masquer() {
@@ -837,10 +865,9 @@
       const flux = new EventSource(BASE + "/flux");
 
       if (new URLSearchParams(location.search).has("demo")) {
-        // En demo on n'ecoute que le theme : l'exemple suit les coins des
-        // reglages des qu'on les enregistre, et l'etat reel (client ferme, rien a
-        // montrer) ne l'efface pas.
-        flux.addEventListener("etat", (m) => placer(JSON.parse(m.data).theme));
+        // En demo, l'etat reel (client ferme, rien a montrer) ne doit pas effacer
+        // l'exemple : on reste branche au flux pour que la source compte dans la
+        // carte OBS de la vue d'ensemble, sans rien en appliquer.
         appliquer(DEMO);
       } else {
         flux.addEventListener("etat", (m) => appliquer(JSON.parse(m.data)));

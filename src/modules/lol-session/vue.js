@@ -140,13 +140,11 @@ export function construireVue({ config, suivi, parties, depuis, champions }) {
   const meilleure = meilleurePartie(joues);
   const ratio = meilleure ? ratioKda(meilleure) : 0;
 
+  // Plus de positions a transmettre : chaque source se place dans OBS. L'ancienne
+  // source unique garde ses coins par defaut (voir session.html).
   return {
-    theme: {
-      coinBandeau: config.coinBandeau || 'top-left',
-      coinTableau: config.coinTableau || 'center',
-    },
     visible: visibilite({
-      affichage: config.affichage,
+      bandeau: config.bandeau,
       phase: suivi.phase,
       clientOuvert: !!(suivi.clientOuvert && suivi.moi),
       nbParties: joues.length,

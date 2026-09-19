@@ -6,9 +6,12 @@
 // d'API a obtenir, pas de compte a relier. Seuls les noms et icones des
 // champions viennent de Data Dragon, le CDN public de Riot (voir champions.js).
 //
-// Le reglage « Affichage » decide de ce qui apparait (voir visibilite() dans
-// session.js) : le bandeau, le tableau de bord, ou les deux en alternance. Une
-// seule source OBS pour tout : le streamer n'a qu'une adresse a coller.
+// Deux sources OBS, chacune a la taille de son element, que le streamer place
+// ou il veut : le bandeau et le tableau de bord (une seule page, session.html,
+// qui lit dans son adresse ce qu'elle doit montrer). Le reglage « Bandeau »
+// decide s'il s'efface entre les parties (voir visibilite() dans session.js).
+// Jusqu'a la 0.25, une source unique montrait les deux : son adresse marche
+// toujours, mais n'est plus proposee.
 //
 // Aucun droit Twitch : le module tourne meme sans chaine connectee.
 
@@ -21,17 +24,11 @@ import { charger as chargerChampions, VIDE as CHAMPIONS_VIDE } from './champions
 import { FILES, nomRang } from './rang.js';
 import { CHAMPIONS_DEMO, sessionDemo } from './demo.js';
 
-const COINS = [
-  { valeur: 'top-left', label: 'En haut à gauche' },
-  { valeur: 'top-center', label: 'En haut au centre' },
-  { valeur: 'top-right', label: 'En haut à droite' },
-  { valeur: 'center', label: 'Au centre' },
-  { valeur: 'bottom-left', label: 'En bas à gauche' },
-  { valeur: 'bottom-center', label: 'En bas au centre' },
-  { valeur: 'bottom-right', label: 'En bas à droite' },
-];
-
 const DUREE_EXEMPLE_MS = 30_000;
+
+// Les sources qui recoivent l'etat : les deux d'aujourd'hui, et l'ancienne
+// source unique, pour qui l'a encore dans OBS.
+const VUES = ['bandeau', 'tableau', 'session'];
 
 const heure = (ms) => {
   const d = new Date(ms);
@@ -50,18 +47,20 @@ export default {
   scopes: [],
 
   config: {
-    version: 1,
+    version: 2,
     champs: [
       {
-        cle: 'affichage',
+        cle: 'bandeau',
         type: 'choix',
-        label: 'Affichage',
-        aide: 'Le tableau de bord se cache pendant la sélection des champions, pour laisser voir les choix.',
-        defaut: 'deux',
+        label: 'Bandeau',
+        aide: 'Le tableau de bord, lui, s’affiche entre les parties, et se cache pendant la sélection des champions pour laisser voir les choix.',
+        defaut: 'partie',
         options: [
-          { valeur: 'deux', label: 'Les deux : le bandeau en partie, le tableau de bord entre les parties' },
-          { valeur: 'bandeau', label: 'Le bandeau seul, tout le temps' },
-          { valeur: 'tableau', label: 'Le tableau de bord seul, entre les parties' },
+          {
+            valeur: 'partie',
+            label: 'Seulement en partie : entre les parties, il laisse la place au tableau de bord',
+          },
+          { valeur: 'toujours', label: 'Tout le temps, dès que le client est ouvert' },
         ],
       },
       {
@@ -86,20 +85,6 @@ export default {
         ],
       },
       {
-        cle: 'coinBandeau',
-        type: 'choix',
-        label: 'Position du bandeau dans OBS',
-        defaut: 'top-left',
-        options: COINS,
-      },
-      {
-        cle: 'coinTableau',
-        type: 'choix',
-        label: 'Position du tableau de bord dans OBS',
-        defaut: 'center',
-        options: COINS,
-      },
-      {
         cle: 'dossierJeu',
         type: 'texte',
         label: 'Dossier de League of Legends (si non trouvé)',
@@ -110,20 +95,53 @@ export default {
     ],
   },
 
-  migrations: {},
+  migrations: {
+    // v2 : deux sources OBS au lieu d'une. « Affichage » devient le reglage du
+    // bandeau (le tableau de bord n'a plus besoin de reglage : on ajoute sa
+    // source ou pas) ; les positions disparaissent, chaque source se place dans
+    // OBS.
+    2: (r) => {
+      r.bandeau = r.affichage === 'bandeau' ? 'toujours' : 'partie';
+      delete r.affichage;
+      delete r.coinBandeau;
+      delete r.coinTableau;
+      return r;
+    },
+  },
 
   compteurs: {
     victoires: 'Victoires',
     defaites: 'Défaites',
   },
 
+  // Tailles mesurees au banc (bandeau 760 x 76 au plus long, tableau de bord
+  // 860 x 532), plus 24 px de marge en haut et a gauche -- l'ecart au bord
+  // qu'avaient les coins -- et de quoi loger l'ombre a droite et en bas.
   overlays: [
     {
-      chemin: 'session',
-      nom: 'Suivi de session',
+      chemin: 'bandeau',
+      nom: 'Bandeau',
       description:
-        'Le bandeau et le tableau de bord, qui s’affichent selon le réglage « Affichage ». Une seule source, à la taille de ta scène.',
+        'Rang, LP de la session, bilan et série. En partie seulement, ou tout le temps : réglage « Bandeau ».',
       fichier: 'session.html',
+      taille: { largeur: 840, hauteur: 150 },
+    },
+    {
+      chemin: 'tableau',
+      nom: 'Tableau de bord',
+      description:
+        'Le récap de la session entre les parties : courbe des LP, dernières parties, champions joués, moyennes.',
+      fichier: 'session.html',
+      taille: { largeur: 920, hauteur: 620 },
+    },
+    {
+      // L'ancienne source unique : gardee pour ne rien casser chez qui l'a deja
+      // dans OBS (bandeau en haut a gauche, tableau de bord au centre), mais
+      // plus proposee.
+      chemin: 'session',
+      nom: 'Ancienne source unique',
+      fichier: 'session.html',
+      masque: true,
     },
   ],
 
@@ -138,7 +156,7 @@ export default {
       ctx._exemple();
       return {
         message:
-          'Exemple affiché pendant 30 secondes : le bandeau et le tableau de bord ensemble, pour les placer dans OBS.',
+          'Exemple affiché pendant 30 secondes dans les deux sources, le bandeau et le tableau de bord, pour les placer dans OBS.',
       };
     },
 
@@ -232,7 +250,7 @@ export default {
       const texte = JSON.stringify(vue);
       if (texte === dernierEnvoi) return;
       dernierEnvoi = texte;
-      ctx.overlay.etat('session', vue);
+      for (const v of VUES) ctx.overlay.etat(v, vue);
     };
 
     // --- Suivi ---------------------------------------------------------------
@@ -331,7 +349,7 @@ export default {
     };
 
     ctx.log.ok('Prêt (' + file.nom + '). Lance League of Legends : le suivi démarre tout seul.');
-    ctx.log.info('Overlay : ' + ctx.overlay.url('session'));
+    ctx.log.info('Overlays : ' + ctx.overlay.url('bandeau') + ' et ' + ctx.overlay.url('tableau'));
 
     return {
       async arreter() {

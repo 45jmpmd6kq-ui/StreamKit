@@ -217,29 +217,48 @@ test('courbe des LP : point de depart, un point par partie, seuils franchis', ()
   assert.equal(session.courbe([partie(1, true)]), null, 'sans rang connu, pas de courbe');
 });
 
-test('affichage : qui se montre selon le reglage et la phase du client', () => {
-  const vis = (affichage, phase, nbParties = 2, clientOuvert = true) =>
-    session.visibilite({ affichage, phase, clientOuvert, nbParties });
+test('affichage : qui se montre selon le reglage « Bandeau » et la phase du client', () => {
+  const vis = (bandeau, phase, nbParties = 2, clientOuvert = true) =>
+    session.visibilite({ bandeau, phase, clientOuvert, nbParties });
 
-  // Les deux : bandeau en partie (selection comprise), tableau de bord entre.
-  assert.deepEqual(vis('deux', 'InProgress'), { bandeau: true, tableau: false });
-  assert.deepEqual(vis('deux', 'ChampSelect'), { bandeau: true, tableau: false });
-  assert.deepEqual(vis('deux', 'EndOfGame'), { bandeau: false, tableau: true });
-  assert.deepEqual(vis('deux', 'Lobby'), { bandeau: false, tableau: true });
+  // Seulement en partie (defaut) : bandeau en partie, selection comprise ;
+  // entre les parties, le tableau de bord prend le relais.
+  assert.deepEqual(vis('partie', 'InProgress'), { bandeau: true, tableau: false });
+  assert.deepEqual(vis('partie', 'ChampSelect'), { bandeau: true, tableau: false });
+  assert.deepEqual(vis('partie', 'EndOfGame'), { bandeau: false, tableau: true });
+  assert.deepEqual(vis('partie', 'Lobby'), { bandeau: false, tableau: true });
   // Pas encore de partie : rien a recapituler, le bandeau reste.
-  assert.deepEqual(vis('deux', 'Lobby', 0), { bandeau: true, tableau: false });
+  assert.deepEqual(vis('partie', 'Lobby', 0), { bandeau: true, tableau: false });
+  assert.deepEqual(vis(undefined, 'Lobby'), vis('partie', 'Lobby'), '« en partie » par defaut');
 
-  assert.deepEqual(vis('bandeau', 'Lobby'), { bandeau: true, tableau: false });
-  assert.deepEqual(vis('bandeau', 'InProgress'), { bandeau: true, tableau: false });
-
-  assert.deepEqual(vis('tableau', 'InProgress'), { bandeau: false, tableau: false });
-  assert.deepEqual(vis('tableau', 'ChampSelect'), { bandeau: false, tableau: false });
-  assert.deepEqual(vis('tableau', 'EndOfGame'), { bandeau: false, tableau: true });
+  // Tout le temps : le bandeau reste, meme avec le tableau de bord a l'ecran.
+  assert.deepEqual(vis('toujours', 'Lobby'), { bandeau: true, tableau: true });
+  assert.deepEqual(vis('toujours', 'InProgress'), { bandeau: true, tableau: false });
 
   // Client ferme : rien, quel que soit le reglage.
-  for (const mode of ['deux', 'bandeau', 'tableau']) {
+  for (const mode of ['partie', 'toujours']) {
     assert.deepEqual(vis(mode, 'None', 3, false), { bandeau: false, tableau: false });
   }
+});
+
+test('reglages d avant les deux sources : « Affichage » devient « Bandeau »', async () => {
+  const { default: manifeste } = await import('../src/modules/lol-session/module.js');
+  const { migrer } = await import('../src/core/schema.js');
+  const migre = (affichage) =>
+    migrer(
+      { affichage, coinBandeau: 'top-right', coinTableau: 'center', file: 'flex' },
+      1,
+      2,
+      manifeste.migrations
+    );
+
+  // « Le bandeau seul, tout le temps » : il reste tout le temps.
+  assert.deepEqual(migre('bandeau'), { bandeau: 'toujours', file: 'flex' });
+  // « Les deux » et « le tableau de bord seul » : le bandeau s'efface entre les
+  // parties, comme avant (seul, le tableau de bord n'a plus besoin de reglage :
+  // on n'ajoute pas la source du bandeau).
+  assert.deepEqual(migre('deux'), { bandeau: 'partie', file: 'flex' });
+  assert.deepEqual(migre('tableau'), { bandeau: 'partie', file: 'flex' });
 });
 
 test('debut de session : lancement, minuit, ou remise a zero plus recente', () => {
@@ -266,7 +285,7 @@ test('historique : fenetre de session, doublons refuses, plafond', () => {
 
 // --- Mise en forme ------------------------------------------------------------
 
-const CONFIG = { affichage: 'deux', file: 'solo', coinBandeau: 'top-left', coinTableau: 'center' };
+const CONFIG = { bandeau: 'partie', file: 'solo' };
 const CHAMPIONS = { version: '16.18.1', parId: CHAMPIONS_DEMO, chargeA: 0 };
 
 test('la session d exemple donne exactement les chiffres de la maquette', () => {
