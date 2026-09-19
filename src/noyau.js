@@ -21,7 +21,7 @@ import { preparerDossiers, DONNEES } from './core/paths.js';
 import * as journal from './core/journal.js';
 import * as store from './core/store.js';
 import * as registre from './core/registre.js';
-import * as twitch from './core/twitch.js';
+import * as twitchReel from './core/twitch.js';
 import * as auth from './core/auth.js';
 import * as maj from './core/maj.js';
 import * as diffusion from './core/diffusion.js';
@@ -29,6 +29,7 @@ import * as compteurs from './core/compteurs.js';
 import * as connecteurs from './core/connecteurs.js';
 import * as coffre from './core/coffre.js';
 import { creerSante, resumeModules } from './core/sante.js';
+import { creerReconnexion, PAUSES_MS, resumeErreur } from './core/reconnexion.js';
 import { creerServeur, ecouter, ENTETES_PAGE_OAUTH } from './core/serveur.js';
 
 const log = journal.pour('noyau');
@@ -53,6 +54,10 @@ export async function demarrerNoyau({
   // safeStorage d'Electron, injecte comme l'updater : le noyau ne sait pas qui
   // l'implemente, et en ligne de commande il n'y a simplement personne.
   coffreSysteme = null,
+  // La couche Twitch et le rythme de ses nouveaux essais : injectables pour les
+  // tests, qui simulent un Twitch injoignable sans attendre des minutes.
+  twitch = twitchReel,
+  pausesTwitchMs = PAUSES_MS,
 } = {}) {
   preparerDossiers();
   journal.purger();
@@ -279,6 +284,54 @@ export async function demarrerNoyau({
       .catch(() => {});
   }
 
+  // --- Connexion a Twitch ---------------------------------------------------
+
+  let enFermeture = false;
+
+  // Un seul essai a la fois : le nouvel essai automatique et une reconnexion
+  // demandee depuis le dashboard ne doivent jamais se croiser (deux connexions,
+  // des modules demarres deux fois).
+  let fileTwitch = Promise.resolve();
+  const enSerie = (fn) => {
+    const p = fileTwitch.then(fn);
+    fileTwitch = p.catch(() => {});
+    return p;
+  };
+
+  // Les modules qui se passent de Twitch (compteur Rocket League, suivi LoL...)
+  // n'ont pas a l'attendre.
+  async function demarrerSansTwitch() {
+    const autonomes = registre.liste().filter((m) => m.actif && !(m.manifeste.scopes ?? []).length);
+    for (const m of autonomes) await registre.demarrer(m.id, fabriquerContexte);
+
+    const enAttente = registre.liste().filter((m) => m.actif && (m.manifeste.scopes ?? []).length);
+    if (enAttente.length) {
+      log.warn(
+        enAttente.length +
+          ' module(s) en attente de Twitch : ' +
+          enAttente.map((m) => m.manifeste.nom).join(', ') +
+          '. Ils démarreront dès que Twitch sera connecté.'
+      );
+    }
+  }
+
+  // Twitch injoignable (reseau pas encore la au lancement de Windows, panne) :
+  // StreamKit retente seul, puis demarre les modules qui attendaient. Avant,
+  // ils restaient eteints jusqu'au lancement suivant. Voir core/reconnexion.js.
+  const reconnexion = creerReconnexion({
+    log,
+    pausesMs: pausesTwitchMs,
+    connecter: () =>
+      enSerie(async () => {
+        if (enFermeture) return false;
+        await twitch.demarrer();
+        if (!twitch.estPret() || enFermeture) return false;
+        brancherSuiviDuDirect();
+        await registre.demarrerActifs(fabriquerContexte);
+        return true;
+      }),
+  });
+
   // --- Objet applicatif expose au serveur ----------------------------------
 
   const app = {
@@ -434,19 +487,26 @@ export async function demarrerNoyau({
     },
 
     async reconnecterTwitch() {
-      await registre.arreterTout();
-      for (const ctx of contextes.values()) ctx._nettoyer();
-      contextes.clear();
-      await twitch.arreter();
-      try {
-        await twitch.demarrer();
-      } catch (e) {
-        log.err('Connexion Twitch impossible : ' + (e?.message || e));
-        return { ok: false, erreur: e?.message || String(e) };
-      }
-      brancherSuiviDuDirect();
-      await registre.demarrerActifs(fabriquerContexte);
-      return { ok: true, etat: twitch.getEtat() };
+      reconnexion.arreter(); // la demande du streamer remplace l'essai prevu
+      return enSerie(async () => {
+        await registre.arreterTout();
+        for (const ctx of contextes.values()) ctx._nettoyer();
+        contextes.clear();
+        await twitch.arreter();
+        try {
+          await twitch.demarrer();
+        } catch (e) {
+          log.err('Connexion Twitch impossible : ' + (e?.message || e));
+          // Tout vient d'etre arrete : ce qui se passe de Twitch repart tout de
+          // suite, et Twitch est retente si ca peut s'arranger seul.
+          await demarrerSansTwitch();
+          reconnexion.apresEchec(e);
+          return { ok: false, erreur: e?.message || String(e) };
+        }
+        brancherSuiviDuDirect();
+        await registre.demarrerActifs(fabriquerContexte);
+        return { ok: true, etat: twitch.getEtat() };
+      });
     },
 
     async callbackTwitch(url, res) {
@@ -518,13 +578,15 @@ export async function demarrerNoyau({
   // store.chargerConfig(), plus haut : le registre lit ici des modules a jour.
   await registre.charger();
 
+  let echecTwitch = null;
   try {
     await twitch.demarrer();
     if (twitch.estPret()) brancherSuiviDuDirect();
   } catch (e) {
-    // Twitch mal configure ne doit pas empecher le dashboard de s'ouvrir : c'est
-    // justement la que le streamer va aller pour corriger.
-    log.err('Twitch : ' + (e?.message || e));
+    // Twitch injoignable ou mal configure ne doit pas empecher le dashboard de
+    // s'ouvrir : c'est justement la que le streamer va aller pour corriger.
+    log.err('Twitch : ' + resumeErreur(e));
+    echecTwitch = e;
   }
 
   const serveur = creerServeur(app);
@@ -537,28 +599,20 @@ export async function demarrerNoyau({
   if (twitch.estPret()) {
     await registre.demarrerActifs(fabriquerContexte);
   } else {
-    const autonomes = registre.liste().filter((m) => m.actif && !(m.manifeste.scopes ?? []).length);
-    for (const m of autonomes) await registre.demarrer(m.id, fabriquerContexte);
-
-    const enAttente = registre.liste().filter((m) => m.actif && (m.manifeste.scopes ?? []).length);
-    if (enAttente.length) {
-      log.warn(
-        enAttente.length +
-          ' module(s) en attente de Twitch : ' +
-          enAttente.map((m) => m.manifeste.nom).join(', ') +
-          '. Ouvre le dashboard pour terminer la configuration.'
-      );
-    }
+    await demarrerSansTwitch();
+    // Seulement maintenant : un essai qui aboutirait avant la ligne du dessus
+    // demarrerait les modules Twitch pendant qu'on les annonce « en attente ».
+    if (echecTwitch) reconnexion.apresEchec(echecTwitch);
   }
 
   updater.verifierAuDemarrage?.().catch(() => {});
 
   // --- Arret ----------------------------------------------------------------
 
-  let enFermeture = false;
   async function fermer() {
     if (enFermeture) return;
     enFermeture = true;
+    reconnexion.arreter();
     log.info('Arret de StreamKit...');
     for (const id of [...contextes.keys()]) await arreterModule(id);
     compteurs.vider();

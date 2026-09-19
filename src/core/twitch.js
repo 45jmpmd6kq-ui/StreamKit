@@ -30,6 +30,7 @@ import * as journal from './journal.js';
 import * as store from './store.js';
 import { creerCanaux, creerJournalTwurple, creerSuivi } from './abonnements.js';
 import * as recompenses from './recompenses.js';
+import { natureErreurTwitch } from './reconnexion.js';
 
 const log = journal.pour('twitch');
 
@@ -49,6 +50,7 @@ const MEMOIRE_RECOMPENSES = '_recompenses';
 let etat = {
   pret: false,
   raison: 'non demarre',
+  conseil: '', // quoi faire, pour la vue d'ensemble, quand Twitch n'est pas pret
   channel: '',
   broadcasterId: '',
   utilisateur: '',
@@ -91,42 +93,32 @@ export async function demarrer() {
   const jeton = tokens.twitch;
 
   if (!app.clientId || !app.clientSecret) {
-    etat = { ...etat, pret: false, raison: 'application Twitch non configurée' };
+    etat = { ...etat, pret: false, raison: 'application Twitch non configurée', conseil: '' };
     log.warn("Twitch non configuré : renseigne l'application dans le dashboard.");
     return etat;
   }
   if (!jeton) {
-    etat = { ...etat, pret: false, raison: 'chaine non autorisee' };
+    etat = { ...etat, pret: false, raison: 'chaine non autorisee', conseil: '' };
     log.warn('Twitch non autorise : connecte ta chaine depuis le dashboard.');
     return etat;
   }
 
-  authProvider = new RefreshingAuthProvider({ clientId: app.clientId, clientSecret: app.clientSecret });
-  authProvider.onRefresh((_userId, nouveau) => {
-    store.majTokens((t) => {
-      t.twitch = nouveau;
-    });
-    log.debug('Jeton Twitch rafraichi.');
-  });
-  await authProvider.addUserForToken(jeton, ['chat']);
-
-  api = new ApiClient({ authProvider });
-
-  // On resout la chaine une fois pour toutes : le streamer saisit un pseudo,
-  // tout le reste de StreamKit travaille avec un identifiant numerique.
-  const channel = (config.twitch.channel || '').toLowerCase();
-  let broadcasterId = config.twitch.broadcasterId;
-  if (channel && !broadcasterId) {
-    const u = await api.users.getUserByName(channel);
-    if (!u) throw new Error('chaine Twitch introuvable : ' + channel);
-    broadcasterId = u.id;
-    config.twitch.broadcasterId = broadcasterId;
-    store.sauverConfig(config);
+  // Les deux seuls appels reseau du demarrage : c'est ici qu'un reseau pas
+  // encore pret fait tout echouer. Le noyau retente alors (core/reconnexion.js) ;
+  // le dashboard, lui, doit dire pourquoi Twitch n'est pas la.
+  let joint;
+  try {
+    joint = await joindre(app, jeton, config);
+  } catch (e) {
+    etat = { ...etat, pret: false, ...motifEchec(e) };
+    throw e;
   }
+  const { channel, broadcasterId } = joint;
 
   etat = {
     pret: true,
     raison: '',
+    conseil: '',
     channel,
     broadcasterId,
     utilisateur: channel,
@@ -201,6 +193,51 @@ export async function demarrer() {
   return etat;
 }
 
+async function joindre(app, jeton, config) {
+  authProvider = new RefreshingAuthProvider({ clientId: app.clientId, clientSecret: app.clientSecret });
+  authProvider.onRefresh((_userId, nouveau) => {
+    store.majTokens((t) => {
+      t.twitch = nouveau;
+    });
+    log.debug('Jeton Twitch rafraichi.');
+  });
+  await authProvider.addUserForToken(jeton, ['chat']);
+
+  api = new ApiClient({ authProvider });
+
+  // On resout la chaine une fois pour toutes : le streamer saisit un pseudo,
+  // tout le reste de StreamKit travaille avec un identifiant numerique.
+  const channel = (config.twitch.channel || '').toLowerCase();
+  let broadcasterId = config.twitch.broadcasterId;
+  if (channel && !broadcasterId) {
+    const u = await api.users.getUserByName(channel);
+    // Un reglage faux, pas une panne : inutile de retenter.
+    if (!u) throw Object.assign(new Error('chaîne Twitch introuvable : ' + channel), { permanente: true });
+    broadcasterId = u.id;
+    config.twitch.broadcasterId = broadcasterId;
+    store.sauverConfig(config);
+  }
+  return { channel, broadcasterId };
+}
+
+// Ce que le dashboard affiche quand Twitch n'a pas pu demarrer.
+function motifEchec(e) {
+  switch (natureErreurTwitch(e)) {
+    case 'autorisation':
+      return {
+        raison: 'autorisation Twitch refusée',
+        conseil: 'Reconnecte ta chaîne : Connecteurs → Twitch → Connecter.',
+      };
+    case 'configuration':
+      return { raison: e.message, conseil: 'Vérifie le nom de ta chaîne : Connecteurs → Twitch.' };
+    default:
+      return {
+        raison: 'Twitch injoignable — nouvel essai automatique',
+        conseil: 'Vérifie ta connexion Internet : les modules Twitch démarreront dès que Twitch répondra.',
+      };
+  }
+}
+
 export async function arreter() {
   try {
     chat?.quit();
@@ -215,7 +252,14 @@ export async function arreter() {
   chat = null;
   listener = null;
   canaux.vider();
-  etat = { ...etat, pret: false, chatConnecte: false, eventsubConnecte: false, raison: 'arrete' };
+  etat = {
+    ...etat,
+    pret: false,
+    chatConnecte: false,
+    eventsubConnecte: false,
+    raison: 'arrete',
+    conseil: '',
+  };
 }
 
 // Debut et fin de live. Utilise par le socle pour rattacher les compteurs au

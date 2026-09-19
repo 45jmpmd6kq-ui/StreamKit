@@ -155,7 +155,9 @@ export function creerSante({
         nom: 'Twitch',
         etat: store.lireTokens().twitchApp?.clientId ? 'ko' : 'inactif',
         detail: t.raison || 'non connecté',
-        aide: 'Clique sur l’indicateur Twitch en haut de la fenêtre.',
+        // Twitch sait parfois quoi faire : reseau a verifier (il retente seul),
+        // chaine a reconnecter...
+        aide: t.conseil || 'Clique sur l’indicateur Twitch en haut de la fenêtre.',
       });
     } else if (manquants.length) {
       connexions.push({

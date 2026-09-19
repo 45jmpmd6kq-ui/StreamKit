@@ -383,6 +383,12 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       son gestionnaire (effacer puis reposer perdait les evenements, prouve avec
       le vrai Twurple). Refus, revocations et evenements jetes par Twurple
       (horloge du PC en avance, abonnement inconnu) arrivent au journal
+- [x] **Reconnexion automatique a Twitch** (`core/reconnexion.js`) : Twitch
+      injoignable au lancement (reseau pas encore la, demarrage avec Windows) est
+      retente seul (10 s, 20 s, 30 s, puis chaque minute), et les modules Twitch
+      demarrent des qu'il repond. Une autorisation refusee ou une chaine
+      introuvable ne se retentent pas ; le dashboard dit pourquoi et quoi faire.
+      Verifie au banc contre le vrai Twitch (reseau coupe, puis faux identifiants)
 - [ ] Random Car valide en live : cout aligne apres Enregistrer, machine a
       l'ecran sur une vraie utilisation
 
@@ -424,3 +430,7 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
   Reproduit avec le vrai Twurple dans `tests/abonnements-twurple.test.js`.
   D'où les abonnements partagés de `core/abonnements.js`, et le journal de
   Twurple branché sur le nôtre.
+- **Un seul échec de Twitch au lancement coupait Twitch pour toute la session.**
+  Avec le démarrage automatique, StreamKit part souvent avant le réseau : les
+  modules Twitch restaient « en attente » jusqu'au lancement suivant, et rien
+  ne réessayait. Tout appel réseau du démarrage doit prévoir son nouvel essai.

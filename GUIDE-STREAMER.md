@@ -238,7 +238,8 @@ connectées.
   marche ; orange ou rouge, lis le texte en dessous, il dit quoi faire.
 - **Démarrer avec Windows** : roue dentée en haut à droite → **Réglages de
   StreamKit** → **Démarrer avec Windows**. StreamKit se lance alors tout seul,
-  près de l'horloge, sans ouvrir de fenêtre.
+  près de l'horloge, sans ouvrir de fenêtre. S'il démarre avant ta connexion
+  Internet, il se connecte à Twitch tout seul dès qu'elle arrive.
 - **Mises à jour** : quand une version sort, un bouton **Mettre à jour → x.y.z**
   apparaît en haut. Clique dessus puis **Mettre à jour maintenant** : StreamKit
   redémarre, et tes réglages et comptes sont conservés. **Pas pendant un
@@ -250,6 +251,15 @@ connectées.
 
 **Une carte est rouge ou orange dans la Vue d'ensemble.**
 Lis le texte gris sous la carte : il indique la marche à suivre.
+
+**Twitch affiche « Twitch injoignable — nouvel essai automatique ».**
+StreamKit s'est lancé avant ta connexion Internet (démarrage avec Windows), ou
+Twitch a un souci. Rien à faire : il réessaie tout seul, de plus en plus
+espacé puis une fois par minute, et les modules Twitch démarrent dès que
+Twitch répond. Les modules qui n'ont pas besoin de Twitch (compteur Rocket
+League, suivi LoL…) tournent déjà. Si la carte affiche plutôt « autorisation
+Twitch refusée », reconnecte ta chaîne (**Connecteurs** → **Twitch** →
+**Connecter**).
 
 **« Autorisation échouée » après avoir cliqué sur Connecter.**
 Presque toujours l'adresse de retour. Recopie-la avec le bouton **Copier** dans
