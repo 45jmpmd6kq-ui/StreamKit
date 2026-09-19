@@ -109,7 +109,12 @@ tu veux, puis clique sur **Enregistrer** en bas.
 
 - **Bot Musique** et **Random Car** créent **eux-mêmes** leur récompense de
   points de chaîne, avec le nom et le coût indiqués dans leurs réglages. Tu n'as
-  rien à créer sur Twitch.
+  rien à créer sur Twitch. Pour changer le nom, le coût ou le délai, fais-le
+  dans StreamKit puis **Enregistrer** : la récompense est mise à jour sur Twitch
+  dans la foulée. Une modification faite directement sur Twitch serait remplacée
+  au prochain démarrage. Si tu avais déjà créé à la main une récompense du même
+  nom, supprime-la sur Twitch : StreamKit ne peut piloter que les récompenses
+  qu'il a créées lui-même, et le module te le signale.
 - **Bot Musique** : active **Afficher le morceau en cours** pour que l'overlay
   « Liste » montre aussi ce qui tourne sur Spotify (pochette, titre, avancement),
   au-dessus des demandes des viewers. Le bloc grandit quand la file se remplit et
@@ -123,7 +128,12 @@ tu veux, puis clique sur **Enregistrer** en bas.
   → Propriétés → « Actualiser le cache de la page actuelle ») : une source déjà
   ouverte garde l'ancien affichage.
 - **Random Car** : dans **Interfaces**, ouvre **Mes voitures** et coche les
-  voitures que tu possèdes. Le tirage se fait uniquement parmi elles.
+  voitures que tu possèdes. Le tirage se fait uniquement parmi elles. **Sans
+  voiture cochée, rien ne s'affiche** : chaque utilisation est remboursée. La
+  **Vue d'ensemble** le signale, et indique sinon le coût réel de la récompense
+  sur Twitch et le nombre de voitures en jeu. La machine à sous est invisible
+  entre deux tirages : pour la placer, ajoute `?demo=1` à l'adresse (un tirage
+  toutes les 14 secondes), ou clique **Lancer un tirage de test**.
 - **Clips** : par défaut, seuls tes modérateurs peuvent taper `!clip`. Ce qui
   suit la commande devient le titre du clip : `!clip pentakill`.
 - **Prédictions** : rien à créer. Lance tes prédictions depuis Twitch comme
@@ -273,6 +283,21 @@ Legends** de la Vue d'ensemble, qui doit dire « en partie » avec ton champion.
 Seuls **tes** moments comptent (et l'ace de ton équipe), et un moment réglé sur
 « Ignoré » ne s'affiche pas. Pas de clip : tu n'étais pas en live, ou ta chaîne
 doit être reconnectée.
+
+**Random Car : la machine à sous n'apparaît pas.**
+Clique sur **Lancer un tirage de test** dans le module. Si le message ajoute
+« aucune source OBS n'affiche la machine à sous », c'est la source OBS : recopie
+son adresse, à la taille de ta scène. Si la machine s'affiche au test mais pas
+quand un viewer utilise la récompense, regarde la ligne **Random Car** de la
+carte **Rocket League**, dans la Vue d'ensemble (aucune voiture cochée ?), puis
+le journal : chaque utilisation y laisse une ligne, et un souci de connexion
+avec Twitch aussi.
+
+**Le coût de la récompense n'est pas celui de StreamKit.**
+Clique sur **Enregistrer** dans le module : StreamKit remet le nom, le coût et
+le délai de ses réglages sur Twitch. Si le module affiche « existe déjà sur ta
+chaîne, mais StreamKit ne l'a pas créée », supprime cette récompense sur Twitch
+(ou donne un autre nom dans le module), puis **Enregistrer**.
 
 **Le scoreboard de prédiction n'apparaît pas.**
 Clique sur **Simuler une prédiction** dans le module. S'il s'affiche,

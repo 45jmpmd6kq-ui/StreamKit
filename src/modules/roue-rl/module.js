@@ -14,6 +14,8 @@
 import { Roue } from './roue.js';
 import * as voitures from './voitures.js';
 
+const points = (n) => Number(n).toLocaleString('fr-FR') + (Math.abs(n) > 1 ? ' points' : ' point');
+
 export default {
   id: 'roue-rl',
   nom: 'Random Car',
@@ -32,7 +34,7 @@ export default {
         cle: 'rewardTitle',
         type: 'texte',
         label: 'Nom de la récompense',
-        aide: 'Créée automatiquement sur ta chaîne si elle n’existe pas encore.',
+        aide: 'StreamKit crée la récompense sur ta chaîne et la tient à jour : change son nom, son coût et son délai ici, pas sur Twitch.',
         defaut: '🚗 Random Car',
         requis: true,
       },
@@ -48,7 +50,7 @@ export default {
         cle: 'rewardCooldownSec',
         type: 'nombre',
         label: 'Délai entre deux utilisations (secondes)',
-        aide: 'Appliqué par Twitch à la création de la récompense.',
+        aide: '0 = aucun délai.',
         defaut: 60,
         min: 0,
         max: 86400,
@@ -186,8 +188,31 @@ export default {
     async tirageDeTest(ctx) {
       if (!ctx._tirer) return { ok: false, erreur: 'Le module doit être démarré pour lancer un tirage.' };
       const r = await ctx._tirer('Test');
-      return { message: r ? 'Tirage lancé : ' + r : 'Aucune voiture sélectionnée.' };
+      if (!r) return { message: 'Aucune voiture sélectionnée.' };
+      return {
+        message:
+          'Tirage lancé : ' +
+          r +
+          (ctx.overlay.nbSources('roue') ? '' : ' — mais aucune source OBS n’affiche la machine à sous.'),
+      };
     },
+  },
+
+  // Vue d'ensemble : ce que Twitch propose vraiment aux viewers, et le piege le
+  // plus courant -- aucune voiture cochee, donc chaque utilisation remboursee
+  // sans rien a l'ecran.
+  async sante(ctx) {
+    const e = ctx._etatRoue?.();
+    const ligne = (etat, detail, aide = '') => [{ id: 'roue-rl', nom: 'Random Car', etat, detail, aide }];
+    if (!e) return ligne('inactif', 'module au repos');
+    if (!e.voitures) {
+      return ligne(
+        'attention',
+        'aucune voiture cochée',
+        'Dans le module Random Car, ouvre « Mes voitures » (Interfaces) et coche tes voitures : sans elles, chaque utilisation est remboursée et rien ne s’affiche.'
+      );
+    }
+    return ligne('ok', '« ' + e.titre + ' » à ' + points(e.cout) + ' · ' + e.voitures + ' voiture(s)');
   },
 
   async demarrer(ctx) {
@@ -240,6 +265,11 @@ export default {
       couleur: c.accent1,
       cooldownSec: c.rewardCooldownSec,
     });
+    ctx._etatRoue = () => ({
+      titre: recompense.titre,
+      cout: recompense.cout,
+      voitures: selection().voitures.length,
+    });
 
     // --- File de tirages ------------------------------------------------------
     // Les utilisations qui s'enchainent sont mises en file : deux rouleaux qui se
@@ -268,6 +298,13 @@ export default {
       ctx.compteur.incr('tirages');
 
       ctx.overlay.diffuser('roue', 'spin', { by: par, winner: gagnante, pool: dispo, spinMs, holdMs });
+      // La machine est invisible au repos : sans source OBS, rien ne dit a
+      // l'antenne que le tirage a eu lieu. Le journal, lui, le dira.
+      if (!ctx.overlay.nbSources('roue')) {
+        ctx.log.warn(
+          'Aucune source OBS n’affiche la machine à sous : ajoute ' + ctx.overlay.url('roue') + ' dans OBS.'
+        );
+      }
 
       // Les points sont valides des que le tirage part : l'animation dure encore
       // quelques secondes, inutile de faire patienter le viewer.
@@ -306,7 +343,9 @@ export default {
       empiler({ par: e.userDisplayName, redemption: e });
     });
 
-    ctx.log.ok('Prêt. Récompense surveillée : « ' + c.rewardTitle + ' ».');
+    ctx.log.ok(
+      'Prêt. Récompense surveillée : « ' + recompense.titre + ' » à ' + points(recompense.cout) + '.'
+    );
 
     return {
       async arreter() {

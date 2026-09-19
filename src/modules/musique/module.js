@@ -48,7 +48,7 @@ export default {
         cle: 'rewardTitle',
         type: 'texte',
         label: 'Nom de la récompense « demande de musique »',
-        aide: 'Créée automatiquement sur ta chaîne si elle n’existe pas encore.',
+        aide: 'StreamKit crée la récompense sur ta chaîne et la tient à jour : change son nom et son coût ici, pas sur Twitch.',
         defaut: '🎵 Demande de musique',
         requis: true,
       },
@@ -330,6 +330,7 @@ export default {
     let annulation = null;
     if (c.annulationActive) {
       annulation = await ctx.twitch.assurerRecompense({
+        cle: 'annulation',
         titre: TITRE_ANNULATION,
         cout: c.cancelRewardCost,
         prompt:

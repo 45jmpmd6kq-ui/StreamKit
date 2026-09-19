@@ -16,6 +16,12 @@
     --accent1: #00B0FF;
     --accent2: #FF9800;
     --bg: #0B1220;
+    /* Les memes couleurs en composantes, pour les transparences : color-mix()
+       n'existe pas dans le navigateur des OBS d'avant la 31, qui ignorait alors
+       le fond et le cadre de la machine. Tenues a jour par le script. */
+    --accent1-rgb: 0, 176, 255;
+    --accent2-rgb: 255, 152, 0;
+    --bg-rgb: 11, 18, 32;
     --item: 104px;      /* hauteur d'une case du rouleau */
     --width: 340px;
   }
@@ -31,8 +37,8 @@
   /* Au repos l'overlay est totalement invisible : pas de cadre vide a l'ecran. */
   #machine {
     width: var(--width);
-    background: color-mix(in srgb, var(--bg) 92%, transparent);
-    border: 2px solid color-mix(in srgb, var(--accent1) 55%, transparent);
+    background: rgba(var(--bg-rgb), .92);
+    border: 2px solid rgba(var(--accent1-rgb), .55);
     border-radius: 18px;
     box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .05) inset;
     overflow: hidden;
@@ -47,8 +53,8 @@
     display: flex; align-items: center; gap: 9px;
     padding: 12px 16px;
     background: linear-gradient(90deg,
-      color-mix(in srgb, var(--accent1) 30%, transparent),
-      color-mix(in srgb, var(--accent2) 22%, transparent));
+      rgba(var(--accent1-rgb), .3),
+      rgba(var(--accent2-rgb), .22));
     border-bottom: 1px solid rgba(255, 255, 255, .09);
   }
   .head .ico { font-size: 19px; line-height: 1; }
@@ -97,11 +103,11 @@
   }
   .fade.top {
     top: 0;
-    background: linear-gradient(to bottom, var(--bg) 8%, color-mix(in srgb, var(--bg) 30%, transparent) 70%, transparent);
+    background: linear-gradient(to bottom, var(--bg) 8%, rgba(var(--bg-rgb), .3) 70%, rgba(var(--bg-rgb), 0));
   }
   .fade.bottom {
     bottom: 0;
-    background: linear-gradient(to top, var(--bg) 8%, color-mix(in srgb, var(--bg) 30%, transparent) 70%, transparent);
+    background: linear-gradient(to top, var(--bg) 8%, rgba(var(--bg-rgb), .3) 70%, rgba(var(--bg-rgb), 0));
   }
 
   /* Curseur : encadre la case centrale. */
@@ -110,7 +116,7 @@
     top: var(--item); height: var(--item);
     border-top: 2px solid var(--accent1);
     border-bottom: 2px solid var(--accent1);
-    box-shadow: 0 0 22px color-mix(in srgb, var(--accent1) 45%, transparent) inset;
+    box-shadow: 0 0 22px rgba(var(--accent1-rgb), .45) inset;
     transition: border-color .3s ease, box-shadow .3s ease;
   }
   .selector::before, .selector::after {
@@ -123,14 +129,14 @@
   /* Etat "resultat" : le curseur passe a la couleur d'accent 2 et pulse. */
   #machine.landed .selector {
     border-color: var(--accent2);
-    box-shadow: 0 0 34px color-mix(in srgb, var(--accent2) 60%, transparent) inset;
+    box-shadow: 0 0 34px rgba(var(--accent2-rgb), .6) inset;
     animation: pulse 1.1s ease-in-out 2;
   }
   #machine.landed .selector::before { border-left-color: var(--accent2); }
   #machine.landed .selector::after  { border-right-color: var(--accent2); }
   @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 34px color-mix(in srgb, var(--accent2) 60%, transparent) inset; }
-    50%      { box-shadow: 0 0 60px color-mix(in srgb, var(--accent2) 85%, transparent) inset; }
+    0%, 100% { box-shadow: 0 0 34px rgba(var(--accent2-rgb), .6) inset; }
+    50%      { box-shadow: 0 0 60px rgba(var(--accent2-rgb), .85) inset; }
   }
 
   .foot {
@@ -267,13 +273,35 @@ const BASE = location.pathname.replace(/\/$/, '');
 // immediatement ses couleurs. EventSource se reconnecte tout seul.
 const flux = new EventSource(BASE + '/flux');
 
+// « #00b0ff » -> « 0, 176, 255 », pour les rgba() du CSS. null si la couleur
+// est illisible : la valeur par defaut du CSS reste alors.
+function composantes(hex) {
+  const m = /^#([0-9a-f]{6})$/i.exec(String(hex ?? '').trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(', ');
+}
+
+function couleur(nom, valeur) {
+  const rgb = composantes(valeur);
+  if (!rgb) return;
+  const r = document.documentElement.style;
+  r.setProperty('--' + nom, valeur);
+  r.setProperty('--' + nom + '-rgb', rgb);
+}
+
+// « ?corner=center » dans l'adresse : cette source garde sa position, quel que
+// soit le reglage du module (l'aide du reglage le promet).
+const COINS = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+const coinDeLaSource = COINS.find((c) => c === new URLSearchParams(location.search).get('corner'));
+if (coinDeLaSource) document.body.dataset.corner = coinDeLaSource;
+
 flux.addEventListener('etat', (e) => {
   const t = JSON.parse(e.data).theme ?? {};
-  const r = document.documentElement.style;
-  if (t.accent1) r.setProperty('--accent1', t.accent1);
-  if (t.accent2) r.setProperty('--accent2', t.accent2);
-  if (t.background) r.setProperty('--bg', t.background);
-  if (t.corner) document.body.dataset.corner = t.corner;
+  couleur('accent1', t.accent1);
+  couleur('accent2', t.accent2);
+  couleur('bg', t.background);
+  if (t.corner && !coinDeLaSource) document.body.dataset.corner = t.corner;
 });
 
 flux.addEventListener('spin', (e) => spin(JSON.parse(e.data)));
@@ -284,6 +312,13 @@ flux.addEventListener('hide', () => {
 
 // Mode demo pour placer la source dans OBS sans lancer de vrai tirage :
 //   .../overlay/roue-rl/roue?demo=1   (Espace ou clic = nouveau tirage)
+//
+// Le tirage revient tout seul toutes les DEMO_MS, comme les exemples des
+// autres overlays. Un seul tirage au chargement ne suffisait pas : il se
+// jouait pendant qu'on collait l'adresse dans OBS, et la machine avait deja
+// disparu une fois la fenetre des proprietes fermee.
+const DEMO_MS = 14000; // defilement 5,2 s + resultat 6,5 s + un temps de vide
+
 if (new URLSearchParams(location.search).has('demo')) {
   fetch(BASE + '/cars/manifest.json')
     .then((r) => r.json())
@@ -301,6 +336,7 @@ if (new URLSearchParams(location.search).has('demo')) {
       });
       addEventListener('click', fire);
       fire();
+      setInterval(fire, DEMO_MS);
     })
     .catch(() => { /* catalogue indisponible : pas de demo, l'overlay reste utilisable */ });
 }

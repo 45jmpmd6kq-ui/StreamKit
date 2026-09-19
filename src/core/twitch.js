@@ -27,8 +27,18 @@ import { EventSubWsListener } from '@twurple/eventsub-ws';
 import { ChatClient } from '@twurple/chat';
 import * as journal from './journal.js';
 import * as store from './store.js';
+import { creerSuivi } from './abonnements.js';
+import * as recompenses from './recompenses.js';
 
 const log = journal.pour('twitch');
+
+// Refus d'abonnement EventSub, dits dans le journal du module concerne.
+const suivi = creerSuivi({ logSocle: log });
+
+// Identifiant de chaque recompense creee par un module, pour la retrouver meme
+// renommee : { idModule: { cle: idRecompense } }. Dans etat/ comme la memoire
+// des modules, mais sous un nom qu'aucun dossier de module ne peut porter.
+const MEMOIRE_RECOMPENSES = '_recompenses';
 
 let etat = {
   pret: false,
@@ -160,6 +170,13 @@ export async function demarrer() {
     });
   }
 
+  if (typeof listener.onSubscriptionCreateFailure === 'function') {
+    listener.onSubscriptionCreateFailure((abonnement, err) => suivi.echec(abonnement, err));
+  }
+  if (typeof listener.onSubscriptionCreateSuccess === 'function') {
+    listener.onSubscriptionCreateSuccess((abonnement) => suivi.succes(abonnement));
+  }
+
   listener.start();
   log.info('EventSub demarre (WebSocket).');
 
@@ -193,12 +210,29 @@ export function surDirect({ debut, fin }) {
   if (!listener || !etat.broadcasterId) return () => {};
   const abonnements = [];
   try {
-    if (debut) abonnements.push(listener.onStreamOnline(etat.broadcasterId, debut));
-    if (fin) abonnements.push(listener.onStreamOffline(etat.broadcasterId, fin));
+    if (debut)
+      abonnements.push(
+        suivi.suivre(listener.onStreamOnline(etat.broadcasterId, debut), log, 'début du live')
+      );
+    if (fin)
+      abonnements.push(suivi.suivre(listener.onStreamOffline(etat.broadcasterId, fin), log, 'fin du live'));
   } catch (e) {
     log.warn('Détection du live indisponible : ' + (e?.message || e));
   }
-  return () => abonnements.forEach((a) => a.stop?.());
+  return () =>
+    abonnements.forEach((a) => {
+      suivi.oublier(a);
+      a.stop?.();
+    });
+}
+
+// Retire un lot d'abonnements EventSub d'un module (voir `noter`).
+function retirer(abonnements) {
+  return () =>
+    abonnements.forEach((a) => {
+      suivi.oublier(a);
+      a.stop();
+    });
 }
 
 // Le live est-il en cours a cet instant ? Interroge Twitch, contrairement aux
@@ -305,7 +339,8 @@ export function contextePour(moduleId, logModule) {
           logModule.err('erreur sur la recompense : ' + (err?.message || err));
         }
       });
-      return noter(moduleId, () => sub.stop());
+      suivi.suivre(sub, logModule, 'utilisations de la récompense');
+      return noter(moduleId, retirer([sub]));
     },
 
     // Cycle de vie des predictions de la chaine : lancee, votes qui arrivent,
@@ -327,7 +362,8 @@ export function contextePour(moduleId, logModule) {
       if (progression) abonnements.push(listener.onChannelPredictionProgress(id, proteger(progression)));
       if (verrou) abonnements.push(listener.onChannelPredictionLock(id, proteger(verrou)));
       if (fin) abonnements.push(listener.onChannelPredictionEnd(id, proteger(fin)));
-      return noter(moduleId, () => abonnements.forEach((a) => a.stop()));
+      abonnements.forEach((a) => suivi.suivre(a, logModule, 'prédictions'));
+      return noter(moduleId, retirer(abonnements));
     },
 
     // Cycle de vie des sondages : lance, votes qui arrivent, termine (normalement,
@@ -347,7 +383,8 @@ export function contextePour(moduleId, logModule) {
       if (debut) abonnements.push(listener.onChannelPollBegin(id, proteger(debut)));
       if (progression) abonnements.push(listener.onChannelPollProgress(id, proteger(progression)));
       if (fin) abonnements.push(listener.onChannelPollEnd(id, proteger(fin)));
-      return noter(moduleId, () => abonnements.forEach((a) => a.stop()));
+      abonnements.forEach((a) => suivi.suivre(a, logModule, 'sondages'));
+      return noter(moduleId, retirer(abonnements));
     },
 
     // Debut d'une coupure pub (automatique ou lancee par le streamer). Twitch
@@ -362,7 +399,8 @@ export function contextePour(moduleId, logModule) {
           logModule.err('erreur sur la pub : ' + (err?.message || err));
         }
       });
-      return noter(moduleId, () => sub.stop());
+      suivi.suivre(sub, logModule, 'pubs');
+      return noter(moduleId, retirer([sub]));
     },
 
     // Valider (points depenses) ou annuler (points rembourses) une redemption.
@@ -378,41 +416,52 @@ export function contextePour(moduleId, logModule) {
       }
     },
 
-    // Cree la recompense si elle n'existe pas deja (evite de refaire un setup
-    // complet quand un module ajoute une recompense).
+    // Cree la recompense, ou aligne celle qui existe sur les reglages du module
+    // (nom, cout, delai...) : voir core/recompenses.js. Appele a chaque
+    // demarrage du module, donc a chaque Enregistrer.
+    //
     // autoFulfill reste a false : une recompense en validation automatique ne
     // peut plus etre remboursee par le bot. Or rembourser est indispensable --
     // morceau introuvable, aucune voiture configuree, Spotify eteint.
     //
-    // Attention aussi : seule l'application qui a CREE la recompense peut la
-    // piloter. Une recompense creee a la main dans le panneau Twitch ne sera
-    // jamais validable ni remboursable par StreamKit.
+    // `cle` distingue les recompenses d'un meme module (le bot musique en a
+    // deux). `cooldownSec` absent : le delai reste celui de Twitch.
     async assurerRecompense({
+      cle = 'principale',
       titre,
       cout,
       prompt,
       saisieRequise = false,
       couleur,
       autoFulfill = false,
-      cooldownSec = 0,
+      cooldownSec,
     }) {
       exige();
-      const existantes = await api.channelPoints.getCustomRewards(etat.broadcasterId, true);
-      const trouvee = existantes.find((r) => r.title === titre);
-      if (trouvee) return { id: trouvee.id, titre: trouvee.title, creee: false };
+      const memoire = store.lireEtat(MEMOIRE_RECOMPENSES, {});
+      const idConnu = memoire[moduleId]?.[cle];
 
-      const r = await api.channelPoints.createCustomReward(etat.broadcasterId, {
-        title: titre,
-        cost: cout,
-        prompt,
-        userInputRequired: saisieRequise,
-        autoFulfill,
-        backgroundColor: couleur,
-        isEnabled: true,
-        ...(cooldownSec > 0 ? { globalCooldown: cooldownSec } : {}),
-      });
-      logModule.ok('Recompense creee : ' + titre);
-      return { id: r.id, titre: r.title, creee: true };
+      const r = await recompenses.assurerRecompense(
+        api,
+        etat.broadcasterId,
+        { titre, cout, prompt, saisieRequise, couleur, autoFulfill, cooldownSec },
+        { idConnu }
+      );
+
+      if (r.id !== idConnu) {
+        memoire[moduleId] = { ...memoire[moduleId], [cle]: r.id };
+        store.sauverEtat(MEMOIRE_RECOMPENSES, memoire);
+      }
+      if (r.creee) {
+        logModule.ok(
+          'Récompense créée sur Twitch : « ' + r.titre + ' », ' + recompenses.points(r.cout) + '.'
+        );
+      } else if (r.changements.length) {
+        logModule.ok(
+          'Récompense « ' + r.titre + ' » mise à jour sur Twitch : ' + r.changements.join(', ') + '.'
+        );
+      }
+      if (r.avertissement) logModule.warn(r.avertissement);
+      return r;
     },
   };
 }

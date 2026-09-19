@@ -156,7 +156,8 @@ ctx.twitch.surCommande('!skip', fn, { qui: 'mods' })   // 'tous'|'mods'|'streame
 ctx.twitch.surRecompense(rewardId, fn)
 ctx.twitch.statutRedemption(e, 'FULFILLED' | 'CANCELED')
 ctx.twitch.surPredictions({ debut, progression, verrou, fin })   // chaque phase optionnelle
-ctx.twitch.assurerRecompense({ titre, cout, prompt, saisieRequise })
+ctx.twitch.assurerRecompense({ titre, cout, prompt, saisieRequise, couleur, cooldownSec, cle })
+                                     // -> { id, titre, cout, creee, changements }
 ctx.twitch.aLeDroit('clips:edit')
 
 ctx.overlay.etat(vue, data)          // état mémorisé : une source OBS qui se
@@ -177,6 +178,17 @@ ctx.minuteur.delai(fn, ms)
 Les abonnements pris via `ctx.twitch.*` et les minuteurs pris via
 `ctx.minuteur.*` sont **retirés automatiquement** quand le module s'arrête.
 `arreter()` ne sert qu'à sauver un état ou fermer une ressource externe.
+Un abonnement que Twitch refuse s'écrit dans le journal de ton module (un
+conflit au redémarrage est retenté tout seul).
+
+**Une récompense de points de chaîne suit les réglages du module.**
+Appelle `assurerRecompense` dans `demarrer()` : elle crée la récompense, ou
+aligne celle qui existe (nom, coût, description, couleur, saisie, et le délai si
+tu passes `cooldownSec`) — donc à chaque Enregistrer. Son identifiant est retenu :
+un nom changé renomme la récompense au lieu d'en créer une seconde. Un module qui
+en a plusieurs les distingue par `cle` (`'principale'` par défaut). Une
+récompense du même nom faite à la main sur Twitch bloque le démarrage avec un
+message qui dit quoi faire : StreamKit ne peut piloter que celles qu'il a créées.
 
 `ctx.minuteur.intervalle` ne **double jamais un tour** : si ta fonction est
 encore en train de travailler quand le tic suivant arrive, ce tic est sauté.

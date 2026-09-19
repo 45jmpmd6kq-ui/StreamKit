@@ -373,6 +373,15 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       partie
 - [ ] Moments forts RL valides en vraie partie (coup d'envoi, overtime,
       entrainement libre ignore)
+- [x] **Recompenses tenues a jour** (`core/recompenses.js`) : chaque demarrage
+      d'un module aligne sa recompense sur ses reglages (nom, cout, delai...), son
+      identifiant est retenu pour la renommer, et une recompense du meme nom faite
+      a la main est signalee en clair. Les abonnements EventSub refuses s'ecrivent
+      dans le journal du module (`core/abonnements.js`), un conflit au redemarrage
+      est retente. Random Car : ligne dans la Vue d'ensemble (cout reel, voitures
+      cochees), tirage sans source OBS signale, demo en boucle
+- [ ] Random Car valide en live : cout aligne apres Enregistrer, machine a
+      l'ecran sur une vraie utilisation
 
 ## Pièges rencontrés (à ne pas refaire)
 
@@ -395,3 +404,10 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
   redémarre les modules à chaud (changement de réglages) ; avec un état global,
   l'ancienne file d'attente survit et les morceaux fantômes reviennent. D'où
   `creerFile()` en fabrique plutôt que l'ancien `queue.js` à état de module.
+- **Une récompense de points de chaîne n'était écrite qu'à sa création.** Allumer
+  Random Car la créait aussitôt au coût par défaut : le coût réglé ensuite dans
+  StreamKit ne partait jamais sur Twitch (vécu le 19/09/2026). Tout réglage qui
+  décrit un objet côté Twitch doit être réappliqué à chaque démarrage du module.
+- **Twurple ne signale un abonnement EventSub refusé que par
+  `onSubscriptionCreateFailure`.** Sans écouteur, le module paraît démarré et ne
+  reçoit rien, sans une ligne au journal.
