@@ -18,8 +18,9 @@
 //   statutRedemption(e, s) valider (FULFILLED) / rembourser (CANCELED)
 //   aLeDroit(scope)        savoir si l'autorisation courante couvre un droit
 //
-// Les abonnements sont suivis par module, pour pouvoir tout retirer proprement
-// quand on desactive un module a chaud.
+// Les gestionnaires sont suivis par module, pour pouvoir tout retirer proprement
+// quand on desactive un module a chaud. Les abonnements EventSub, eux, restent
+// poses jusqu'a la fin de la connexion (voir core/abonnements.js).
 
 import { RefreshingAuthProvider } from '@twurple/auth';
 import { ApiClient } from '@twurple/api';
@@ -27,13 +28,18 @@ import { EventSubWsListener } from '@twurple/eventsub-ws';
 import { ChatClient } from '@twurple/chat';
 import * as journal from './journal.js';
 import * as store from './store.js';
-import { creerSuivi } from './abonnements.js';
+import { creerCanaux, creerJournalTwurple, creerSuivi } from './abonnements.js';
 import * as recompenses from './recompenses.js';
 
 const log = journal.pour('twitch');
 
 // Refus d'abonnement EventSub, dits dans le journal du module concerne.
 const suivi = creerSuivi({ logSocle: log });
+
+// Abonnements EventSub partages : un par evenement, garde toute la connexion.
+// Un module qui redemarre ne fait que changer de gestionnaire (voir
+// core/abonnements.js : effacer puis reposer perdait les evenements).
+const canaux = creerCanaux({ suivi });
 
 // Identifiant de chaque recompense creee par un module, pour la retrouver meme
 // renommee : { idModule: { cle: idRecompense } }. Dans etat/ comme la memoire
@@ -147,7 +153,13 @@ export async function demarrer() {
   chat.connect();
 
   // --- EventSub en WebSocket : pas d'URL publique, pas de serveur a exposer ---
-  listener = new EventSubWsListener({ apiClient: api });
+  // Le journal de Twurple part dans le notre : c'est lui qui sait qu'un
+  // evenement a ete jete (horloge du PC en avance, abonnement inconnu).
+  canaux.vider();
+  listener = new EventSubWsListener({
+    apiClient: api,
+    logger: { minLevel: 'debug', custom: creerJournalTwurple({ log }) },
+  });
 
   // On MESURE l'etat de la socket au lieu de le declarer. Avant, la ligne
   // « eventsubConnecte = true » suivait immediatement start() : la vue
@@ -176,6 +188,12 @@ export async function demarrer() {
   if (typeof listener.onSubscriptionCreateSuccess === 'function') {
     listener.onSubscriptionCreateSuccess((abonnement) => suivi.succes(abonnement));
   }
+  if (typeof listener.onRevoke === 'function') {
+    listener.onRevoke((abonnement, statut) => {
+      suivi.revoque(abonnement, statut);
+      canaux.retirer(abonnement);
+    });
+  }
 
   listener.start();
   log.info('EventSub demarre (WebSocket).');
@@ -196,6 +214,7 @@ export async function arreter() {
   }
   chat = null;
   listener = null;
+  canaux.vider();
   etat = { ...etat, pret: false, chatConnecte: false, eventsubConnecte: false, raison: 'arrete' };
 }
 
@@ -223,15 +242,6 @@ export function surDirect({ debut, fin }) {
     abonnements.forEach((a) => {
       suivi.oublier(a);
       a.stop?.();
-    });
-}
-
-// Retire un lot d'abonnements EventSub d'un module (voir `noter`).
-function retirer(abonnements) {
-  return () =>
-    abonnements.forEach((a) => {
-      suivi.oublier(a);
-      a.stop();
     });
 }
 
@@ -270,6 +280,21 @@ export function contextePour(moduleId, logModule) {
   const exige = () => {
     if (!etat.pret) throw new Error('Twitch non connecte (' + etat.raison + ')');
   };
+
+  // Branche `fn` sur l'abonnement EventSub partage `nom`, cree au besoin par
+  // `creer(recevoir)`. A l'arret du module, seul le gestionnaire est retire.
+  // `quoi` nomme l'abonnement dans le journal ; `sujet` complete « erreur sur ».
+  const brancher = (nom, quoi, sujet, creer, fn) =>
+    noter(
+      moduleId,
+      canaux.brancher({ nom, creer, log: logModule, quoi }, async (e) => {
+        try {
+          await fn(e);
+        } catch (err) {
+          logModule.err('erreur sur ' + sujet + ' : ' + (err?.message || err));
+        }
+      })
+    );
 
   return {
     get api() {
@@ -332,15 +357,13 @@ export function contextePour(moduleId, logModule) {
     surRecompense(rewardId, fn) {
       exige();
       if (!rewardId) throw new Error('surRecompense : identifiant de recompense manquant');
-      const sub = listener.onChannelRedemptionAddForReward(etat.broadcasterId, rewardId, async (e) => {
-        try {
-          await fn(e);
-        } catch (err) {
-          logModule.err('erreur sur la recompense : ' + (err?.message || err));
-        }
-      });
-      suivi.suivre(sub, logModule, 'utilisations de la récompense');
-      return noter(moduleId, retirer([sub]));
+      return brancher(
+        'recompense:' + rewardId,
+        'utilisations de la récompense',
+        'la recompense',
+        (recevoir) => listener.onChannelRedemptionAddForReward(etat.broadcasterId, rewardId, recevoir),
+        fn
+      );
     },
 
     // Cycle de vie des predictions de la chaine : lancee, votes qui arrivent,
@@ -349,21 +372,19 @@ export function contextePour(moduleId, logModule) {
     // (channel:manage:predictions le couvre aussi).
     surPredictions({ debut, progression, verrou, fin }) {
       exige();
-      const abonnements = [];
-      const proteger = (fn) => async (e) => {
-        try {
-          await fn(e);
-        } catch (err) {
-          logModule.err('erreur sur la prediction : ' + (err?.message || err));
-        }
-      };
       const id = etat.broadcasterId;
-      if (debut) abonnements.push(listener.onChannelPredictionBegin(id, proteger(debut)));
-      if (progression) abonnements.push(listener.onChannelPredictionProgress(id, proteger(progression)));
-      if (verrou) abonnements.push(listener.onChannelPredictionLock(id, proteger(verrou)));
-      if (fin) abonnements.push(listener.onChannelPredictionEnd(id, proteger(fin)));
-      abonnements.forEach((a) => suivi.suivre(a, logModule, 'prédictions'));
-      return noter(moduleId, retirer(abonnements));
+      const phases = [
+        ['debut', debut, (recevoir) => listener.onChannelPredictionBegin(id, recevoir)],
+        ['progression', progression, (recevoir) => listener.onChannelPredictionProgress(id, recevoir)],
+        ['verrou', verrou, (recevoir) => listener.onChannelPredictionLock(id, recevoir)],
+        ['fin', fin, (recevoir) => listener.onChannelPredictionEnd(id, recevoir)],
+      ];
+      const retraits = phases
+        .filter(([, fn]) => fn)
+        .map(([phase, fn, creer]) =>
+          brancher('prediction:' + phase, 'prédictions', 'la prediction', creer, fn)
+        );
+      return () => retraits.forEach((r) => r());
     },
 
     // Cycle de vie des sondages : lance, votes qui arrivent, termine (normalement,
@@ -371,20 +392,16 @@ export function contextePour(moduleId, logModule) {
     // channel:read:polls (channel:manage:polls le couvre aussi).
     surSondages({ debut, progression, fin }) {
       exige();
-      const abonnements = [];
-      const proteger = (fn) => async (e) => {
-        try {
-          await fn(e);
-        } catch (err) {
-          logModule.err('erreur sur le sondage : ' + (err?.message || err));
-        }
-      };
       const id = etat.broadcasterId;
-      if (debut) abonnements.push(listener.onChannelPollBegin(id, proteger(debut)));
-      if (progression) abonnements.push(listener.onChannelPollProgress(id, proteger(progression)));
-      if (fin) abonnements.push(listener.onChannelPollEnd(id, proteger(fin)));
-      abonnements.forEach((a) => suivi.suivre(a, logModule, 'sondages'));
-      return noter(moduleId, retirer(abonnements));
+      const phases = [
+        ['debut', debut, (recevoir) => listener.onChannelPollBegin(id, recevoir)],
+        ['progression', progression, (recevoir) => listener.onChannelPollProgress(id, recevoir)],
+        ['fin', fin, (recevoir) => listener.onChannelPollEnd(id, recevoir)],
+      ];
+      const retraits = phases
+        .filter(([, fn]) => fn)
+        .map(([phase, fn, creer]) => brancher('sondage:' + phase, 'sondages', 'le sondage', creer, fn));
+      return () => retraits.forEach((r) => r());
     },
 
     // Debut d'une coupure pub (automatique ou lancee par le streamer). Twitch
@@ -392,15 +409,13 @@ export function contextePour(moduleId, logModule) {
     // channel:read:ads.
     surPub(fn) {
       exige();
-      const sub = listener.onChannelAdBreakBegin(etat.broadcasterId, async (e) => {
-        try {
-          await fn(e);
-        } catch (err) {
-          logModule.err('erreur sur la pub : ' + (err?.message || err));
-        }
-      });
-      suivi.suivre(sub, logModule, 'pubs');
-      return noter(moduleId, retirer([sub]));
+      return brancher(
+        'pub',
+        'pubs',
+        'la pub',
+        (recevoir) => listener.onChannelAdBreakBegin(etat.broadcasterId, recevoir),
+        fn
+      );
     },
 
     // Valider (points depenses) ou annuler (points rembourses) une redemption.

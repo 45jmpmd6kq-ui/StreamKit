@@ -299,6 +299,15 @@ le délai de ses réglages sur Twitch. Si le module affiche « existe déjà sur
 chaîne, mais StreamKit ne l'a pas créée », supprime cette récompense sur Twitch
 (ou donne un autre nom dans le module), puis **Enregistrer**.
 
+**Le scoreboard de sondage n'apparaît pas.**
+Clique sur **Simuler un sondage** dans le module. S'il s'affiche, la source OBS
+est bonne : regarde alors la carte **Sondages** de la Vue d'ensemble (droit
+manquant : reconnecte ta chaîne), puis le journal. Un sondage lancé y laisse la
+ligne « Sondage lancé » ; sans elle, Twitch n'a rien transmis, et le journal dit
+pourquoi (abonnement refusé, ou horloge du PC en avance : remets Windows à
+l'heure). Si rien ne s'affiche à la simulation, c'est la source OBS : recopie son
+adresse.
+
 **Le scoreboard de prédiction n'apparaît pas.**
 Clique sur **Simuler une prédiction** dans le module. S'il s'affiche,
 l'overlay est bien placé : regarde alors la carte **Prédictions** de la Vue

@@ -376,10 +376,13 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - [x] **Recompenses tenues a jour** (`core/recompenses.js`) : chaque demarrage
       d'un module aligne sa recompense sur ses reglages (nom, cout, delai...), son
       identifiant est retenu pour la renommer, et une recompense du meme nom faite
-      a la main est signalee en clair. Les abonnements EventSub refuses s'ecrivent
-      dans le journal du module (`core/abonnements.js`), un conflit au redemarrage
-      est retente. Random Car : ligne dans la Vue d'ensemble (cout reel, voitures
-      cochees), tirage sans source OBS signale, demo en boucle
+      a la main est signalee en clair. Random Car : ligne dans la Vue d'ensemble
+      (cout reel, voitures cochees), tirage sans source OBS signale, demo en boucle
+- [x] **Abonnements EventSub partages** (`core/abonnements.js`) : un par
+      evenement, garde toute la connexion ; un module qui redemarre ne change que
+      son gestionnaire (effacer puis reposer perdait les evenements, prouve avec
+      le vrai Twurple). Refus, revocations et evenements jetes par Twurple
+      (horloge du PC en avance, abonnement inconnu) arrivent au journal
 - [ ] Random Car valide en live : cout aligne apres Enregistrer, machine a
       l'ecran sur une vraie utilisation
 
@@ -411,3 +414,13 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 - **Twurple ne signale un abonnement EventSub refusé que par
   `onSubscriptionCreateFailure`.** Sans écouteur, le module paraît démarré et ne
   reçoit rien, sans une ligne au journal.
+- **Effacer puis reposer aussitôt le même abonnement EventSub perd ses
+  événements.** Twurple range un abonnement sous un nom logique (type +
+  condition) ; quand Twitch confirme l'effacement de l'ancien APRÈS la création
+  du nouveau, Twurple retire le nouveau de ses tables et jette ce que Twitch
+  envoie (« Notification from unknown event received », dans sa console
+  seulement). C'est ce que faisait chaque redémarrage de module jusqu'à la
+  0.25.0 : sondages et Random Car muets après un Enregistrer (19/09/2026).
+  Reproduit avec le vrai Twurple dans `tests/abonnements-twurple.test.js`.
+  D'où les abonnements partagés de `core/abonnements.js`, et le journal de
+  Twurple branché sur le nôtre.

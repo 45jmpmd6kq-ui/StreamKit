@@ -175,11 +175,15 @@ ctx.minuteur.delai(fn, ms)
 
 ### Ce dont tu n'as pas à t'occuper
 
-Les abonnements pris via `ctx.twitch.*` et les minuteurs pris via
+Les gestionnaires branchés via `ctx.twitch.*` et les minuteurs pris via
 `ctx.minuteur.*` sont **retirés automatiquement** quand le module s'arrête.
 `arreter()` ne sert qu'à sauver un état ou fermer une ressource externe.
-Un abonnement que Twitch refuse s'écrit dans le journal de ton module (un
-conflit au redémarrage est retenté tout seul).
+Les abonnements EventSub eux-mêmes restent posés chez Twitch jusqu'à la fin de
+la connexion, partagés : un module qui redémarre (chaque Enregistrer) ne fait
+que changer de gestionnaire. Effacer puis reposer aussitôt le même abonnement
+perdait les événements (voir le README, « Pièges »). Un abonnement que Twitch
+refuse ou coupe s'écrit dans le journal de ton module (un conflit est retenté
+tout seul).
 
 **Une récompense de points de chaîne suit les réglages du module.**
 Appelle `assurerRecompense` dans `demarrer()` : elle crée la récompense, ou
