@@ -88,7 +88,9 @@ function contexte(reglages = {}) {
     }),
     twitch: {
       channel: 'streamer',
-      assurerRecompense: async ({ titre }) => ({ id: titre }),
+      // Comme la vraie : ce que Twitch porte apres alignement. Un test remplace
+      // cette fonction pour renvoyer un cout different des reglages.
+      assurerRecompense: async ({ titre, cout }) => ({ id: titre, titre, cout, changements: [] }),
       surRecompense: (id, fn) => recompenses.set(id, fn),
       statutRedemption: async () => {},
       dire: () => {},
@@ -287,4 +289,53 @@ test('deux releves simultanes ne passent pas deux fois un morceau refuse', async
   await Promise.all([t.tour(), releveAnticipe()]);
 
   assert.equal(spotify.suivants, 1);
+});
+
+// --- Vue d'ensemble ---------------------------------------------------------
+
+test('la vue d ensemble montre les deux recompenses, au cout porte par Twitch', async () => {
+  fauxSpotify();
+  const t = contexte({ rewardTitle: '🎵 Demande de musique', rewardCost: 500, cancelRewardCost: 1000 });
+  // Twitch renvoie un cout different des reglages : c'est LUI qu'on affiche,
+  // sinon la ligne repeterait le formulaire au lieu de le verifier.
+  t.ctx.twitch.assurerRecompense = async ({ titre, cout }) => ({
+    id: titre,
+    titre,
+    cout: cout === 500 ? 750 : cout,
+  });
+  await manifeste.demarrer(t.ctx);
+
+  const cartes = await manifeste.sante(t.ctx);
+  assert.deepEqual(
+    cartes.map((c) => c.id),
+    ['musique', 'spotify']
+  );
+  assert.equal(cartes[0].etat, 'ok');
+  // `\s` : l'espace des milliers est une espace fine insecable, qui depend de
+  // la version d'ICU du Node qui fait tourner le test.
+  assert.match(cartes[0].detail, /^« 🎵 Demande de musique » à 750 points · refus à 1\s000 points$/);
+  assert.match(cartes[0].aide, /Récompense de refus/);
+});
+
+test('refus desactive : la ligne ne parle que de la demande', async () => {
+  fauxSpotify();
+  const t = contexte({ annulationActive: false, rewardCost: 1 });
+  await manifeste.demarrer(t.ctx);
+
+  const [ligne] = await manifeste.sante(t.ctx);
+  assert.equal(ligne.detail, '« 🎵 Demande de musique » à 1 point');
+  assert.match(ligne.aide, /désactivé/);
+});
+
+test('module au repos : pas de ligne recompense, la carte Spotify reste', async () => {
+  // sante() est aussi lue avant tout demarrage (vue d'ensemble ouverte au
+  // lancement) : sans recompense connue, on ne montre pas une ligne vide.
+  fauxSpotify();
+  const { ctx } = contexte();
+
+  const cartes = await manifeste.sante(ctx);
+  assert.deepEqual(
+    cartes.map((c) => c.id),
+    ['spotify']
+  );
 });

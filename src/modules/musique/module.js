@@ -24,6 +24,66 @@ const VUES = ['annonces', 'liste'];
 // morceau annule est saute, et avec lequel l'overlay voit un changement.
 const INTERVALLE_SUIVI = 5000;
 
+const points = (n) => Number(n).toLocaleString('fr-FR') + (Math.abs(n) > 1 ? ' points' : ' point');
+
+// La ligne « Bot Musique » de la vue d'ensemble : le nom et le cout que porte
+// VRAIMENT la recompense sur Twitch, pas ceux des reglages. Le module aligne
+// Twitch sur ses reglages a chaque demarrage ; cette ligne est l'endroit ou le
+// streamer verifie que c'est bien parti, sans ouvrir son tableau de bord Twitch
+// (Random Car le fait deja dans sa carte Rocket League).
+//
+// Rien tant que le module n'a pas demarre : ses recompenses ne sont connues
+// qu'a ce moment-la.
+function carteRecompenses(ctx) {
+  const r = ctx._etatMusique?.();
+  if (!r) return [];
+  return [
+    {
+      id: 'musique',
+      nom: 'Bot Musique',
+      etat: 'ok',
+      detail:
+        '« ' + r.titre + ' » à ' + points(r.cout) + (r.refus ? ' · refus à ' + points(r.refus.cout) : ''),
+      aide: r.refus
+        ? 'Récompense de refus : « ' + r.refus.titre + ' ».'
+        : 'Le refus d’une musique est désactivé dans les réglages.',
+    },
+  ];
+}
+
+async function carteSpotify(ctx) {
+  if (!ctx.connecteur('spotify').connecte) {
+    return {
+      id: 'spotify',
+      nom: 'Spotify',
+      etat: 'inactif',
+      detail: 'non connecté',
+      aide: 'Branche Spotify depuis l’écran Connecteurs.',
+    };
+  }
+
+  try {
+    // Un appareil actif est la condition pour qu'une musique parte en file :
+    // sans lui, chaque demande serait remboursée.
+    const appareil = await ctx._spotify?.getActiveDevice();
+    return {
+      id: 'spotify',
+      nom: 'Spotify',
+      etat: appareil ? 'ok' : 'attention',
+      detail: appareil ? appareil.name : 'aucun appareil actif',
+      aide: appareil ? '' : 'Ouvre Spotify et lance une musique, sinon les demandes seront remboursées.',
+    };
+  } catch (e) {
+    return {
+      id: 'spotify',
+      nom: 'Spotify',
+      etat: 'ko',
+      detail: 'injoignable',
+      aide: e?.message || String(e),
+    };
+  }
+}
+
 export default {
   id: 'musique',
   nom: 'Bot Musique',
@@ -213,46 +273,12 @@ export default {
 
   // --- Autorisation Spotify -------------------------------------------------
 
-  // Ce que ce module apporte a la vue d'ensemble. L'existence de la connexion
-  // Spotify est deja rapportee par le socle (ecran Connecteurs) : ici on parle
-  // de ce que lui seul sait, l'appareil de lecture actif.
+  // Ce que ce module apporte a la vue d'ensemble : ses recompenses telles que
+  // Twitch les porte, et l'appareil de lecture actif. L'existence de la
+  // connexion Spotify, elle, est deja rapportee par le socle (ecran
+  // Connecteurs) ; la carte « Spotify » ci-dessous prend sa place.
   async sante(ctx) {
-    if (!ctx.connecteur('spotify').connecte) {
-      return [
-        {
-          id: 'spotify',
-          nom: 'Spotify',
-          etat: 'inactif',
-          detail: 'non connecté',
-          aide: 'Branche Spotify depuis l’écran Connecteurs.',
-        },
-      ];
-    }
-
-    try {
-      // Un appareil actif est la condition pour qu'une musique parte en file :
-      // sans lui, chaque demande serait remboursée.
-      const appareil = await ctx._spotify?.getActiveDevice();
-      return [
-        {
-          id: 'spotify',
-          nom: 'Spotify',
-          etat: appareil ? 'ok' : 'attention',
-          detail: appareil ? appareil.name : 'aucun appareil actif',
-          aide: appareil ? '' : 'Ouvre Spotify et lance une musique, sinon les demandes seront remboursées.',
-        },
-      ];
-    } catch (e) {
-      return [
-        {
-          id: 'spotify',
-          nom: 'Spotify',
-          etat: 'ko',
-          detail: 'injoignable',
-          aide: e?.message || String(e),
-        },
-      ];
-    }
+    return [...carteRecompenses(ctx), await carteSpotify(ctx)];
   },
 
   // --- Cycle de vie ---------------------------------------------------------
@@ -340,6 +366,13 @@ export default {
         couleur: '#ff4d5e',
       });
     }
+
+    // Lu par sante() : ce que Twitch porte apres l'alignement, pas les reglages.
+    ctx._etatMusique = () => ({
+      titre: principale.titre,
+      cout: principale.cout,
+      refus: annulation && { titre: annulation.titre, cout: annulation.cout },
+    });
 
     // --- 1) Demande de musique ----------------------------------------------
 
@@ -551,7 +584,11 @@ export default {
 
     // --- Demarrage termine ----------------------------------------------------
 
-    ctx.log.ok('Prêt. Récompense surveillée : « ' + c.rewardTitle + ' ».');
+    // Le titre et le cout viennent de Twitch : le journal dit ce que les
+    // viewers voient vraiment, pas ce que le module a demande.
+    ctx.log.ok(
+      'Prêt. Récompense surveillée : « ' + principale.titre + ' » à ' + points(principale.cout) + '.'
+    );
     spotify
       .getActiveDevice()
       .then((d) => {
