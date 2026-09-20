@@ -15,7 +15,13 @@ import { join } from 'node:path';
 import { decouper, lireMessage, creerClient, abonner } from '../src/modules/rl-session/flux.js';
 import { creerSuiviParties, trouverJoueur } from '../src/modules/rl-session/partie.js';
 import { creerLecteur, creerSuiviFichier } from '../src/modules/rl-session/journal-jeu.js';
-import { lireIni, activerIni, activerFichiers, etatApi } from '../src/modules/rl-session/installation.js';
+import {
+  lireIni,
+  activerIni,
+  activerFichiers,
+  etatApi,
+  rallumerApi,
+} from '../src/modules/rl-session/installation.js';
 import { accepter, ajouter, bilan, debutSession } from '../src/modules/rl-session/session.js';
 
 // --- Flux : des objets JSON colles, sans separateur ------------------------------
@@ -311,6 +317,11 @@ const LIGNES = {
   reservation:
     '[0305.22] RankedReconnect: RankedReconnectSave_TA_0.SetRankedReconnect() Server=((Reservation=(ServerName="EU7-0e69fc9a-Hydyne",Playlist=11,Region="EU",ReservationID="D60F52538BC347479AFF1B9116513617"',
   fin: '[0572.42] ScriptLog: Match Ended - [Reservation: , MatchID: ]',
+  // Relevees sur le PC de Sylvain le 20/09/2026 : le meme jeu, API eteinte
+  // puis rallumee, a onze minutes d'intervalle.
+  ouverture: 'Log: Log file open, 20/09/2026 15:48:06',
+  apiEteinte: '[0022.56] StatsAPI: PacketSendRate=(0.0000) Port=(49123) WebPort=(49124)',
+  apiActive: '[0020.24] StatsAPI: PacketSendRate=(30.0000) Port=(49123) WebPort=(49124)',
 };
 
 test('Launch.log : identite, playlist de la file et de la reservation, fin de partie', () => {
@@ -323,6 +334,28 @@ test('Launch.log : identite, playlist de la file et de la reservation, fin de pa
   assert.equal(l.etat.playlist, 11);
   l.ligne(LIGNES.fin);
   assert.equal(l.etat.playlist, null, 'un match prive lance ensuite ne doit pas heriter du classe');
+});
+
+test('Launch.log : le jeu ecrit le reglage d API avec lequel il a demarre', () => {
+  // Les .ini disent ce qu'on a demande, cette ligne ce qui s'applique VRAIMENT
+  // a la partie en cours. Les deux ont diverge le 20/09/2026.
+  const l = creerLecteur();
+  assert.equal(l.etat.api, null, 'rien tant que le jeu ne l a pas ecrit');
+  l.ligne(LIGNES.apiEteinte);
+  assert.deepEqual(l.etat.api, { taux: 0, port: 49123 });
+  l.ligne(LIGNES.apiActive);
+  assert.deepEqual(l.etat.api, { taux: 30, port: 49123 });
+});
+
+test('Launch.log : un nouveau lancement du jeu efface ce qu on savait du precedent', () => {
+  const l = creerLecteur();
+  l.ligne(LIGNES.apiActive);
+  l.ligne(LIGNES.file);
+  l.ligne(LIGNES.identite);
+  l.ligne(LIGNES.ouverture);
+  assert.equal(l.etat.api, null, 'le jeu relance peut avoir demarre avec un autre reglage');
+  assert.equal(l.etat.playlist, null);
+  assert.equal(l.etat.primaryId, MOI, 'le compte, lui, ne change pas d un lancement a l autre');
 });
 
 test('suivi du fichier : lecture par morceaux et ligne en cours d ecriture', () => {
@@ -419,6 +452,54 @@ test('activerFichiers : sauvegarde .bak a la premiere modification seulement', (
     assert.deepEqual(activerFichiers([f]), [{ fichier: f, ok: true, change: false }]);
     assert.equal(readFileSync(f + '.bak', 'utf8'), INI_LIVRE);
     assert.ok(existsSync(f));
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
+  }
+});
+
+test('etatApi : un seul fichier eteint suffit a dire eteinte, et il est nomme', () => {
+  // Le cas du 20/09/2026 : fichier du jeu a 30, copie utilisateur a 0. Le jeu
+  // recopie le sien par-dessus au lancement suivant, donc le zero l emporte.
+  const dossier = mkdtempSync(join(tmpdir(), 'rl-ini-'));
+  const jeu = join(dossier, 'DefaultStatsAPI.ini');
+  const copie = join(dossier, 'TAStatsAPI.ini');
+  try {
+    writeFileSync(jeu, INI_LIVRE.replace('PacketSendRate=0', 'PacketSendRate=30'));
+    writeFileSync(copie, INI_LIVRE);
+    const e = etatApi([jeu, copie]);
+    assert.equal(e.active, false);
+    assert.deepEqual(e.eteints, [copie], 'seul le fichier fautif sera reecrit');
+    assert.equal(e.port, 49123);
+
+    activerFichiers(e.eteints);
+    assert.equal(etatApi([jeu, copie]).active, true);
+    assert.deepEqual(etatApi([jeu, copie]).eteints, []);
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
+  }
+});
+
+test('rallumerApi : remet le reglage quand le jeu l a efface, et se tait sinon', () => {
+  // Le scenario du 20/09/2026 : Rocket League (ou son lanceur) remet les
+  // fichiers dans leur etat d origine au lancement. Sans cette veille, le
+  // streamer part en live avec une API eteinte et rien ne le dit.
+  const dossier = mkdtempSync(join(tmpdir(), 'rl-ini-'));
+  const f = join(dossier, 'DefaultStatsAPI.ini');
+  try {
+    writeFileSync(f, INI_LIVRE);
+
+    const premier = rallumerApi([f]);
+    assert.equal(premier.active, true);
+    assert.deepEqual(premier.remis, [f]);
+    assert.deepEqual(premier.refuses, []);
+
+    // Rien a faire : le module ne doit rien avoir a dire au streamer.
+    assert.deepEqual(rallumerApi([f]).remis, [], 'deja active : on ne repete pas');
+
+    // Le jeu efface de nouveau.
+    writeFileSync(f, INI_LIVRE);
+    assert.deepEqual(rallumerApi([f]).remis, [f]);
+    assert.equal(lireIni(readFileSync(f, 'utf8')).taux, 30);
   } finally {
     rmSync(dossier, { recursive: true, force: true });
   }

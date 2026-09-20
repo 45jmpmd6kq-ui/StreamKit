@@ -246,3 +246,35 @@ test('sans joueur identifie, la vue d ensemble le dit une fois connecte', async 
     rmSync(dossier, { recursive: true, force: true });
   }
 });
+
+test('vue d ensemble : le jeu tourne, mais il a demarre avec l API eteinte', async () => {
+  // Ce que dit le Launch.log du jeu lui-meme (PacketSendRate=0) : plus besoin
+  // de deviner, et plus de « jeu fermé » pendant que le streamer joue.
+  const ctx = {
+    _etatRL: () => ({
+      connecte: false,
+      jeuLance: true,
+      apiActive: true,
+      apiDuJeu: { taux: 0, port: 49123 },
+      bilan: { victoires: 0, defaites: 0 },
+    }),
+  };
+  const [ligne] = await manifeste.sante(ctx);
+  assert.equal(ligne.etat, 'attention');
+  assert.match(ligne.detail, /API éteinte/);
+  assert.match(ligne.aide, /Relance le jeu/);
+});
+
+test('vue d ensemble : API allumee au lancement du jeu, mais rien ne repond', async () => {
+  const ctx = {
+    _etatRL: () => ({
+      connecte: false,
+      jeuLance: true,
+      apiActive: true,
+      apiDuJeu: { taux: 30, port: 49123 },
+      bilan: { victoires: 0, defaites: 0 },
+    }),
+  };
+  const [ligne] = await manifeste.sante(ctx);
+  assert.match(ligne.detail, /l’API ne répond pas/);
+});

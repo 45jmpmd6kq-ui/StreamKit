@@ -53,13 +53,36 @@ const RE_RESERVATION = /Reservation=\(.*?\bPlaylist=(\d+)/;
 const RE_FIN = /Match Ended/;
 const RE_IDENTITE = /"userId":"((?:Epic|Steam|PS4|PS5|XboxOne|Switch)\|[^"|]+\|\d+)"/;
 
+// Ce que le jeu a VRAIMENT lu de l'API de stats, une vingtaine de secondes
+// apres son lancement :
+//
+//   [0022.56] StatsAPI: PacketSendRate=(0.0000) Port=(49123) WebPort=(49124)
+//
+// Les fichiers .ini disent ce qu'on a demande ; cette ligne dit ce qui s'
+// applique a la partie en cours. Les deux ont diverge chez Sylvain le
+// 20/09/2026 : fichiers a 30, jeu a 0, aucune connexion de la journee.
+const RE_STATSAPI = /StatsAPI:\s*PacketSendRate=\(([\d.]+)\)\s*Port=\((\d+)\)/;
+
+// Premiere ligne d'un journal : « Log: Log file open, 20/09/2026 15:48:06 ».
+const RE_OUVERTURE = /^Log: Log file open/;
+
 // Etat deduit des lignes, sans rien savoir du fichier.
 export function creerLecteur() {
-  const etat = { playlist: null, primaryId: null };
+  const etat = { playlist: null, primaryId: null, api: null };
   return {
     etat,
     ligne(texte) {
       let m;
+      // Nouveau lancement du jeu : ce qu'on savait du precedent ne vaut plus.
+      if (RE_OUVERTURE.test(texte)) {
+        etat.playlist = null;
+        etat.api = null;
+        return;
+      }
+      if ((m = RE_STATSAPI.exec(texte))) {
+        etat.api = { taux: Number(m[1]), port: Number(m[2]) };
+        return;
+      }
       if ((m = RE_FILE.exec(texte)) || (m = RE_RESERVATION.exec(texte))) {
         etat.playlist = Number(m[1]);
       } else if (RE_FIN.test(texte)) {

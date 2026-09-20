@@ -9,7 +9,7 @@
 // empruntent au suivi de session LoL.
 
 import { abonner } from '../rl-session/flux.js';
-import { etatApi, fichiersApi } from '../rl-session/installation.js';
+import { etatApi, fichiersApi, jeuLance } from '../rl-session/installation.js';
 import { trouverLaunchLog } from '../rl-session/journal-jeu.js';
 import { creerDetecteur } from './detection.js';
 
@@ -129,6 +129,19 @@ export default {
           'Clique « Activer l’API dans Rocket League » dans le module Compteur de session, puis relance le jeu.'
         );
       }
+      // Le jeu tourne et l'API ne repond pas : il a demarre avec le reglage
+      // eteint (Rocket League le remet a zero tout seul, voir installation.js).
+      // Dire « jeu fermé » a ce moment-la, c'est envoyer le streamer chercher
+      // ailleurs -- vecu le 20/09/2026.
+      // ctx._jeuLance : injecte par les tests, pour ne pas dependre de ce qui
+      // tourne sur la machine qui les lance.
+      if (await (ctx._jeuLance ?? jeuLance)()) {
+        return ligne(
+          'attention',
+          'jeu lancé, mais l’API ne répond pas',
+          'Relance Rocket League : il ne lit le réglage de l’API qu’au démarrage.'
+        );
+      }
       return ligne(
         'inactif',
         'jeu fermé',
@@ -190,7 +203,12 @@ export default {
 
     // --- Jeu -------------------------------------------------------------------
 
-    const api = etatApi(await fichiersApi(await trouverLaunchLog('')));
+    // La liste des fichiers ne bouge pas de la session ; leur CONTENU si : le
+    // jeu remet l'API a zero tout seul (voir ../rl-session/installation.js).
+    // C'est le compteur de session qui la rallume -- un seul module ecrit dans
+    // les fichiers du jeu --, mais la carte doit dire la verite du moment.
+    const fichiers = await fichiersApi(await trouverLaunchLog(''));
+    const api = etatApi(fichiers);
     let champsNotes = false;
 
     const client = abonner({
@@ -219,7 +237,7 @@ export default {
 
     ctx._etatMoments = () => ({
       connecte: client.estConnecte(),
-      apiActive: api.active,
+      apiActive: client.estConnecte() ? true : etatApi(fichiers).active,
       arme: det.arme(),
       enChauffe: det.enChauffe(),
       enOvertime: det.enOvertime(),

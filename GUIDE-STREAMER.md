@@ -114,7 +114,10 @@ tu veux, puis clique sur **Enregistrer** en bas.
   dans la foulée. Une modification faite directement sur Twitch serait remplacée
   au prochain démarrage. Si tu avais déjà créé à la main une récompense du même
   nom, supprime-la sur Twitch : StreamKit ne peut piloter que les récompenses
-  qu'il a créées lui-même, et le module te le signale.
+  qu'il a créées lui-même, et le module te le signale. Pour vérifier d'un coup
+  d'œil que le coût est bien parti, regarde la **Vue d'ensemble** : la carte
+  **Bot Musique** et la ligne **Random Car** de la carte **Rocket League**
+  affichent le nom et le coût que la récompense porte **sur Twitch**.
 - **Bot Musique** : active **Afficher le morceau en cours** pour que l'overlay
   « Liste » montre aussi ce qui tourne sur Spotify (pochette, titre, avancement),
   au-dessus des demandes des viewers. Le bloc grandit quand la file se remplit et
@@ -167,6 +170,11 @@ tu veux, puis clique sur **Enregistrer** en bas.
   partie classée met le compteur à jour. Les matchs privés, les parties hors
   ligne et les replays ne comptent jamais. **Réinitialiser la session** remet le
   compteur à zéro en début de live.
+  **Rocket League éteint parfois cette API tout seul** (mise à jour du jeu,
+  vérification des fichiers par Epic ou Steam). Tant que le module est allumé,
+  StreamKit la remet en marche et l'écrit dans le journal ; si le jeu tournait
+  déjà, relance-le. La Vue d'ensemble dit « jeu lancé avec l'API éteinte » dans
+  ce cas — c'est le jeu lui-même qui le déclare, pas une supposition.
 - **Moments forts** (Rocket League) : même API que le compteur de session (si ce
   n'est pas déjà fait, active-la depuis le module **Compteur de session**, puis
   relance le jeu). Deux moments, sous le score du jeu : la **game de chauffe**,
@@ -280,12 +288,18 @@ appareil, et que le compte est bien Premium.
 **Un clip est refusé.**
 Tu n'es pas en live, ou le délai entre deux clips n'est pas écoulé.
 
-**Le compteur Rocket League ne bouge pas.**
-Regarde la carte **Rocket League** de la Vue d'ensemble, elle dit quoi faire :
-« API du jeu désactivée » (clique sur **Activer l'API**, puis relance le jeu),
-« jeu lancé, mais l'API ne répond pas » (relance le jeu), ou « joueur non
-identifié » (renseigne ton pseudo en jeu tout en bas des réglages du module).
-Seules les parties **classées** comptent par défaut : c'est réglable.
+**Le compteur Rocket League ne bouge pas, ou les moments forts ne s'affichent
+jamais.**
+Les deux modules lisent la même chose : l'API de stats du jeu. Regarde la carte
+**Rocket League** de la Vue d'ensemble, elle dit quoi faire : « API du jeu
+désactivée » (clique sur **Activer l'API**, puis relance le jeu), « jeu lancé
+avec l'API éteinte » ou « jeu lancé, mais l'API ne répond pas » (**relance le
+jeu** : il ne lit ce réglage qu'au démarrage), ou « joueur non identifié »
+(renseigne ton pseudo en jeu tout en bas des réglages du module). Seules les
+parties **classées** comptent par défaut : c'est réglable.
+Dans le journal du jour, la ligne « Connecté à Rocket League » est la preuve que
+la liaison est bonne : sans elle, aucun overlay Rocket League ne peut rien
+afficher, et ce n'est pas la faute d'OBS.
 
 **Le suivi League of Legends ne bouge pas.**
 Regarde la carte **League of Legends** de la Vue d'ensemble : « client fermé »

@@ -340,3 +340,41 @@ test('avec le compteur de session : une seule connexion, chacun son travail', as
     rmSync(dossier, { recursive: true, force: true });
   }
 });
+
+// --- Vue d'ensemble ---------------------------------------------------------
+//
+// Le 20/09/2026, Rocket League tournait avec son API eteinte : les deux cartes
+// annoncaient « jeu fermé », et le streamer a cherche du cote d'OBS.
+
+test('jeu lance mais API muette : la carte ne dit plus « jeu fermé »', async () => {
+  const ctx = {
+    config: { chauffe: true, overtime: true },
+    _jeuLance: async () => true,
+    _etatMoments: () => ({ connecte: false, apiActive: true, arme: true }),
+  };
+  const [ligne] = await manifeste.sante(ctx);
+  assert.equal(ligne.etat, 'attention');
+  assert.match(ligne.detail, /jeu lancé/);
+  assert.match(ligne.aide, /Relance Rocket League/);
+});
+
+test('jeu ferme : c est normal, la carte reste calme', async () => {
+  const ctx = {
+    config: { chauffe: true, overtime: true },
+    _jeuLance: async () => false,
+    _etatMoments: () => ({ connecte: false, apiActive: true, arme: true }),
+  };
+  const [ligne] = await manifeste.sante(ctx);
+  assert.equal(ligne.etat, 'inactif');
+  assert.equal(ligne.detail, 'jeu fermé');
+});
+
+test('API eteinte dans les fichiers : on le dit avant de parler du jeu', async () => {
+  const ctx = {
+    config: { chauffe: true, overtime: true },
+    _jeuLance: async () => true,
+    _etatMoments: () => ({ connecte: false, apiActive: false, arme: true }),
+  };
+  const [ligne] = await manifeste.sante(ctx);
+  assert.equal(ligne.detail, 'API du jeu désactivée');
+});

@@ -14,7 +14,7 @@
 import { abonner, PORT_PAR_DEFAUT } from './flux.js';
 import { creerSuiviParties } from './partie.js';
 import { creerLecteur, creerSuiviFichier, nomPlaylist, trouverLaunchLog } from './journal-jeu.js';
-import { activerFichiers, etatApi, fichiersApi, jeuLance } from './installation.js';
+import { activerFichiers, fichiersApi, jeuLance, rallumerApi } from './installation.js';
 import { accepter, ajouter, bilan, debutSession } from './session.js';
 
 // Evenements qui racontent la vie d'une partie : on les trace (niveau debug)
@@ -240,6 +240,19 @@ export default {
         },
       ];
     }
+    // Le jeu lui-meme a ecrit qu'il demarrait avec l'API eteinte : plus besoin
+    // de deviner, et surtout plus de « jeu fermé » pendant qu'il tourne.
+    if (e.jeuLance && e.apiDuJeu && !(e.apiDuJeu.taux > 0)) {
+      return [
+        {
+          id: 'rocket-league',
+          nom: 'Rocket League',
+          etat: 'attention',
+          detail: 'jeu lancé avec l’API éteinte',
+          aide: 'Rocket League l’avait remise à zéro ; StreamKit l’a rallumée. Relance le jeu : il ne lit ce réglage qu’au démarrage.',
+        },
+      ];
+    }
     if (e.jeuLance) {
       return [
         {
@@ -293,19 +306,45 @@ export default {
     const identite = () => ({ primaryId: lecteur.etat.primaryId, pseudo: c.pseudo });
 
     // --- Etat de l'API dans les fichiers du jeu ------------------------------
+    //
+    // La liste des fichiers ne bouge pas de la session : la chercher demande le
+    // registre et le disque, on ne le refait pas toutes les dix secondes.
     const diag = { apiActive: null, port: PORT_PAR_DEFAUT, jeuLance: false };
-    const rafraichirDiag = async () => {
-      const api = etatApi(await fichiersIni(ctx));
+    let fichiers = await fichiersIni(ctx);
+
+    // Le jeu (ou son lanceur) remet ce reglage a zero sans prevenir -- voir
+    // l'en-tete d'installation.js. Tant que le module tourne, on le remet :
+    // sinon le streamer decouvre en plein live que plus rien ne remonte.
+    // Le refus se repete a chaque tour : on ne le dit qu'une fois, sinon le
+    // journal du live se remplit d'une ligne toutes les dix secondes.
+    let refusSignale = false;
+    const veillerApi = async ({ premiere = false } = {}) => {
+      const api = rallumerApi(fichiers);
       diag.apiActive = api.active;
       diag.port = api.port;
+
+      if (api.remis.length) {
+        ctx.log.warn(
+          premiere
+            ? 'L’API de stats était désactivée dans Rocket League : StreamKit vient de la rallumer. Relance le jeu s’il est déjà ouvert.'
+            : 'Rocket League a remis son API de stats à zéro (mise à jour ou vérification des fichiers du jeu) : StreamKit l’a rallumée. Relance le jeu s’il est déjà ouvert.'
+        );
+      }
+      if (api.refuses.length && !api.active && !refusSignale) {
+        // Fichiers protégés par Windows : le bouton donne le bon conseil.
+        refusSignale = true;
+        ctx.log.warn(
+          'L’API de stats est désactivée dans Rocket League et StreamKit n’a pas pu la rallumer : clique « Activer l’API dans Rocket League », puis relance le jeu.'
+        );
+      }
+      if (api.active) refusSignale = false;
     };
-    ctx._rafraichirDiag = rafraichirDiag;
-    await rafraichirDiag();
-    if (diag.apiActive === false) {
-      ctx.log.warn(
-        'L’API de stats est désactivée dans Rocket League : clique « Activer l’API dans Rocket League », puis relance le jeu.'
-      );
-    }
+
+    ctx._rafraichirDiag = async () => {
+      fichiers = await fichiersIni(ctx);
+      await veillerApi();
+    };
+    await veillerApi({ premiere: true });
 
     // --- Parties -------------------------------------------------------------
     const parties = creerSuiviParties({
@@ -369,10 +408,14 @@ export default {
     });
 
     // Hors connexion, on regarde de temps en temps si le jeu tourne, pour
-    // donner le bon conseil (« lance le jeu » / « relance-le »).
+    // donner le bon conseil (« lance le jeu » / « relance-le »), et on verifie
+    // que l'API est toujours allumee dans les fichiers. Le lanceur les remet a
+    // zero juste avant de demarrer le jeu : ces dix secondes sont la fenetre
+    // ou l'on peut encore gagner la course.
     ctx.minuteur.intervalle(async () => {
       if (client.estConnecte()) return;
       diag.jeuLance = await jeuLance();
+      await veillerApi();
     }, 10000);
 
     // --- Pour la vue d'ensemble et les actions ---------------------------------
@@ -384,6 +427,8 @@ export default {
       filtre: c.filtre,
       apiActive: diag.apiActive,
       jeuLance: diag.jeuLance,
+      // Ce que le jeu LANCE a lu de l'API, d'apres son propre journal.
+      apiDuJeu: lecteur.etat.api,
       bilan: calculer(),
     });
 

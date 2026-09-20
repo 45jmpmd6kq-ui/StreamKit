@@ -418,6 +418,18 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
   redémarre les modules à chaud (changement de réglages) ; avec un état global,
   l'ancienne file d'attente survit et les morceaux fantômes reviennent. D'où
   `creerFile()` en fabrique plutôt que l'ancien `queue.js` à état de module.
+- **Un réglage écrit dans les fichiers d'un jeu ne tient pas tout seul.** Rocket
+  League est livré avec son API de stats éteinte (`PacketSendRate=0`) ; le bouton
+  de StreamKit la rallumait une fois pour toutes… sauf que le lanceur remet
+  parfois `DefaultStatsAPI.ini` dans son état d'origine juste avant de démarrer
+  le jeu, et que le jeu régénère alors la copie utilisateur à partir de ce
+  fichier (le tampon `[IniVersion]` de la copie porte la **date** du fichier du
+  jeu). Résultat sur le PC de Sylvain : six semaines sans une seule connexion au
+  jeu, pendant que StreamKit affichait « déjà active » et « jeu fermé » (vécu le
+  20/09/2026, moments forts RL). Deux leçons : **surveiller** ce qu'on a écrit
+  tant que le module tourne, et chercher où le programme visé **déclare ce qu'il
+  a vraiment lu** — ici `StatsAPI: PacketSendRate=(0.0000)` dans son `Launch.log`,
+  qui tranche entre « ce qu'on a demandé » et « ce qui s'applique ».
 - **Une récompense de points de chaîne n'était écrite qu'à sa création.** Allumer
   Random Car la créait aussitôt au coût par défaut : le coût réglé ensuite dans
   StreamKit ne partait jamais sur Twitch (vécu le 19/09/2026). Tout réglage qui

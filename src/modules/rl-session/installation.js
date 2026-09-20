@@ -8,6 +8,19 @@
 // On modifie aussi la copie utilisateur (Documents\My Games\...\TAStatsAPI.ini)
 // quand elle existe : c'est la version generee que le jeu garde de son cote,
 // et on ne veut pas qu'elle contredise l'autre.
+//
+// CE REGLAGE NE TIENT PAS TOUT SEUL (constate le 20/09/2026 sur le PC de
+// Sylvain, Epic, six semaines sans une seule connexion au jeu) :
+//   - le lanceur remet parfois DefaultStatsAPI.ini dans son etat d'origine
+//     (PacketSendRate=0) juste avant de demarrer le jeu -- verification des
+//     fichiers, mise a jour ;
+//   - le jeu, lui, regenere la copie utilisateur a partir du fichier du jeu
+//     des que la date de celui-ci ne correspond plus au tampon `[IniVersion]`
+//     ecrit dans la copie. Le zero se propage donc aux deux fichiers, sans
+//     rien dire, et le streamer croit son API allumee.
+// D'ou `surveiller` cote module : tant que le module tourne, on relit les
+// fichiers et on remet le reglage. La verite sur la partie EN COURS, elle, est
+// dans le Launch.log du jeu (voir RE_STATSAPI dans journal-jeu.js).
 
 import { execFile } from 'node:child_process';
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -141,17 +154,21 @@ export async function fichiersApi(cheminLaunchLog) {
   return [...installations.map(iniDe), iniUtilisateur(cheminLaunchLog)].filter(Boolean);
 }
 
-// Etat de l'API d'apres les fichiers : { active, port, fichiers }.
+// Etat de l'API d'apres les fichiers : { active, port, fichiers, eteints }.
+//
+// Un seul fichier a zero suffit a dire « eteinte » : le jeu recopie celui de
+// l'installation par-dessus la copie utilisateur au lancement suivant, donc un
+// zero qui traine finit toujours par gagner.
 export function etatApi(fichiers) {
   const lus = fichiers
     .filter((f) => f && existsSync(f))
     .map((f) => ({ f, ...lireIni(readFileSync(f, 'utf8')) }));
-  if (!lus.length) return { active: null, port: PORT_PAR_DEFAUT, fichiers: [] };
+  if (!lus.length) return { active: null, port: PORT_PAR_DEFAUT, fichiers: [], eteints: [] };
   return {
-    // Le fichier de l'installation fait foi ; la copie utilisateur sert de repli.
-    active: lus[0].taux > 0,
+    active: lus.every((l) => l.taux > 0),
     port: lus[0].port,
     fichiers: lus.map((l) => l.f),
+    eteints: lus.filter((l) => !(l.taux > 0)).map((l) => l.f),
   };
 }
 
@@ -177,6 +194,24 @@ export function activerFichiers(fichiers) {
     }
   }
   return rapport;
+}
+
+// Relit les fichiers et rallume l'API la ou elle a ete eteinte. C'est ce que le
+// module appelle en boucle : le jeu la remet a zero tout seul (en-tete).
+//
+// Renvoie l'etat APRES coup : { active, port, fichiers, eteints, remis,
+// refuses }. `remis` et `refuses` sont vides quand il n'y avait rien a faire --
+// le module ne parle au streamer que s'il s'est passe quelque chose.
+export function rallumerApi(fichiers) {
+  const avant = etatApi(fichiers);
+  if (avant.active !== false) return { ...avant, remis: [], refuses: [] };
+
+  const rapport = activerFichiers(avant.eteints);
+  return {
+    ...etatApi(fichiers),
+    remis: rapport.filter((r) => r.ok && r.change).map((r) => r.fichier),
+    refuses: rapport.filter((r) => !r.ok).map((r) => r.fichier),
+  };
 }
 
 // Rocket League tourne-t-il ? Sert seulement a choisir le bon conseil quand
