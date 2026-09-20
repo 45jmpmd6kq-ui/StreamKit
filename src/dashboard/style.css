@@ -206,6 +206,77 @@ a.btn {
   margin-bottom: 2rem;
 }
 
+/* ---------- Cartes d'univers (vue d'ensemble) ---------- */
+/* Une carte par univers, une ligne par module. Elles ont autant de lignes que
+   de modules allumes : leur hauteur suit leur contenu, on ne les etire pas. */
+.cartes-univers {
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  grid-auto-rows: auto;
+  align-items: start;
+}
+.carte.univers {
+  padding: 0;
+  overflow: hidden;
+}
+.carte.univers .u-entete {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--bordure);
+  /* La couleur de l'univers, assez diluee pour rester un reperage et jamais un
+     etat -- ceux-la gardent le vert, l'orange et le rouge. */
+  background: color-mix(in srgb, var(--univers) 12%, transparent);
+}
+.carte.univers .u-icone {
+  font-size: 1rem;
+  line-height: 1;
+}
+.carte.univers .u-nom {
+  font-weight: 600;
+  flex: 1;
+}
+.carte.univers .u-compte {
+  color: var(--texte-faible);
+  font-size: 0.78rem;
+}
+.carte.univers .u-ligne {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 0.1rem 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--bordure) 55%, transparent);
+}
+.carte.univers .u-ligne:last-child {
+  border-bottom: 0;
+}
+/* La pastille s'aligne sur la premiere ligne du texte, pas sur son milieu. */
+.carte.univers .u-ligne .point {
+  margin-top: 0.4rem;
+}
+.carte.univers .u-l-nom {
+  font-size: 0.9rem;
+}
+.carte.univers .u-l-icone {
+  margin-right: 0.3rem;
+}
+.carte.univers .u-l-detail {
+  grid-column: 2;
+  color: var(--texte-doux);
+  font-size: 0.86rem;
+  word-break: break-word;
+}
+.carte.univers .u-l-aide {
+  display: block;
+  color: var(--texte-faible);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin-top: 0.15rem;
+}
+.carte.univers .u-ligne.inactif .u-l-nom {
+  color: var(--texte-doux);
+}
+
 .carte {
   background: var(--panneau);
   border: 1px solid var(--bordure);
@@ -503,8 +574,15 @@ a.btn {
   padding: 1.5rem 1.75rem 2rem;
   min-height: 0;
 }
+/* 720 px, c'est la largeur ou un formulaire de reglages se lit sans balayer la
+   tete de gauche a droite. La vue d'ensemble, elle, n'est pas un texte : ses
+   cartes laissaient la moitie de la fenetre vide et se serraient a trois par
+   ligne. Elle seule prend toute la place disponible. */
 .detail-inner {
   max-width: 720px;
+}
+.detail-inner[data-vue='__accueil__'] {
+  max-width: 1240px;
 }
 
 .pied-detail {

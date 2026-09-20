@@ -26,6 +26,11 @@ export const FRAICHEUR_SANTE_MS = 20000;
 // module qu'on n'a pas encore lance.
 const GRAVITE = { ko: 3, attention: 2, ok: 1, inactif: 0 };
 
+// La carte des connexions du socle : Twitch, OBS, les connecteurs. Elle n'a pas
+// de categorie -- ce n'est pas un univers de modules, c'est ce dont tout le
+// monde depend. D'ou une couleur neutre, et la premiere place a l'ecran.
+const GROUPE_SOCLE = { nom: 'Connexions', icone: '🔌', couleur: '#8b93a7' };
+
 // Ce que le streamer lit du lien avec Twitch. Les deux canaux sont
 // INDEPENDANTS : le chat peut tourner pendant qu'EventSub se reconnecte (les
 // points de chaine ne repondent plus, mais les commandes si). Un « tout va
@@ -144,13 +149,16 @@ export function creerSante({
   // Chaque module ajoute les siennes via sante() dans son manifeste -- Spotify
   // pour le bot musique, le Riot Client pour Valorant.
   async function sante() {
-    const connexions = [];
+    // Les lignes du socle (Twitch, OBS, connecteurs). Elles finissent dans la
+    // carte « Connexions », et un module peut remplacer la sienne (voir plus
+    // bas : le bot musique en sait plus sur Spotify que le socle).
+    const socle = [];
 
     // --- Twitch ---
     const t = twitch.getEtat();
     const manquants = twitch.droitsManquants(registre.scopesRequis());
     if (!t.pret) {
-      connexions.push({
+      socle.push({
         id: 'twitch',
         nom: 'Twitch',
         etat: store.lireTokens().twitchApp?.clientId ? 'ko' : 'inactif',
@@ -160,7 +168,7 @@ export function creerSante({
         aide: t.conseil || 'Clique sur l’indicateur Twitch en haut de la fenêtre.',
       });
     } else if (manquants.length) {
-      connexions.push({
+      socle.push({
         id: 'twitch',
         nom: 'Twitch',
         etat: 'attention',
@@ -168,7 +176,7 @@ export function creerSante({
         aide: 'Reconnecte ta chaîne : ' + manquants.join(', '),
       });
     } else {
-      connexions.push({
+      socle.push({
         id: 'twitch',
         nom: 'Twitch',
         etat: t.chatConnecte ? 'ok' : 'attention',
@@ -188,7 +196,7 @@ export function creerSante({
         if (n) vues.push(m.manifeste.nom + ' › ' + o.nom + ' (' + n + ')');
       }
     }
-    connexions.push({
+    socle.push({
       id: 'obs',
       nom: 'OBS',
       etat: total ? 'ok' : 'inactif',
@@ -207,7 +215,7 @@ export function creerSante({
       if (!requis.length) continue;
 
       const e = connecteurs.pour(c.id);
-      connexions.push({
+      socle.push({
         id: c.id,
         nom: c.nom,
         // Pas connecte n'est pas une panne : un streamer qui n'utilise pas le
@@ -226,10 +234,26 @@ export function creerSante({
       });
     }
 
-    // Cartes fusionnees des categories `carteUnique` : id de categorie -> carte
-    // deja posee dans `connexions`, que la boucle ci-dessous remplit ligne a
-    // ligne.
+    // Une carte par UNIVERS, une ligne par module -- choix du user le
+    // 20/09/2026 devant trois maquettes. Avant, onze cartes cote a cote
+    // melangeaient connexions, jeux et modules, et une carte ne disait qu'en
+    // tout petit de quel module elle venait.
     const groupes = new Map();
+    const groupe = (cat) => {
+      let g = groupes.get(cat.id);
+      if (!g) {
+        g = {
+          id: 'groupe:' + cat.id,
+          nom: cat.label,
+          icone: cat.icone,
+          couleur: cat.couleur,
+          ordre: cat.ordre,
+          lignes: [],
+        };
+        groupes.set(cat.id, g);
+      }
+      return g;
+    };
 
     // --- Modules : chacun declare ses propres connexions ---
     //
@@ -270,65 +294,45 @@ export function creerSante({
       const categorie = categories.resoudre(m.manifeste.categorie);
 
       for (const c of cartes) {
-        const enrichi = { ...c, module: m.manifeste.nom };
-
-        // Un jeu est un sujet, pas deux : les categories `carteUnique` fondent
-        // les cartes de leurs modules en une seule, une ligne par module. Sans
-        // ca, League of Legends occupait deux cartes voisines -- « suivi de
-        // session » et « partie en cours » -- que le streamer devait rapprocher
-        // du regard pour savoir ou en etait son jeu.
-        if (categorie.carteUnique) {
-          const groupe = groupes.get(categorie.id);
-          // Le nom de la ligne est celui du MODULE : sous le titre « League of
-          // Legends », « Suivi de session » dit ce que la ligne raconte. Un
-          // module qui declare plusieurs cartes garde les noms de ses cartes,
-          // sinon elles seraient indiscernables.
-          const ligne = {
-            nom: cartes.length > 1 ? c.nom : m.manifeste.nom,
-            etat: c.etat,
-            detail: c.detail || '',
-            aide: c.aide || '',
-          };
-          if (groupe) groupe.lignes.push(ligne);
-          else {
-            const carte = {
-              id: 'categorie:' + categorie.id,
-              nom: categorie.label,
-              etat: c.etat,
-              lignes: [ligne],
-            };
-            groupes.set(categorie.id, carte);
-            // A la place de la premiere carte du groupe : l'ordre de l'ecran ne
-            // depend pas de l'ordre d'allumage des modules.
-            connexions.push(carte);
-          }
+        // Un module qui tourne en sait plus que le socle sur son connecteur --
+        // l'appareil Spotify actif, par exemple. Sa version remplace la ligne
+        // generique dans « Connexions », a la meme place, au lieu de doubler
+        // avec elle.
+        const i = socle.findIndex((x) => x.id === c.id);
+        if (i >= 0) {
+          socle[i] = { ...socle[i], ...c, module: m.manifeste.nom };
           continue;
         }
 
-        // Un module qui tourne en sait plus que le socle sur son connecteur --
-        // l'appareil Spotify actif, par exemple. Sa version remplace la carte
-        // generique, a la meme place, au lieu de doubler avec elle.
-        const i = connexions.findIndex((x) => x.id === enrichi.id);
-        if (i >= 0) connexions[i] = enrichi;
-        else connexions.push(enrichi);
+        // Sinon la ligne va sous l'univers du module. Son nom est celui du
+        // MODULE : sous « League of Legends », « Suivi de session » dit ce que
+        // la ligne raconte. Un module qui declare plusieurs cartes garde les
+        // noms de ses cartes, sinon elles seraient indiscernables.
+        groupe(categorie).lignes.push({
+          id: c.id,
+          nom: cartes.length > 1 ? c.nom : m.manifeste.nom,
+          icone: m.manifeste.icone ?? '',
+          module: m.manifeste.nom,
+          etat: c.etat,
+          detail: c.detail || '',
+          aide: c.aide || '',
+        });
       }
     }
 
-    // Une carte de groupe porte le PIRE etat de ses lignes : une panne ne se
-    // cache pas derriere un module qui va bien. L'aide montree est celle de
-    // cette ligne -- c'est elle qu'il faut lire en premier.
-    for (const groupe of groupes.values()) {
-      const pire = groupe.lignes.reduce((a, l) => (GRAVITE[l.etat] > GRAVITE[a.etat] ? l : a));
-      groupe.etat = pire.etat;
-      groupe.aide = pire.aide || groupe.lignes.find((l) => l.aide)?.aide || '';
-      // Un seul module allume : une liste d'une ligne n'apprend rien de plus
-      // qu'une carte ordinaire, et en dit meme moins (pas de pastille de
-      // provenance). On revient donc a la carte ordinaire.
-      if (groupe.lignes.length === 1) {
-        groupe.detail = groupe.lignes[0].detail;
-        groupe.module = groupe.lignes[0].nom;
-        delete groupe.lignes;
-      }
+    // Les cartes, dans l'ordre de l'ecran : les connexions d'abord (sans elles
+    // rien ne marche), puis les univers dans l'ordre du catalogue -- pas dans
+    // l'ordre d'allumage des modules.
+    const connexions = [
+      { id: 'groupe:connexions', ...GROUPE_SOCLE, lignes: socle },
+      ...[...groupes.values()].sort((a, b) => a.ordre - b.ordre),
+    ].filter((g) => g.lignes.length);
+
+    // Une carte porte le PIRE etat de ses lignes : une panne ne se cache pas
+    // derriere un module qui va bien -- c'est tout l'interet de cet ecran.
+    for (const g of connexions) {
+      g.etat = g.lignes.reduce((a, l) => (GRAVITE[l.etat] > GRAVITE[a] ? l.etat : a), 'inactif');
+      delete g.ordre;
     }
 
     // --- Compteurs d'usage ---

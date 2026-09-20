@@ -243,15 +243,19 @@ tu veux, puis clique sur **Enregistrer** en bas.
    session LoL et les moments forts (LoL et Rocket League), le bouton **Afficher
    un exemple** du module montre aussi un exemple, sans toucher à l'adresse.
 
-Pour vérifier : dans **Vue d'ensemble**, la carte **OBS** compte les sources
+Pour vérifier : dans **Vue d'ensemble**, la ligne **OBS** de la carte **Connexions** compte les sources
 connectées.
 
 ---
 
 ## 6. Au quotidien
 
-- **Avant le live**, jette un œil à la **Vue d'ensemble** : une carte verte, ça
-  marche ; orange ou rouge, lis le texte en dessous, il dit quoi faire.
+- **Avant le live**, jette un œil à la **Vue d'ensemble**. Elle a une carte par
+  univers — **Connexions** (Twitch, OBS, Spotify), **Twitch**, **Rocket
+  League**, **League of Legends** — et dans chacune, **une ligne par module**
+  avec son icône. Une pastille verte, ça marche ; orange ou rouge, lis le texte
+  gris sous la ligne, il dit quoi faire. La carte prend l'état de sa ligne la
+  plus inquiétante : rien ne se cache derrière un module qui va bien.
 - **Démarrer avec Windows** : roue dentée en haut à droite → **Réglages de
   StreamKit** → **Démarrer avec Windows**. StreamKit se lance alors tout seul,
   près de l'horloge, sans ouvrir de fenêtre. S'il démarre avant ta connexion
@@ -266,7 +270,8 @@ connectées.
 ## 7. En cas de souci
 
 **Une carte est rouge ou orange dans la Vue d'ensemble.**
-Lis le texte gris sous la carte : il indique la marche à suivre.
+Repère la ligne dont la pastille n'est pas verte : c'est ce module-là qui
+coince. Le texte gris sous la ligne indique la marche à suivre.
 
 **Twitch affiche « Twitch injoignable — nouvel essai automatique ».**
 StreamKit s'est lancé avant ta connexion Internet (démarrage avec Windows), ou
@@ -302,7 +307,7 @@ la liaison est bonne : sans elle, aucun overlay Rocket League ne peut rien
 afficher, et ce n'est pas la faute d'OBS.
 
 **Le suivi League of Legends ne bouge pas.**
-Regarde la carte **League of Legends** de la Vue d'ensemble : « client fermé »
+Regarde la ligne **Suivi de session** de la carte **League of Legends** de la Vue d'ensemble : « client fermé »
 (lance le jeu), ou « League of Legends introuvable » (indique le dossier du jeu
 tout en bas des réglages du module, par exemple `C:\Riot Games\League of Legends`).
 Vérifie aussi **Parties comptées** : une Flexible ne compte pas si le module suit
@@ -310,7 +315,7 @@ la Solo/Duo. Rien à l'écran quand le client est fermé : c'est voulu.
 
 **Les moments forts LoL n'apparaissent pas.**
 Clique sur **Afficher un exemple** dans le module. S'il s'affiche, la source OBS
-est bonne : regarde alors, pendant une partie, la carte **Partie de League of
+est bonne : regarde alors, pendant une partie, la ligne **Moments forts** de la carte **League of
 Legends** de la Vue d'ensemble, qui doit dire « en partie » avec ton champion.
 Seuls **tes** moments comptent (et l'ace de ton équipe), et un moment réglé sur
 « Ignoré » ne s'affiche pas. Pas de clip : tu n'étais pas en live, ou ta chaîne
@@ -333,7 +338,7 @@ chaîne, mais StreamKit ne l'a pas créée », supprime cette récompense sur Tw
 
 **Le scoreboard de sondage n'apparaît pas.**
 Clique sur **Simuler un sondage** dans le module. S'il s'affiche, la source OBS
-est bonne : regarde alors la carte **Sondages** de la Vue d'ensemble (droit
+est bonne : regarde alors la ligne **Sondages** de la carte **Twitch** de la Vue d'ensemble (droit
 manquant : reconnecte ta chaîne), puis le journal. Un sondage lancé y laisse la
 ligne « Sondage lancé » ; sans elle, Twitch n'a rien transmis, et le journal dit
 pourquoi (abonnement refusé, ou horloge du PC en avance : remets Windows à
@@ -342,7 +347,7 @@ adresse.
 
 **Le scoreboard de prédiction n'apparaît pas.**
 Clique sur **Simuler une prédiction** dans le module. S'il s'affiche,
-l'overlay est bien placé : regarde alors la carte **Prédictions** de la Vue
+l'overlay est bien placé : regarde alors la ligne **Prédictions** de la carte **Twitch** de la Vue
 d'ensemble — droit manquant (reconnecte ta chaîne) ou chaîne ni Affiliée ni
 Partenaire. Si rien ne s'affiche, c'est la source OBS : recopie son adresse.
 

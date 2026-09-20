@@ -473,6 +473,32 @@ function brancherRail() {
 
 // --- Vue d'ensemble ---------------------------------------------------------
 
+// Une carte par univers (Connexions, Twitch, Rocket League…), une ligne par
+// module. L'en-tete porte la couleur de l'univers, la bordure gauche et les
+// pastilles portent l'etat : deux informations qui ne se marchent pas dessus.
+function dessinerUnivers(g) {
+  return `
+    <div class="carte univers ${g.etat}" style="--univers:${echapper(g.couleur || 'var(--texte-faible)')}">
+      <div class="u-entete">
+        <span class="u-icone">${echapper(g.icone || '')}</span>
+        <span class="u-nom">${echapper(g.nom)}</span>
+        <span class="u-compte">${g.lignes.length}</span>
+      </div>
+      ${g.lignes
+        .map(
+          (l) => `
+        <div class="u-ligne ${l.etat}">
+          <span class="point ${classePastille(l.etat)}"></span>
+          <span class="u-l-nom">${l.icone ? `<span class="u-l-icone">${echapper(l.icone)}</span>` : ''}${echapper(l.nom)}</span>
+          <span class="u-l-detail">${echapper(l.detail || '')}${
+            l.aide ? `<span class="u-l-aide">${echapper(l.aide)}</span>` : ''
+          }</span>
+        </div>`
+        )
+        .join('')}
+    </div>`;
+}
+
 function dessinerAccueil() {
   const s = etat.sante;
   $('#pied-detail').hidden = true;
@@ -485,8 +511,11 @@ function dessinerAccueil() {
   // « Tout est en ordre » ne doit pas s'afficher alors qu'une connexion n'est
   // même pas configurée. Une connexion inactive n'est pas une panne pour autant :
   // un streamer qui n'utilise que Valorant n'a aucun besoin de Twitch.
-  const soucis = s.connexions.filter((c) => c.etat === 'ko' || c.etat === 'attention').length;
-  const inactifs = s.connexions.filter((c) => c.etat === 'inactif').length;
+  // Sur les LIGNES, pas sur les cartes : « 2 points à regarder » doit compter
+  // les modules concernés, pas les univers qui en contiennent un.
+  const lignes = s.connexions.flatMap((g) => g.lignes);
+  const soucis = lignes.filter((l) => l.etat === 'ko' || l.etat === 'attention').length;
+  const inactifs = lignes.filter((l) => l.etat === 'inactif').length;
   const resume = soucis
     ? soucis + ' point' + (soucis > 1 ? 's' : '') + ' à regarder avant de lancer ton live.'
     : inactifs
@@ -505,33 +534,8 @@ function dessinerAccueil() {
       '<p class="resume-accueil">' +
       echapper(resume) +
       '</p>' +
-      '<div class="cartes">' +
-      s.connexions
-        .map(
-          (c) => `
-        <div class="carte ${c.etat}">
-          <div class="entete">
-            <span class="point ${classePastille(c.etat)}"></span>
-            <span class="nom">${echapper(c.nom)}</span>
-            ${c.module ? `<span class="provenance">${echapper(c.module)}</span>` : ''}
-          </div>
-          ${
-            c.lignes
-              ? `<div class="lignes">${c.lignes
-                  .map(
-                    (l) => `
-                <div class="ligne">
-                  <span class="point ${classePastille(l.etat)}"></span>
-                  <span><span class="l-nom">${echapper(l.nom)}</span>${l.detail ? ` <span class="l-detail">— ${echapper(l.detail)}</span>` : ''}</span>
-                </div>`
-                  )
-                  .join('')}</div>`
-              : `<div class="carte-detail">${echapper(c.detail || '')}</div>`
-          }
-          ${c.aide ? `<div class="aide">${echapper(c.aide)}</div>` : ''}
-        </div>`
-        )
-        .join('') +
+      '<div class="cartes cartes-univers">' +
+      s.connexions.map(dessinerUnivers).join('') +
       '</div>' +
       dessinerKpis(s) +
       '<div class="section"><h3>Modules</h3>' +

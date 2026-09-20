@@ -58,7 +58,12 @@ function monter({
   });
 }
 
-const carte = (vue, id) => vue.connexions.find((c) => c.id === id);
+// La vue d'ensemble est faite de cartes d'univers (« Connexions », « Twitch »,
+// un jeu…), chacune avec une ligne par module. Les tests visent tantot la carte,
+// tantot la ligne : `carte` cherche une ligne par son identifiant, `univers`
+// cherche la carte d'une categorie.
+const carte = (vue, id) => vue.connexions.flatMap((c) => c.lignes).find((l) => l.id === id);
+const univers = (vue, id) => vue.connexions.find((c) => c.id === 'groupe:' + id);
 
 // --- Twitch ----------------------------------------------------------------
 
@@ -148,8 +153,16 @@ test('la carte d un module remplace celle du socle, a la meme place', async () =
   });
   const vue = await monter({ modules: [musique], connecteurs: { connecte: true } }).sante();
 
-  const ids = vue.connexions.map((c) => c.id);
-  assert.deepEqual(ids, ['twitch', 'obs', 'spotify'], 'ni doublon ni changement de place');
+  assert.deepEqual(
+    vue.connexions.map((c) => c.id),
+    ['groupe:connexions'],
+    'la carte du module ne cree pas un univers a elle toute seule'
+  );
+  assert.deepEqual(
+    vue.connexions[0].lignes.map((l) => l.id),
+    ['twitch', 'obs', 'spotify'],
+    'ni doublon ni changement de place'
+  );
   assert.equal(carte(vue, 'spotify').detail, 'PC-SALON');
   assert.equal(carte(vue, 'spotify').module, 'Module musique');
 });
@@ -261,15 +274,39 @@ test('deux modules d un meme jeu ne font qu une carte, une ligne chacun', async 
   });
 
   const vue = await monter({ modules: [suivi, moments] }).sante();
-  const lol = carte(vue, 'categorie:lol');
+  const lol = univers(vue, 'lol');
 
-  assert.equal(vue.connexions.filter((c) => c.id.startsWith('categorie:')).length, 1, 'une seule carte');
+  assert.deepEqual(
+    vue.connexions.map((c) => c.id),
+    ['groupe:connexions', 'groupe:lol'],
+    'les connexions du socle d abord, puis un univers'
+  );
   assert.equal(lol.nom, 'League of Legends');
+  assert.equal(lol.icone, '⚔️');
   // Le nom du module, pas celui de sa carte : sous « League of Legends », c'est
   // « Suivi de session » qui dit ce que la ligne raconte.
   assert.deepEqual(
     lol.lignes.map((l) => l.nom + ' : ' + l.detail),
     ['Suivi de session : client fermé', 'Moments forts : pas de partie en cours']
+  );
+});
+
+test('les univers sortent dans l ordre du catalogue, pas dans celui des modules', async () => {
+  // Sinon l'ecran se reorganise a chaque fois qu'un module demarre avant un
+  // autre : on ne retrouve plus sa carte au meme endroit d'un live a l'autre.
+  const carteDe = (nom) => async () => [{ id: nom, nom, etat: 'ok', detail: 'ok' }];
+  const modules = [
+    module_('lol-session', { manifeste: { nom: 'Suivi', categorie: 'lol', sante: carteDe('lol') } }),
+    module_('clips', { manifeste: { nom: 'Clips', categorie: 'twitch', sante: carteDe('clips') } }),
+    module_('rl-session', {
+      manifeste: { nom: 'Compteur', categorie: 'rocket-league', sante: carteDe('rl') },
+    }),
+  ];
+
+  const vue = await monter({ modules }).sante();
+  assert.deepEqual(
+    vue.connexions.map((c) => c.id),
+    ['groupe:connexions', 'groupe:twitch', 'groupe:rocket-league', 'groupe:lol']
   );
 });
 
@@ -293,26 +330,39 @@ test('une panne dans un groupe ressort sur la carte, avec l aide qui va avec', a
     },
   });
 
-  const lol = carte(await monter({ modules: [suivi, moments] }).sante(), 'categorie:lol');
-  assert.equal(lol.etat, 'ko');
-  assert.equal(lol.aide, 'Relance le client.');
+  const vue = await monter({ modules: [suivi, moments] }).sante();
+  assert.equal(univers(vue, 'lol').etat, 'ko');
+  // L'aide reste sur SA ligne : c'est le module en panne qu'il faut aller voir,
+  // pas l'univers entier.
+  assert.equal(carte(vue, 'p').aide, 'Relance le client.');
+  assert.equal(carte(vue, 'lol').aide, '');
 });
 
-test('un groupe reduit a un seul module redevient une carte ordinaire', async () => {
-  // Une liste d'une seule ligne n'apprend rien de plus, et perdrait au passage
-  // la provenance affichee en haut a droite de la carte.
+test('un seul module allume : la carte de l univers garde sa ligne', async () => {
+  // Avant, une carte d'une seule ligne redevenait une carte ordinaire -- et on
+  // reperdait le nom du module, relegue en petit dans un coin.
   const seul = module_('lol-session', {
     manifeste: {
       nom: 'Suivi de session',
+      icone: '📈',
       categorie: 'lol',
       sante: async () => [{ id: 'lol', nom: 'League of Legends', etat: 'ok', detail: 'Or IV' }],
     },
   });
 
-  const lol = carte(await monter({ modules: [seul] }).sante(), 'categorie:lol');
-  assert.equal(lol.lignes, undefined);
-  assert.equal(lol.detail, 'Or IV');
-  assert.equal(lol.module, 'Suivi de session');
+  const lol = univers(await monter({ modules: [seul] }).sante(), 'lol');
+  assert.equal(lol.nom, 'League of Legends');
+  assert.deepEqual(lol.lignes, [
+    {
+      id: 'lol',
+      nom: 'Suivi de session',
+      icone: '📈',
+      module: 'Suivi de session',
+      etat: 'ok',
+      detail: 'Or IV',
+      aide: '',
+    },
+  ]);
 });
 
 test('les compteurs d un module restent visibles quand il est arrete', async () => {

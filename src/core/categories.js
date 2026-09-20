@@ -16,20 +16,23 @@
 // Launch.log — leur demander deux fois le meme chemin serait absurde. La
 // structure ci-dessous est prete a accueillir un champ `champs` par categorie.
 
-// `carteUnique` : dans la vue d'ensemble, les modules de cette categorie
-// partagent UNE carte, une ligne chacun. Un jeu est un sujet, pas deux -- League
-// of Legends en a deux modules (suivi de session, moments forts) et faisait deux
-// cartes voisines a rapprocher du regard. Twitch ne l'a pas : le bot musique,
-// les clips et les pubs sont des sujets independants, et la carte Twitch du
-// socle parle deja de la connexion.
+// Dans la vue d'ensemble, les modules d'une categorie partagent UNE carte, une
+// ligne chacun (choix du user le 20/09/2026). Un univers est un sujet : League
+// of Legends en a deux modules, Twitch cinq, et onze cartes cote a cote ne
+// disaient plus a quel module chaque ligne appartenait.
+//
+// `couleur` : l'identite de l'univers a l'ecran (en-tete de sa carte, icone du
+// rail). Elle ne dit jamais un ETAT -- le vert, l'orange et le rouge sont
+// reserves a ca, et resteraient illisibles si une categorie pouvait les
+// reprendre a son compte.
 export const CATEGORIES = [
-  { id: 'twitch', label: 'Twitch', icone: '🟣', ordre: 10 },
-  { id: 'rocket-league', label: 'Rocket League', icone: '🚀', ordre: 20, carteUnique: true },
-  { id: 'lol', label: 'League of Legends', icone: '⚔️', ordre: 30, carteUnique: true },
-  { id: 'valorant', label: 'Valorant', icone: '🔫', ordre: 40, carteUnique: true },
+  { id: 'twitch', label: 'Twitch', icone: '🟣', couleur: '#9146ff', ordre: 10 },
+  { id: 'rocket-league', label: 'Rocket League', icone: '🚀', couleur: '#3d8bff', ordre: 20 },
+  { id: 'lol', label: 'League of Legends', icone: '⚔️', couleur: '#c8aa6e', ordre: 30 },
+  { id: 'valorant', label: 'Valorant', icone: '🔫', couleur: '#ff4655', ordre: 40 },
   // Fourre-tout volontaire, toujours en dernier : ce qui ne depend d'aucun jeu
   // ni de Twitch (module de demonstration, futurs utilitaires).
-  { id: 'outils', label: 'Outils', icone: '🧰', ordre: 90 },
+  { id: 'outils', label: 'Outils', icone: '🧰', couleur: '#8b93a7', ordre: 90 },
 ];
 
 const PAR_DEFAUT = CATEGORIES.find((c) => c.id === 'outils');

@@ -319,13 +319,17 @@ Elle doit donc être rapide et ne jamais lever : une exception est rattrapée et
 affichée comme une connexion en erreur, mais autant écrire le bon message
 soi-même.
 
-**Deux modules d'un même jeu ne font qu'une carte.** Les catégories de jeu
-portent `carteUnique` (voir `core/categories.js`) : le socle fond les cartes de
-leurs modules en une seule, titrée du nom du jeu, avec une ligne par module et
-sa pastille. La carte prend le **pire** état de ses lignes et l'`aide` de
-celle-là — une panne ne se cache pas derrière un module qui va bien. Un seul
-module allumé : la carte redevient ordinaire. Tu n'as rien à faire pour ça,
-`categorie` suffit.
+**Une carte par univers, une ligne par module.** Le socle range ta carte sous
+la catégorie du module (`core/categories.js`), avec le nom et l'icône du module
+devant. Un module qui déclare plusieurs cartes garde leurs noms. La carte de
+l'univers prend le **pire** état de ses lignes — une panne ne se cache pas
+derrière un module qui va bien. Tu n'as rien à faire pour ça, `categorie`
+suffit.
+
+**Sauf si ta carte porte l'`id` d'une connexion du socle** (`twitch`, `obs`, ou
+l'identifiant d'un connecteur comme `spotify`) : elle remplace alors celle du
+socle dans la carte « Connexions », à la même place. C'est ce que fait le bot
+musique, qui en sait plus que le socle sur Spotify (l'appareil qui joue).
 
 **Choisis `inactif` plutôt que `ko` quand rien n'est cassé.** Le Riot Client
 fermé entre deux sessions de jeu est normal ; le marquer en rouge apprendrait
