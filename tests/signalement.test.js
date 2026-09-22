@@ -269,14 +269,15 @@ test('un rapport envoye : un fil nomme, les mentions coupees, le journal et le r
   // Personne ne fait sonner tout le serveur depuis sa description.
   assert.deepEqual(payload.allowed_mentions, { parse: [] });
 
-  const embed = payload.embeds[0];
-  assert.match(embed.title, /Random Car › Overlay : Machine à sous/);
-  assert.match(embed.description, /rien ne s’est affiché/);
-  assert.equal(embed.color, 0xf59e0b, 'une ligne « attention » colore le message en orange');
-  const champ = (nom) => embed.fields.find((f) => f.name === nom)?.value;
-  assert.equal(champ('Sources OBS'), 'Machine à sous : 0');
-  assert.equal(champ('Streamer'), 'kouss');
-  assert.match(embed.footer.text, new RegExp(r.reference));
+  // Le resume est dans le TEXTE du message : Discord montre les pieces jointes
+  // avant les encadres, et on ouvrait le rapport sans savoir de quoi il parlait.
+  assert.equal(payload.embeds, undefined);
+  const lignes = payload.content.split('\n');
+  assert.equal(lignes[0], '🟠 **🎡 Random Car › Overlay : Machine à sous** · réf. `' + r.reference + '`');
+  assert.match(payload.content, /^> Un viewer a pris la récompense.*rien ne s’est affiché.*$/m);
+  assert.match(payload.content, /\*\*Sources OBS\*\* Machine à sous : 0/);
+  assert.match(payload.content, /\*\*Streamer\*\* kouss · \*\*Quand\*\* à l’instant · \*\*StreamKit\*\* /);
+  assert.ok(payload.content.length <= 2000);
 
   assert.deepEqual(
     fichiers.map((f) => f.nom),
@@ -608,7 +609,7 @@ test('« StreamKit en general » : pas de module, mais tout le reste', async () 
   assert.equal(r.ok, true);
   const { payload } = discord.envois[0];
   assert.match(payload.thread_name, /^StreamKit — /);
-  assert.match(payload.embeds[0].title, /StreamKit en général › Connexion Twitch/);
+  assert.match(payload.content, /^🐞 \*\*StreamKit en général › Connexion Twitch\*\* · réf\./m);
   const rapport = texteDe(discord.envois[0], 'rapport-');
   assert.match(rapport, /## Twitch/);
   assert.match(rapport, /\| Random Car \(`roue-rl`\) \| oui \| démarré/);
@@ -646,7 +647,7 @@ test(
       const { url, form } = recus[0];
       assert.equal(url, '/api/webhooks/1/jeton?wait=true');
       const payload = JSON.parse(form.get('payload_json'));
-      assert.ok(payload.thread_name && payload.embeds.length === 1);
+      assert.ok(payload.thread_name && payload.content.includes('réf.'));
       assert.equal(form.get('files[0]').name, 'rapport-' + r.reference + '.md');
       const capture = [...form.values()].find((v) => v.name === 'capture-1.png');
       assert.equal(capture.size, 2048);

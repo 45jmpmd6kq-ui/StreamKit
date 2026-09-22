@@ -71,8 +71,11 @@ export const QUAND = {
   hier: 'Hier',
 };
 
-// Couleurs de la bordure du message Discord (celles du dashboard).
-const COULEUR = { ko: 0xf43f5e, attention: 0xf59e0b, normal: 0x9146ff };
+// La gravite en tete du message, faute de bordure coloree : le texte d'un
+// message Discord ne porte pas de couleur.
+const MARQUE = { ko: '🔴', attention: '🟠', normal: '🐞' };
+// 2000 caracteres chez Discord, avec de la marge.
+const MAX_CONTENU = 1900;
 
 // Codes d'erreur Discord qui disent de quel genre de salon il s'agit.
 const FORUM_EXIGE_UN_FIL = 220001;
@@ -648,24 +651,51 @@ export function creerSignalement({
     return canaux + (manquants.length ? ' · ' + manquants.length + ' droit(s) manquant(s)' : '');
   }
 
+  // Tout le resume tient dans le TEXTE du message, pas dans un encadre :
+  // Discord affiche toujours les pieces jointes AVANT les encadres, et le
+  // resume se retrouvait sous la capture et les deux fichiers -- on ouvrait un
+  // rapport sans savoir de quoi il parlait. Le texte, lui, passe devant.
   function messageDiscord(r) {
     const { demande: dm, general: g, detail: d } = r;
-    const champ = (name, value, inline = true) => ({ name, value: tronquer(value || '—', 1000), inline });
-    const fields = [
-      champ('Streamer', dm.pseudo || r.chaine || '—'),
-      champ('Version', g.version + ' · ' + g.systeme.replace(/ \(.*\)$/, '')),
-      champ('Quand', QUAND[dm.quand]),
-      champ('Twitch', resumeTwitch(r.twitchEtat, r.droitsManquants)),
+    const titre = libelleModule(d) + (dm.partieLibelle ? ' › ' + dm.partieLibelle : '');
+    const entete = MARQUE[gravite(d)] + ' **' + tronquer(titre, 150) + '** · réf. `' + r.reference + '`';
+
+    const faits = [
+      '**Streamer** ' +
+        (dm.pseudo || r.chaine || '—') +
+        ' · **Quand** ' +
+        QUAND[dm.quand].toLowerCase() +
+        ' · **StreamKit** ' +
+        g.version +
+        ' · ' +
+        g.systeme.replace(/ \(.*\)$/, ''),
+      '**Twitch** ' + resumeTwitch(r.twitchEtat, r.droitsManquants),
     ];
     if (d) {
-      fields.push(champ('Module', d.etat));
+      faits.push('**Module** ' + d.etat);
       const obs = d.overlayVise ? [d.overlayVise] : d.overlays.filter((o) => !o.masque);
-      if (obs.length) fields.push(champ('Sources OBS', obs.map((o) => o.nom + ' : ' + o.sources).join('\n')));
+      if (obs.length) faits.push('**Sources OBS** ' + obs.map((o) => o.nom + ' : ' + o.sources).join(' · '));
       const alerte = d.alertes.at(-1);
-      if (alerte) fields.push(champ('Dernière alerte du module', alerte.h + ' ' + alerte.message, false));
+      if (alerte) faits.push('**Dernière alerte** ' + alerte.h + ' ' + alerte.message);
     }
+    const blocFaits = tronquer(faits.join('\n'), 900);
 
-    const titre = libelleModule(d) + (dm.partieLibelle ? ' › ' + dm.partieLibelle : '');
+    // Ce qui reste du message revient a la description ; son texte complet est
+    // de toute facon dans le rapport joint.
+    const composer = (max) =>
+      [
+        entete,
+        '',
+        tronquer(dm.description, max)
+          .split('\n')
+          .map((l) => '> ' + l)
+          .join('\n'),
+        '',
+        blocFaits,
+      ].join('\n');
+    let contenu = composer(Math.max(120, MAX_CONTENU - entete.length - blocFaits.length - 8));
+    if (contenu.length > MAX_CONTENU) contenu = composer(120);
+
     // Titre du fil (100 caracteres chez Discord) : c'est la description qu'on
     // raccourcit, jamais le module ni le pseudo -- ce sont eux qu'on cherche
     // dans la liste des fils.
@@ -678,16 +708,7 @@ export function creerSignalement({
         // Personne ne doit pouvoir faire sonner tout le serveur avec un
         // « @everyone » glisse dans sa description.
         allowed_mentions: { parse: [] },
-        embeds: [
-          {
-            title: tronquer(titre, 250),
-            description: tronquer(dm.description, 3500),
-            color: COULEUR[gravite(d)],
-            fields,
-            footer: { text: 'Réf. ' + r.reference + ' · StreamKit ' + g.version },
-            timestamp: g.date,
-          },
-        ],
+        content: contenu,
       },
     };
   }
