@@ -305,6 +305,11 @@ privé, par un webhook (`core/signalement.js`). À mettre en place une fois :
    [Environment]::SetEnvironmentVariable('STREAMKIT_WEBHOOK_BUGS', '<URL du webhook>', 'User')
    ```
 
+   Si l'écriture dans le registre est refusée (stratégie de sécurité, antivirus),
+   une seconde voie : coller l'adresse, seule, dans
+   `%APPDATA%\StreamKit\webhook-bugs.txt`. Le script de construction la lit
+   aussi, et ce fichier est hors du dépôt comme `tokens.json`.
+
 **Jamais dans le dépôt** : il est public, et des robots parcourent GitHub à la
 recherche de webhooks Discord pour les inonder ou les supprimer.
 `scripts/cible-signalement.mjs` la glisse, brouillée, dans

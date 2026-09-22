@@ -44,6 +44,25 @@ function depuisRegistre() {
   }
 }
 
+// Seconde voie, pour un poste ou l'ecriture dans le registre est refusee
+// (strategie de securite, antivirus) : un fichier texte a cote des donnees de
+// StreamKit, qui ne contient QUE l'adresse. Hors du depot, comme tokens.json.
+const FICHIER_APPDATA = join(
+  process.env.APPDATA || join(process.env.USERPROFILE || '', 'AppData', 'Roaming'),
+  'StreamKit',
+  'webhook-bugs.txt'
+);
+
+function depuisAppData() {
+  try {
+    return readFileSync(FICHIER_APPDATA, 'utf8')
+      .replace(/^\uFEFF/, '')
+      .split(/\r?\n/)[0];
+  } catch {
+    return ''; // pas de fichier : on continue avec les autres sources
+  }
+}
+
 function depuisFichier() {
   try {
     const { cible } = JSON.parse(readFileSync(FICHIER, 'utf8'));
@@ -56,6 +75,7 @@ function depuisFichier() {
 const sources = [
   ['variable d’environnement', (process.env[NOM] ?? '').trim()],
   ['registre Windows', depuisRegistre().trim()],
+  ['fichier ' + FICHIER_APPDATA, depuisAppData().trim()],
   ['construction précédente', depuisFichier().trim()],
 ];
 
