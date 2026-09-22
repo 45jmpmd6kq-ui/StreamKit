@@ -59,10 +59,19 @@ jobs:
 
       - run: npm ci
 
-      # --publish never, explicitement : electron-builder publie de lui-meme
-      # dans certains contextes d'integration continue. Une release ne part
-      # QUE quand on lance « npm run publier » a la main.
-      - run: npx electron-builder --win --publish never
+      # « npm run dist » et pas « npx electron-builder » : la construction ne se
+      # reduit plus a electron-builder. Deux scripts tournent avant lui et
+      # produisent des fichiers ignores par git -- l'adresse du salon des
+      # rapports de bug, et les notes de version extraites de NOUVEAUTES.md, que
+      # build.releaseInfo reclame. Sans eux, la CI echoue sur un fichier absent
+      # (vecu a la 0.28.0). Ici il n'y a pas d'adresse de webhook : le script le
+      # signale et la construction continue, l'artefact enregistre simplement
+      # les rapports sur le PC au lieu de les envoyer.
+      #
+      # `dist` porte deja --publish never, explicitement : electron-builder
+      # publie de lui-meme dans certains contextes d'integration continue. Une
+      # release ne part QUE quand on lance « npm run publier » a la main.
+      - run: npm run dist
 
       # L'installeur reste telechargeable une semaine depuis l'onglet Actions :
       # de quoi essayer un correctif sans rien publier.
