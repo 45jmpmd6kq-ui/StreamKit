@@ -25,3 +25,6 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   retrouve ton rapport quand on t'en reparle.
 - Si le rapport ne peut pas partir (pas de connexion), il est enregistré sur ton
   PC et StreamKit te propose d'ouvrir le dossier pour l'envoyer à la main.
+- **Tu sais enfin ce que chaque mise à jour apporte.** Quand une version sort,
+  StreamKit l'annonce avec la liste de ce qui change ; et au redémarrage, il te
+  montre ce qu'il vient d'installer.
