@@ -141,22 +141,22 @@
          Windows : une bulle système qui surgit pendant que le streamer capture
          son écran serait diffusée en direct à ses viewers. -->
     <dialog id="modale-maj">
-      <div class="modale-entete">
-        <h2>Une nouvelle version est disponible</h2>
+      <!-- Bandeau plein : le numéro de version en grand, pour que l'annonce se
+           voie entre deux parties. La même fenêtre sert au « Quoi de neuf »
+           après une mise à jour, en vert (classe « faite »). -->
+      <div class="maj-entete" id="maj-entete">
+        <div class="maj-surtitre" id="maj-surtitre">MISE À JOUR DISPONIBLE</div>
+        <div class="maj-titre" id="maj-titre">StreamKit</div>
+        <div class="maj-sous" id="maj-sous"></div>
       </div>
       <div class="modale-corps">
-        <div class="saut-version">
-          <span class="v-avant" id="maj-avant">—</span>
-          <span class="v-fleche">→</span>
-          <span class="v-apres" id="maj-apres">—</span>
-        </div>
+        <div id="maj-blocs"></div>
+        <div class="maj-notes" id="maj-notes" hidden></div>
 
-        <p class="maj-texte">
+        <p class="maj-texte" id="maj-texte">
           La mise à jour se fait toute seule : StreamKit se ferme, se remplace et redémarre.
           <b>Tes réglages sont conservés.</b>
         </p>
-
-        <div class="maj-notes" id="maj-notes" hidden></div>
 
         <div class="bandeau avert" id="maj-en-live" hidden>
           <span>🔴</span>
@@ -169,6 +169,7 @@
       <div class="modale-pied">
         <button class="btn" id="btn-maj-plus-tard">Plus tard</button>
         <button class="btn primaire" id="btn-maj-maintenant">Mettre à jour maintenant</button>
+        <button class="btn primaire" id="btn-maj-vu" hidden>J'ai vu</button>
       </div>
     </dialog>
 

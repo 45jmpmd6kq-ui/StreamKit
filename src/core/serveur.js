@@ -599,6 +599,10 @@ export function creerServeur(app) {
         if (chemin === '/api/maj/appliquer' && methode === 'POST') {
           return json(res, 200, await app.appliquerMaj());
         }
+        // Ce que la version installee a apporte (NOUVEAUTES.md embarque).
+        if (chemin === '/api/maj/notes' && methode === 'GET') {
+          return json(res, 200, app.notesDeVersion());
+        }
 
         return json(res, 404, { erreur: 'route inconnue' });
       }

@@ -261,42 +261,106 @@ function repousserMaj(version) {
   }
 }
 
-// GitHub renvoie les notes de release en HTML : « <p>fix update</p> ». Affichées
-// telles quelles, les balises se voient. On les convertit en texte plutôt que de
-// les injecter en innerHTML — ce texte vient d'une page web, il n'a rien à faire
-// dans le DOM de l'application.
-function notesEnTexte(html) {
-  if (!html) return '';
-  return (
-    String(html)
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
-      .replace(/<li[^>]*>/gi, '• ')
-      .replace(/<[^>]+>/g, '')
-      // Entités que GitHub produit couramment dans les messages de commit.
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&amp;/g, '&')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
+// Les notes de version arrivent déjà découpées par le socle (core/notes.js),
+// qu'elles viennent de `latest.yml` (Markdown) ou de la release GitHub (HTML) :
+// ici on ne fait que les afficher, en texte, jamais en innerHTML.
+const RUBRIQUES_MAJ = [
+  ['nouveautes', '✨ Nouveautés'],
+  ['corrections', '🐛 Corrections'],
+  ['autres', 'Au programme'],
+];
+
+function dessinerNotes(blocs) {
+  $('#maj-blocs').replaceChildren(
+    ...RUBRIQUES_MAJ.filter(([cle]) => blocs?.[cle]?.length).map(([cle, titre]) => {
+      const bloc = document.createElement('div');
+      bloc.className = 'maj-bloc';
+      const h = document.createElement('h3');
+      h.textContent = titre;
+      const ul = document.createElement('ul');
+      for (const point of blocs[cle]) {
+        const li = document.createElement('li');
+        li.textContent = point;
+        ul.append(li);
+      }
+      bloc.append(h, ul);
+      return bloc;
+    })
   );
+  return $('#maj-blocs').childElementCount > 0;
+}
+
+function dateCourte(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const jour = (x) => x.toISOString().slice(0, 10);
+  if (jour(d) === jour(new Date())) return "aujourd'hui";
+  return 'le ' + d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 }
 
 function ouvrirModaleMaj(info) {
-  $('#maj-avant').textContent = info.actuelle;
-  $('#maj-apres').textContent = info.derniere;
+  $('#maj-entete').classList.remove('faite');
+  $('#maj-surtitre').textContent = 'MISE À JOUR DISPONIBLE';
+  $('#maj-titre').textContent = 'StreamKit ' + info.derniere;
+  const publiee = info.publieeLe ? dateCourte(info.publieeLe) : '';
+  $('#maj-sous').textContent = 'tu es en ' + info.actuelle + (publiee ? ' · publiée ' + publiee : '');
 
+  // Les notes découpées ; à défaut le texte brut, s'il y en a un.
   const notes = $('#maj-notes');
-  const texte = notesEnTexte(info.notes);
-  notes.hidden = !texte;
-  notes.textContent = texte;
+  if (dessinerNotes(info.blocs)) {
+    notes.hidden = true;
+  } else {
+    const texte = String(info.notes ?? '').trim();
+    notes.hidden = !texte;
+    notes.textContent = texte;
+  }
 
+  $('#maj-texte').hidden = false;
   // Un module démarré = quelque chose tourne peut-être en direct. On ne bloque
   // pas, on prévient : c'est au streamer de juger.
   $('#maj-en-live').hidden = !(etat.general?.modules?.demarres > 0);
+  $('#btn-maj-plus-tard').hidden = false;
+  $('#btn-maj-maintenant').hidden = false;
+  $('#btn-maj-vu').hidden = true;
+
+  $('#modale-maj').showModal();
+}
+
+// Après une mise à jour, la version installée dit ce qu'elle apporte. C'est le
+// seul moment où le streamer lit vraiment les notes : au redémarrage, il a la
+// fenêtre sous les yeux. Lu dans l'application, sans réseau.
+async function montrerNouveautes() {
+  const version = etat.general?.version;
+  if (!version) return;
+
+  let vue;
+  try {
+    vue = localStorage.getItem('streamkit.versionVue');
+    localStorage.setItem('streamkit.versionVue', version);
+  } catch {
+    return; // pas de mémoire locale : on ne saurait pas quand s'arrêter
+  }
+  // Rien à raconter : version déjà vue, ou toute première installation.
+  if (!vue || vue === version) return;
+
+  let r;
+  try {
+    r = await api('/api/maj/notes');
+  } catch {
+    return;
+  }
+  if (r.version !== version || !dessinerNotes(r.blocs) || $('#modale-maj').open) return;
+
+  $('#maj-entete').classList.add('faite');
+  $('#maj-surtitre').textContent = 'MISE À JOUR INSTALLÉE';
+  $('#maj-titre').textContent = 'StreamKit ' + version;
+  $('#maj-sous').textContent = 'ce qui a changé';
+  $('#maj-notes').hidden = true;
+  $('#maj-texte').hidden = true;
+  $('#maj-en-live').hidden = true;
+  $('#btn-maj-plus-tard').hidden = true;
+  $('#btn-maj-maintenant').hidden = true;
+  $('#btn-maj-vu').hidden = false;
 
   $('#modale-maj').showModal();
 }
@@ -1310,6 +1374,10 @@ function brancherTiroir() {
 function brancherModales() {
   const mR = $('#modale-reglages');
 
+  // « J'ai vu » ferme le « Quoi de neuf ». Branché ici et pas dans
+  // verifierMaj() : quand on est À JOUR, cette fonction s'arrête avant.
+  $('#btn-maj-vu').addEventListener('click', () => $('#modale-maj').close());
+
   // L'indicateur du bandeau menait a une fenetre qui demandait exactement ce
   // que demande la carte Twitch de l'ecran Connecteurs, en ecrivant au meme
   // endroit. Deux formulaires pour une seule donnee finissent toujours par
@@ -1740,6 +1808,9 @@ await chargerJournal();
 await chargerSante();
 await chargerConnecteurs();
 brancherFluxJournal();
+// D'abord ce qu'on vient d'installer, ensuite ce qui est disponible : les deux
+// partagent la même fenêtre, et « Quoi de neuf » suit tout juste un redémarrage.
+await montrerNouveautes();
 verifierMaj();
 
 // L'état général bouge sans qu'on y touche (chat qui se reconnecte, module qui

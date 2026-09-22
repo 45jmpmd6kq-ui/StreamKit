@@ -24,6 +24,7 @@ import * as registre from './core/registre.js';
 import * as twitchReel from './core/twitch.js';
 import * as auth from './core/auth.js';
 import * as maj from './core/maj.js';
+import * as notes from './core/notes.js';
 import * as diffusion from './core/diffusion.js';
 import * as compteurs from './core/compteurs.js';
 import * as connecteurs from './core/connecteurs.js';
@@ -594,8 +595,21 @@ export async function demarrerNoyau({
     },
 
     // --- Mise a jour (implementation injectee) ---
-    verifierMaj: () => updater.verifier(),
+    //
+    // Les notes sont decoupees ici, pas dans le dashboard : elles arrivent
+    // tantot en Markdown (latest.yml), tantot en HTML (release GitHub).
+    async verifierMaj() {
+      const r = await updater.verifier();
+      return { ...r, blocs: notes.decouper(r.notes) };
+    },
     appliquerMaj: () => updater.appliquer(),
+
+    // Ce que la version INSTALLEE a apporte : lu dans l'application, sans
+    // reseau. C'est le « Quoi de neuf » du redemarrage.
+    notesDeVersion: () => ({
+      version: maj.versionActuelle(),
+      blocs: notes.decouper(notes.notesLocales()),
+    }),
 
     // --- Signaler un bug ---
     apercuSignalement: (corps) => signalement.apercu(corps),

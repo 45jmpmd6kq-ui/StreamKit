@@ -260,10 +260,13 @@ connectées.
   StreamKit** → **Démarrer avec Windows**. StreamKit se lance alors tout seul,
   près de l'horloge, sans ouvrir de fenêtre. S'il démarre avant ta connexion
   Internet, il se connecte à Twitch tout seul dès qu'elle arrive.
-- **Mises à jour** : quand une version sort, un bouton **Mettre à jour → x.y.z**
-  apparaît en haut. Clique dessus puis **Mettre à jour maintenant** : StreamKit
-  redémarre, et tes réglages et comptes sont conservés. **Pas pendant un
-  live** : attends la fin.
+- **Mises à jour** : quand une version sort, StreamKit l'annonce en ouvrant une
+  fenêtre qui liste ce qui change — les nouveautés et les corrections. Clique
+  sur **Mettre à jour maintenant** : StreamKit redémarre, et tes réglages et
+  comptes sont conservés. **Pas pendant un live** : attends la fin, la fenêtre
+  te le rappelle, et le bouton **Mettre à jour → x.y.z** reste en haut aussi
+  longtemps que tu veux. Au redémarrage, StreamKit te montre ce qu'il vient
+  d'installer.
 
 ---
 

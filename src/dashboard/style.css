@@ -1004,33 +1004,62 @@ dialog::backdrop {
 
 /* ---------- Fenêtre de mise à jour ---------- */
 
-.saut-version {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.1rem;
-  padding: 0.6rem 0 1.3rem;
+/* Bandeau plein largeur : l'annonce doit se voir d'un coup d'oeil, entre deux
+   parties. En vert quand elle raconte ce qui vient d'être installé. */
+.maj-entete {
+  background: var(--accent);
+  padding: 1.1rem 1.4rem 1.2rem;
+  color: #fff;
 }
-.saut-version .v-avant {
-  font-size: 1.35rem;
-  color: var(--texte-faible);
-  font-variant-numeric: tabular-nums;
+.maj-entete.faite {
+  background: #1a7f4b;
 }
-.saut-version .v-fleche {
-  color: var(--texte-faible);
+.maj-surtitre {
+  font-size: 0.7rem;
+  letter-spacing: 0.11em;
+  opacity: 0.85;
 }
-.saut-version .v-apres {
-  font-size: 2rem;
+.maj-titre {
+  font-size: 1.7rem;
   font-weight: 700;
-  color: var(--accent);
+  line-height: 1.2;
+  margin-top: 0.1rem;
   font-variant-numeric: tabular-nums;
+}
+.maj-sous {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* Les notes de version, en listes : « Nouveautés » puis « Corrections ». */
+.maj-bloc {
+  margin-bottom: 1.1rem;
+}
+.maj-bloc h3 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--texte-faible);
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+.maj-bloc ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.maj-bloc li {
+  margin-bottom: 0.4rem;
+  color: var(--texte-doux);
+}
+.maj-bloc li::marker {
+  color: var(--accent);
 }
 
 .maj-texte {
   margin: 0;
-  text-align: center;
   color: var(--texte-doux);
   line-height: 1.6;
+  font-size: 0.9rem;
 }
 .maj-texte b {
   color: var(--texte);

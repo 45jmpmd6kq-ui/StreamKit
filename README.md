@@ -194,16 +194,35 @@ git switch test
 ## Publier une mise à jour
 
 ```bash
+# écrire la section « ## <version> » dans NOUVEAUTES.md (obligatoire, voir plus bas)
 # sur main, au commit testé, tagué et poussé (section précédente)
 # créer la release en BROUILLON, vide, sur le tag (voir le troisième piège)
 npm run publier            # build + envoi des fichiers dans ce brouillon
-# vérifier les 3 fichiers, puis publier le brouillon
+# vérifier les 3 fichiers, poser les notes en corps de release, puis publier
 ```
 
 `npm run publier` fait tout d'un coup. Il lui faut un jeton dans la variable
 d'environnement `GH_TOKEN` — un jeton *fine-grained* limité à ce dépôt avec la
 seule permission **Contents : Read and write** suffit (sur GitHub, les releases
 et leurs fichiers relèvent de « Contents »).
+
+### Les notes de version ne sont pas facultatives
+
+`NOUVEAUTES.md` porte une section par version, **écrite pour les streamers**.
+`npm run publier` s'arrête si la version publiée n'a pas la sienne, et
+`npm test` le vérifie aussi — une version qui s'annonce sans dire ce qu'elle
+change n'apprend rien à personne, et c'est le seul moment où le streamer lit.
+
+`scripts/notes-de-version.mjs` extrait la section dans `notes-version.md`
+(ignoré par git), qu'`electron-builder` recopie dans `latest.yml`
+(`build.releaseInfo.releaseNotesFile`). C'est de là que la fenêtre de mise à
+jour les tire : `electron-updater` ne va chercher le corps de la release GitHub
+que si `latest.yml` n'en porte pas. Poser quand même ce texte en corps de
+release au moment du `PATCH` final — c'est ce qu'on lit sur la page GitHub.
+
+Le fichier est aussi **embarqué dans l'application** (`build.files`) : au
+redémarrage qui suit une mise à jour, StreamKit affiche « Quoi de neuf » avec
+la section de la version installée, sans réseau.
 
 Sans jeton, `npm run dist` construit dans `livraison\` et il reste à créer la
 release à la main en y joignant **l'installeur, `latest.yml` et le `.blockmap`**.
