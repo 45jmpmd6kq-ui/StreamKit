@@ -35,11 +35,17 @@ const coffreFactice = {
   },
 };
 
-// Ecrit tokens.json a la main, en forcant une date differente : sans ca, le
-// cache memoire du store (indexe sur la mtime) resservirait l'ancien contenu.
+// Ecrit tokens.json a la main, en forcant une date differente a CHAQUE appel :
+// le cache memoire du store est indexe sur la mtime, et sous Windows l'horloge
+// systeme n'avance que toutes les ~15 ms. Deux poserFichier() du meme tic
+// portaient donc la MEME date (Date.now() - 60 s), et le second se faisait
+// resservir le contenu du premier -- la migration rechiffrait alors un objet
+// perime, et le test suivant lisait un jeton disparu. Vu en vrai sur la CI,
+// reproduit ici en figeant la date : d'ou le compteur.
+let ecritures = 0;
 function poserFichier(objet) {
   writeFileSync(TOKENS_PATH, JSON.stringify(objet, null, 2), 'utf8');
-  const jadis = new Date(Date.now() - 60000);
+  const jadis = new Date(Date.now() - 60000 - ++ecritures * 1000);
   utimesSync(TOKENS_PATH, jadis, jadis);
 }
 
