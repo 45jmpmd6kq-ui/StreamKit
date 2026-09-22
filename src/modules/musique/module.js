@@ -283,6 +283,23 @@ export default {
 
   // --- Cycle de vie ---------------------------------------------------------
 
+  // Rapport de bug : les recompenses telles que Twitch les porte, l'appareil
+  // Spotify (sans lui, chaque demande est remboursee) et la file.
+  async diagnostic(ctx) {
+    let appareil = 'module arrêté';
+    if (ctx._spotify) {
+      try {
+        const a = await ctx._spotify.getActiveDevice();
+        appareil = a
+          ? a.name + ' (' + a.type + ', volume ' + a.volume_percent + ' %)'
+          : 'aucun appareil actif';
+      } catch (e) {
+        appareil = 'Spotify injoignable : ' + (e?.message || e);
+      }
+    }
+    return { enMarche: ctx._etatMusique?.() ?? 'module arrêté', appareilSpotify: appareil };
+  },
+
   async demarrer(ctx) {
     const c = ctx.config;
 
@@ -369,6 +386,8 @@ export default {
 
     // Lu par sante() : ce que Twitch porte apres l'alignement, pas les reglages.
     ctx._etatMusique = () => ({
+      id: principale.id,
+      enFile: file.aVenir().length,
       titre: principale.titre,
       cout: principale.cout,
       refus: annulation && { titre: annulation.titre, cout: annulation.cout },

@@ -318,6 +318,12 @@ export function droitsManquants(scopes = []) {
   return scopes.filter((s) => !aLeDroit(s));
 }
 
+// Abonnements EventSub en cours, pour le rapport de bug (voir
+// core/abonnements.js, liste).
+export function abonnements() {
+  return canaux.liste();
+}
+
 // --- Ce qu'on expose a un module -------------------------------------------
 
 export function contextePour(moduleId, logModule) {
@@ -331,7 +337,7 @@ export function contextePour(moduleId, logModule) {
   const brancher = (nom, quoi, sujet, creer, fn) =>
     noter(
       moduleId,
-      canaux.brancher({ nom, creer, log: logModule, quoi }, async (e) => {
+      canaux.brancher({ nom, creer, log: logModule, quoi, module: moduleId }, async (e) => {
         try {
           await fn(e);
         } catch (err) {

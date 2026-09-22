@@ -30,6 +30,9 @@ export const CONFIG_PATH = join(DONNEES, 'config.json');
 export const TOKENS_PATH = join(DONNEES, 'tokens.json');
 export const JOURNAUX_DIR = join(DONNEES, 'journaux');
 export const ETAT_DIR = join(DONNEES, 'etat');
+// Rapports de bug qui n'ont pas pu partir (voir core/signalement.js). Cree a la
+// demande : la plupart des installations n'en auront jamais besoin.
+export const SIGNALEMENTS_DIR = join(DONNEES, 'signalements');
 
 export function preparerDossiers() {
   for (const d of [DONNEES, JOURNAUX_DIR, ETAT_DIR]) mkdirSync(d, { recursive: true });

@@ -175,6 +175,15 @@ export default {
     ];
   },
 
+  // Rapport de bug : ce que le bandeau sait (joueur, rang, session, partie),
+  // avec les trois derniers matchs seulement.
+  async diagnostic(ctx) {
+    const e = ctx._construireEtat?.();
+    if (!e) return { enMarche: 'module arrêté' };
+    const { matches, ...reste } = e;
+    return { ...reste, matchs: matches.length, derniersMatchs: matches.slice(0, 3) };
+  },
+
   async demarrer(ctx) {
     const c = ctx.config;
     const stocke = ctx.etat.lire({ meta: null, matchs: [] });

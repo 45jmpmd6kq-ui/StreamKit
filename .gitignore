@@ -3,3 +3,6 @@ livraison/
 *.log
 config.json
 tokens.json
+# Adresse du salon Discord des rapports de bug : glissee par
+# scripts/cible-signalement.mjs a la construction, JAMAIS dans le depot (public).
+src/core/signalement-cible.json

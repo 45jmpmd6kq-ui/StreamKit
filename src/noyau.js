@@ -29,6 +29,7 @@ import * as compteurs from './core/compteurs.js';
 import * as connecteurs from './core/connecteurs.js';
 import * as coffre from './core/coffre.js';
 import { creerSante, resumeModules } from './core/sante.js';
+import { creerSignalement, lireCible } from './core/signalement.js';
 import { creerReconnexion, PAUSES_MS, resumeErreur } from './core/reconnexion.js';
 import { creerServeur, ecouter, ENTETES_PAGE_OAUTH } from './core/serveur.js';
 
@@ -58,6 +59,13 @@ export async function demarrerNoyau({
   // tests, qui simulent un Twitch injoignable sans attendre des minutes.
   twitch = twitchReel,
   pausesTwitchMs = PAUSES_MS,
+  // Ouvre un dossier dans l'explorateur (shell.openPath sous Electron) : un
+  // rapport de bug qui n'a pas pu partir y est enregistre. Absent en ligne de
+  // commande, le dashboard affiche alors le chemin.
+  ouvrirDossier = null,
+  // Salon Discord des rapports de bug : lu dans l'installeur par defaut (voir
+  // core/signalement.js), remplace par un faux Discord dans les tests.
+  cibleSignalement = lireCible(),
 } = {}) {
   preparerDossiers();
   journal.purger();
@@ -254,6 +262,24 @@ export async function demarrerNoyau({
     port: PORT,
     contexteDe: (id) => contextes.get(id),
     etatDirect,
+  });
+
+  // « Signaler un bug » : voir core/signalement.js.
+  const signalement = creerSignalement({
+    registre,
+    twitch,
+    diffusion,
+    compteurs,
+    sante: () => vuesSante.sante(),
+    connecteurs: () => vuesSante.etatConnecteurs(),
+    contexteDe: (id) => contextes.get(id),
+    // Un module arrete a quand meme son diagnostic (l'API de stats de Rocket
+    // League se verifie jeu ferme) : meme contexte jetable que pour ses actions.
+    contexteJetable: (m) => contextePour(m),
+    config: () => store.getConfig(),
+    secrets: () => store.lireTokens(),
+    cible: cibleSignalement,
+    ouvrir: ouvrirDossier,
   });
 
   function brancherSuiviDuDirect() {
@@ -570,6 +596,11 @@ export async function demarrerNoyau({
     // --- Mise a jour (implementation injectee) ---
     verifierMaj: () => updater.verifier(),
     appliquerMaj: () => updater.appliquer(),
+
+    // --- Signaler un bug ---
+    apercuSignalement: (corps) => signalement.apercu(corps),
+    envoyerSignalement: (corps) => signalement.envoyer(corps),
+    ouvrirSignalement: (reference) => signalement.ouvrirDossier(reference),
   };
 
   // --- Demarrage ------------------------------------------------------------

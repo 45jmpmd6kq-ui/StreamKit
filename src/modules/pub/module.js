@@ -174,6 +174,12 @@ export default {
     return [{ id: 'pub', nom: 'Pubs Twitch', etat: 'ok', detail, aide: '' }];
   },
 
+  // Rapport de bug : ce que Twitch a refuse au demarrage, et ce que le module
+  // suit en ce moment.
+  async diagnostic(ctx) {
+    return { refusDeTwitch: ctx._refus ?? null, enCours: ctx._suivi?.etat() ?? null };
+  },
+
   async demarrer(ctx) {
     const c = ctx.config;
     const theme = { coin: c.coin, phraseAvant: c.phraseAvant, phrasePendant: c.phrasePendant };

@@ -215,6 +215,19 @@ export default {
     return ligne('ok', '« ' + e.titre + ' » à ' + points(e.cout) + ' · ' + e.voitures + ' voiture(s)');
   },
 
+  // Rapport de bug : la recompense telle que Twitch la porte (son id est celui
+  // de l'abonnement « recompense:<id> » du rapport) et la selection. « Rien ne
+  // s'affiche » se tranche entre ces deux-la et les sources OBS, que le socle
+  // ajoute de lui-meme.
+  async diagnostic(ctx) {
+    const { voitures: dispo, inconnues } = voitures.resoudre(ctx.etat.lire({ possedees: [] }).possedees);
+    return {
+      enMarche: ctx._etatRoue?.() ?? 'module arrêté',
+      voituresCochees: dispo.length,
+      nomsInconnus: inconnues,
+    };
+  },
+
   async demarrer(ctx) {
     const c = ctx.config;
 
@@ -266,6 +279,7 @@ export default {
       cooldownSec: c.rewardCooldownSec,
     });
     ctx._etatRoue = () => ({
+      id: recompense.id,
       titre: recompense.titre,
       cout: recompense.cout,
       voitures: selection().voitures.length,

@@ -16,6 +16,7 @@
 // Aucun droit Twitch : le module tourne meme sans chaine connectee.
 
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { creerClient, trouverDossier } from './client.js';
 import { creerSuivi, PHASES_JEU } from './suivi.js';
 import { debutSession } from './session.js';
@@ -192,6 +193,19 @@ export default {
       [qui, nomRang(e.rang), e.victoires + ' V / ' + e.defaites + ' D'].filter(Boolean).join(' · '),
       e.enPartie ? 'En partie' : ''
     );
+  },
+
+  // Rapport de bug : ou StreamKit cherche le jeu, et si le client y tourne.
+  async diagnostic(ctx) {
+    const dossier = trouverDossier(ctx.config.dossierJeu);
+    return {
+      enMarche: ctx._etatLoL?.() ?? 'module arrêté',
+      dossierDuJeu: dossier,
+      dossierTrouve: existsSync(dossier),
+      // Le lockfile n'existe que client ouvert. Son CONTENU porte le mot de
+      // passe de l'API locale : il ne sort jamais d'ici.
+      clientOuvert: existsSync(join(dossier, 'lockfile')),
+    };
   },
 
   async demarrer(ctx) {

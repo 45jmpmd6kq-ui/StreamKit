@@ -23,6 +23,9 @@
       <div class="pousse"></div>
 
       <button class="btn petit" id="btn-maj" hidden></button>
+      <button class="btn petit" id="btn-bug" title="Envoyer un rapport à la personne qui s'occupe de StreamKit">
+        🐞 Signaler un bug
+      </button>
       <button class="btn petit discret" id="btn-reglages" title="Réglages de StreamKit">⚙️</button>
     </header>
 
@@ -166,6 +169,86 @@
       <div class="modale-pied">
         <button class="btn" id="btn-maj-plus-tard">Plus tard</button>
         <button class="btn primaire" id="btn-maj-maintenant">Mettre à jour maintenant</button>
+      </div>
+    </dialog>
+
+    <!-- Signaler un bug (core/signalement.js).
+         Le module est présélectionné d'après l'écran ouvert : c'est presque
+         toujours de lui qu'on parle. Le journal, l'état du module et de
+         StreamKit partent avec, sans rien demander au streamer. -->
+    <dialog id="modale-bug">
+      <div class="modale-entete"><h2>🐞 Signaler un bug</h2></div>
+
+      <div class="modale-corps" id="bug-formulaire">
+        <div class="bandeau info" id="bug-hors-ligne" hidden>
+          <span>💾</span>
+          <div>
+            <b>Cette version n'envoie pas les rapports</b>
+            <p>Ton rapport sera enregistré sur ce PC, et tu pourras l'envoyer à la main.</p>
+          </div>
+        </div>
+
+        <div class="bug-grille">
+          <div>
+            <label class="bug-label" for="bug-module">Module</label>
+            <select id="bug-module"></select>
+          </div>
+          <div>
+            <label class="bug-label" for="bug-partie">Partie concernée</label>
+            <select id="bug-partie"></select>
+          </div>
+        </div>
+
+        <span class="bug-label">Quand ?</span>
+        <div class="bug-quand" role="radiogroup" aria-label="Quand est-ce arrivé ?">
+          <button type="button" class="puce" role="radio" data-quand="instant" aria-checked="true">
+            À l'instant
+          </button>
+          <button type="button" class="puce" role="radio" data-quand="aujourdhui" aria-checked="false">
+            Plus tôt aujourd'hui
+          </button>
+          <button type="button" class="puce" role="radio" data-quand="hier" aria-checked="false">Hier</button>
+        </div>
+
+        <label class="bug-label" for="bug-description">Ce qui s'est passé</label>
+        <textarea
+          id="bug-description"
+          maxlength="4000"
+          placeholder="Ce que tu faisais, ce que tu attendais, et ce qui s'est passé à la place."
+        ></textarea>
+        <div class="bug-erreur" id="bug-erreur" hidden></div>
+
+        <div class="bug-depot" id="bug-depot">
+          <div class="bug-vignettes" id="bug-vignettes"></div>
+          <span>
+            Glisse tes captures ici, colle-les (<kbd>Ctrl</kbd>+<kbd>V</kbd>) ou
+            <button type="button" class="lien" id="bug-parcourir">choisis un fichier</button>.
+          </span>
+          <input type="file" id="bug-fichiers" multiple hidden />
+        </div>
+
+        <div class="bug-ligne">
+          <label class="bug-label" for="bug-pseudo">Ton pseudo</label>
+          <input type="text" id="bug-pseudo" maxlength="60" placeholder="pour savoir qui te répondre" />
+        </div>
+
+        <details class="bug-joint">
+          <summary>📎 Joint automatiquement : <span id="bug-joint-resume">…</span></summary>
+          <ul id="bug-joint-liste"></ul>
+          <p class="bug-note">Jamais tes mots de passe ni tes jetons de connexion : ils sont masqués.</p>
+          <details>
+            <summary>Voir le rapport</summary>
+            <pre id="bug-rapport"></pre>
+          </details>
+        </details>
+      </div>
+
+      <div class="modale-corps" id="bug-resultat" hidden></div>
+
+      <div class="modale-pied">
+        <button class="btn" id="btn-bug-annuler">Annuler</button>
+        <button class="btn" id="btn-bug-dossier" hidden>Ouvrir le dossier</button>
+        <button class="btn primaire" id="btn-bug-envoyer">Envoyer</button>
       </div>
     </dialog>
 

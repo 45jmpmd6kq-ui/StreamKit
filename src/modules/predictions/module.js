@@ -157,6 +157,12 @@ export default {
     ];
   },
 
+  // Rapport de bug : ce que Twitch a refuse au demarrage, et ce que le module
+  // suit en ce moment.
+  async diagnostic(ctx) {
+    return { refusDeTwitch: ctx._refus ?? null, enCours: ctx._suivi?.courante() ?? null };
+  },
+
   async demarrer(ctx) {
     const c = ctx.config;
     const theme = { bleu: c.couleurBleu, rose: c.couleurRose, coin: c.coin };

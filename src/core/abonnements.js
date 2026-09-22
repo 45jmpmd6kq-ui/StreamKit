@@ -111,8 +111,9 @@ export function creerCanaux({ suivi }) {
 
   return {
     // `creer(recevoir)` pose l'abonnement Twurple ; `log` et `quoi` servent au
-    // suivi. Renvoie le debranchement.
-    brancher({ nom, creer, log, quoi }, gestionnaire) {
+    // suivi, `module` au rapport de bug (qui ecoute quoi). Renvoie le
+    // debranchement.
+    brancher({ nom, creer, log, quoi, module = '' }, gestionnaire) {
       let c = canaux.get(nom);
       if (!c) {
         const gestionnaires = new Set();
@@ -125,12 +126,16 @@ export function creerCanaux({ suivi }) {
             }
           }
         });
-        c = { abonnement, gestionnaires, log };
+        c = { abonnement, gestionnaires, log, quoi, modules: new Map() };
         suivi.suivre(abonnement, log, quoi);
         canaux.set(nom, c);
       }
       c.gestionnaires.add(gestionnaire);
-      return () => c.gestionnaires.delete(gestionnaire);
+      c.modules.set(gestionnaire, module);
+      return () => {
+        c.gestionnaires.delete(gestionnaire);
+        c.modules.delete(gestionnaire);
+      };
     },
 
     // Revoque par Twitch : le prochain module qui s'y branche en reposera un.
@@ -146,6 +151,18 @@ export function creerCanaux({ suivi }) {
 
     nombre: () => canaux.size,
     gestionnaires: (nom) => canaux.get(nom)?.gestionnaires.size ?? 0,
+
+    // Pour le rapport de bug : chaque abonnement, s'il est confirme par Twitch,
+    // et quels modules l'ecoutent. « Random Car ne reagit plus » se tranche
+    // souvent ici -- un abonnement jamais confirme ne recoit rien.
+    liste: () =>
+      [...canaux].map(([nom, c]) => ({
+        nom,
+        quoi: c.quoi,
+        verifie: !!c.abonnement?.verified,
+        gestionnaires: c.gestionnaires.size,
+        modules: [...new Set(c.modules.values())].filter(Boolean),
+      })),
   };
 }
 

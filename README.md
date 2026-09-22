@@ -285,7 +285,43 @@ Côté streamer, rien à saisir : le dépôt est déclaré dans `build.publish`.
 **Le dépôt doit être public.** L'updater lit les releases sans s'authentifier ;
 en privé il faudrait distribuer un jeton GitHub à chaque streamer. Le code ne
 contient aucun secret : `config.json` et `tokens.json` vivent dans `%APPDATA%`
-et sont ignorés par git.
+et sont ignorés par git. L'adresse du salon des rapports de bug non plus : voir
+ci-dessous.
+
+### Rapports de bug : le salon Discord
+
+Le bouton **🐞 Signaler un bug** des streamers poste dans un salon Discord
+privé, par un webhook (`core/signalement.js`). À mettre en place une fois :
+
+1. Sur le serveur Discord, un salon privé — de préférence un salon **Forum** :
+   chaque rapport y ouvre son propre fil, titré « module — description ·
+   pseudo », où l'on peut répondre et que l'on peut clore. Un salon texte marche
+   aussi : StreamKit le détecte au premier envoi.
+2. Paramètres du salon ▸ Intégrations ▸ Webhooks ▸ Nouveau webhook ▸ Copier
+   l'URL du webhook.
+3. La ranger dans une variable d'environnement utilisateur, comme `GH_TOKEN` :
+
+   ```powershell
+   [Environment]::SetEnvironmentVariable('STREAMKIT_WEBHOOK_BUGS', '<URL du webhook>', 'User')
+   ```
+
+**Jamais dans le dépôt** : il est public, et des robots parcourent GitHub à la
+recherche de webhooks Discord pour les inonder ou les supprimer.
+`scripts/cible-signalement.mjs` la glisse, brouillée, dans
+`src/core/signalement-cible.json` (ignoré par git) juste avant chaque
+construction. Il relit aussi le registre : une variable posée après l'ouverture
+du terminal est vue quand même.
+
+- `npm run dist` sans adresse : l'installeur se construit, et les rapports sont
+  seulement enregistrés sur le PC (`%APPDATA%\StreamKit\signalements`), le
+  dashboard le disant d'emblée ;
+- `npm run publier` sans adresse : **refusé**. Les streamers recevraient une
+  version incapable d'envoyer quoi que ce soit.
+
+L'adresse reste lisible par qui décortique l'installeur : il pourrait poster
+dans le salon ou supprimer le webhook, pas lire ce qui s'y trouve. Si ça
+arrive : nouveau webhook, nouvelle variable, une version publiée. Les rapports
+faits entre-temps ne sont pas perdus, ils attendent sur les PC.
 
 ### Un correctif d'update ne se voit qu'une version plus tard
 
@@ -396,6 +432,14 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
       Verifie au banc contre le vrai Twitch (reseau coupe, puis faux identifiants)
 - [ ] Random Car valide en live : cout aligne apres Enregistrer, machine a
       l'ecran sur une vraie utilisation
+- [x] **Signaler un bug** (`core/signalement.js`) : bouton dans la barre du
+      haut, module de l'ecran preselectionne, partie concernee (overlay, page,
+      bouton), captures collees ou glissees. Journal, etat du module, sources
+      OBS, abonnements EventSub, `diagnostic()` des modules et etat de StreamKit
+      partent dans un salon Discord (un fil par rapport en Forum), secrets
+      remplaces avant l'envoi ; rapport enregistre sur le PC si l'envoi echoue.
+      Verifie contre un faux Discord (dashboard reel, vrai fetch)
+- [ ] Premier rapport reel recu dans le salon Discord
 
 ## Pièges rencontrés (à ne pas refaire)
 

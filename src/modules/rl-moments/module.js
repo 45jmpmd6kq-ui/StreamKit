@@ -157,6 +157,16 @@ export default {
     return ligne('ok', 'connecté');
   },
 
+  // Rapport de bug : le detecteur, et l'API de stats telle que le jeu la lira
+  // a son prochain lancement.
+  async diagnostic(ctx) {
+    return {
+      enMarche: ctx._etatMoments?.() ?? 'module arrêté',
+      apiDansLesFichiers: etatApi(await fichiersApi(await trouverLaunchLog(''))),
+      jeuLance: await jeuLance(),
+    };
+  },
+
   async demarrer(ctx) {
     const c = ctx.config;
     const det = creerDetecteur({ memoire: ctx.etat.lire({ derniereActiviteA: 0, rearme: false }) });

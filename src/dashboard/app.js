@@ -1370,6 +1370,350 @@ function brancherModales() {
   });
 }
 
+// ------------------------------------------------------------ signaler un bug
+
+// Le rapport lui-même (journal, état du module, réglages masqués) est composé
+// par StreamKit : voir core/signalement.js. Ici, seulement ce que le streamer
+// ajoute — ses mots et ses captures.
+const BUG_MAX_PIECES = 6;
+const BUG_MAX_OCTETS = 8 * 1024 * 1024;
+const BUG_MAX_TOTAL = 24 * 1024 * 1024;
+
+const bug = { pieces: [], quand: 'instant', apercu: 0, reference: null };
+
+const PARTIES_GENERALES = [
+  ['', 'Je ne sais pas'],
+  ['twitch', 'Connexion Twitch'],
+  ['connecteurs', 'Connecteurs (Spotify…)'],
+  ['obs', 'OBS et les overlays'],
+  ['maj', 'Mise à jour'],
+  ['dashboard', 'Cette fenêtre'],
+];
+
+// Les « sous-parties » d'un module : ce qu'il montre au streamer. Un overlay
+// précis fait remonter ses sources OBS en tête du rapport.
+function partiesDe(m) {
+  if (!m) return PARTIES_GENERALES;
+  return [
+    ['', 'Tout le module'],
+    ['reglages', 'Réglages'],
+    ...m.overlays.map((o) => ['overlay:' + o.chemin, 'Overlay : ' + o.nom]),
+    ...(m.pages ?? []).map((p) => ['page:' + p.chemin, 'Interface : ' + p.nom]),
+    ...m.actions.map((a) => ['action:' + a.nom, 'Bouton : ' + a.label]),
+    ['autre', 'Autre chose'],
+  ];
+}
+
+const tailleLisible = (o) =>
+  o < 1024 * 1024
+    ? Math.max(1, Math.round(o / 1024)) + ' Ko'
+    : (o / 1048576).toFixed(1).replace('.', ',') + ' Mo';
+
+function remplirModulesBug() {
+  const groupes = grouperParCategorie();
+  $('#bug-module').innerHTML =
+    '<option value="general">StreamKit en général / je ne sais pas</option>' +
+    groupes
+      .map(
+        (g) =>
+          `<optgroup label="${echapper(g.categorie.label)}">${g.modules
+            .map((m) => `<option value="${echapper(m.id)}">${echapper(m.icone + ' ' + m.nom)}</option>`)
+            .join('')}</optgroup>`
+      )
+      .join('');
+  // Le module à l'écran : c'est presque toujours de lui qu'on parle.
+  const courant = moduleAffiche();
+  $('#bug-module').value = courant && modulesAffiches().includes(courant) ? courant.id : 'general';
+}
+
+function remplirPartiesBug() {
+  const m = etat.modules.find((x) => x.id === $('#bug-module').value);
+  $('#bug-partie').innerHTML = partiesDe(m)
+    .map(([v, l]) => `<option value="${echapper(v)}">${echapper(l)}</option>`)
+    .join('');
+  if (!m && etat.selection === CONNECTEURS) $('#bug-partie').value = 'connecteurs';
+}
+
+function demandeBug() {
+  const partie = $('#bug-partie');
+  return {
+    module: $('#bug-module').value,
+    partie: partie.value,
+    // « Tout le module » ou « Je ne sais pas » n'ajoutent rien au titre.
+    partieLibelle: partie.value ? (partie.selectedOptions[0]?.textContent ?? '') : '',
+    quand: bug.quand,
+    description: $('#bug-description').value,
+    pseudo: $('#bug-pseudo').value,
+  };
+}
+
+// Ce qui partira avec le message, relu à chaque changement de module ou de
+// date : le streamer voit exactement ce qu'il envoie.
+let minuteurApercu;
+function demanderApercuBug() {
+  clearTimeout(minuteurApercu);
+  minuteurApercu = setTimeout(chargerApercuBug, 150);
+}
+
+async function chargerApercuBug() {
+  const numero = ++bug.apercu;
+  $('#bug-joint-resume').textContent = 'préparation…';
+  try {
+    const r = await api('/api/signalement/apercu', { method: 'POST', corps: demandeBug() });
+    if (numero !== bug.apercu) return; // une demande plus récente est partie entre-temps
+    $('#bug-hors-ligne').hidden = r.envoiPossible;
+    $('#bug-joint-resume').textContent = r.fichiers.map((f) => f.court).join(', ');
+    $('#bug-joint-liste').innerHTML = r.fichiers
+      .map((f) => `<li><b>${echapper(f.nom)}</b> — ${echapper(f.quoi)} · ${echapper(f.taille)}</li>`)
+      .join('');
+    $('#bug-rapport').textContent = r.rapport;
+  } catch (e) {
+    if (numero === bug.apercu) $('#bug-joint-resume').textContent = 'aperçu indisponible (' + e.message + ')';
+  }
+}
+
+function lireFichier(f) {
+  return new Promise((ok, ko) => {
+    const lecteur = new FileReader();
+    lecteur.onload = () => ok(lecteur.result);
+    lecteur.onerror = () => ko(lecteur.error);
+    lecteur.readAsDataURL(f);
+  });
+}
+
+async function ajouterPiecesBug(fichiers) {
+  for (const f of fichiers) {
+    if (bug.pieces.length >= BUG_MAX_PIECES) {
+      toast(BUG_MAX_PIECES + ' pièces jointes au plus', true);
+      break;
+    }
+    if (f.size > BUG_MAX_OCTETS) {
+      toast('« ' + f.name + ' » dépasse 8 Mo : envoie-le directement sur Discord', true);
+      continue;
+    }
+    if (bug.pieces.reduce((t, p) => t + p.taille, 0) + f.size > BUG_MAX_TOTAL) {
+      toast('Pièces jointes trop lourdes (24 Mo au total)', true);
+      break;
+    }
+    // Une capture collée s'appelle « image.png » : on lui donne un vrai nom.
+    const collee = !f.name || /^image\.\w+$/i.test(f.name);
+    const extension = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    const nom = collee ? 'capture-' + (bug.pieces.length + 1) + '.' + extension : f.name;
+    try {
+      bug.pieces.push({
+        nom,
+        type: f.type || 'application/octet-stream',
+        taille: f.size,
+        url: await lireFichier(f),
+      });
+    } catch {
+      toast('« ' + nom + ' » est illisible', true);
+    }
+  }
+  dessinerPiecesBug();
+}
+
+// Construit à la main plutôt qu'en innerHTML : l'aperçu est une adresse data:
+// fabriquée à partir du fichier, on ne la recopie pas dans du HTML.
+function dessinerPiecesBug() {
+  $('#bug-vignettes').replaceChildren(
+    ...bug.pieces.map((p, i) => {
+      const v = document.createElement('div');
+      v.className = 'vignette';
+      v.title = p.nom + ' · ' + tailleLisible(p.taille);
+      if (p.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = p.url;
+        img.alt = '';
+        v.append(img);
+      } else {
+        v.textContent = p.nom;
+      }
+      const retirer = document.createElement('button');
+      retirer.type = 'button';
+      retirer.className = 'retirer';
+      retirer.dataset.retirer = String(i);
+      retirer.setAttribute('aria-label', 'Retirer ' + p.nom);
+      retirer.textContent = '×';
+      v.append(retirer);
+      return v;
+    })
+  );
+}
+
+function viderFormulaireBug() {
+  bug.pieces = [];
+  $('#bug-description').value = '';
+  dessinerPiecesBug();
+}
+
+function ouvrirBug() {
+  // Le résultat du rapport précédent laisse la place à un formulaire neuf. Un
+  // brouillon fermé par erreur (Échap), lui, est gardé.
+  $('#bug-formulaire').hidden = false;
+  $('#bug-resultat').hidden = true;
+  $('#btn-bug-envoyer').hidden = false;
+  $('#btn-bug-dossier').hidden = true;
+  $('#btn-bug-annuler').textContent = 'Annuler';
+  $('#bug-erreur').hidden = true;
+
+  remplirModulesBug();
+  remplirPartiesBug();
+  if (!$('#bug-pseudo').value) {
+    let pseudo = '';
+    try {
+      pseudo = localStorage.getItem('streamkit.pseudoBug') || '';
+    } catch {
+      /* pas de mémoire locale : on part de la chaîne */
+    }
+    $('#bug-pseudo').value = pseudo || etat.general?.chaine || '';
+  }
+  $('#modale-bug').showModal();
+  $('#bug-description').focus();
+  chargerApercuBug();
+}
+
+function afficherResultatBug(r) {
+  bug.reference = r.reference;
+  $('#bug-formulaire').hidden = true;
+  $('#btn-bug-envoyer').hidden = true;
+  $('#btn-bug-annuler').textContent = 'Fermer';
+  const zone = $('#bug-resultat');
+  zone.hidden = false;
+
+  if (r.ok && !r.partiel) {
+    zone.innerHTML = `<div class="bandeau succes"><span>✅</span><div><b>Rapport envoyé</b>
+      <p>Référence <code>${echapper(r.reference)}</code> : donne-la si on t'en reparle. Merci !</p></div></div>`;
+  } else {
+    const raison = String(r.partiel || r.raison || 'raison inconnue');
+    zone.innerHTML = `<div class="bandeau avert"><span>⚠️</span><div>
+      <b>${r.ok ? 'Rapport envoyé en partie' : 'Ton rapport n’est pas parti'}</b>
+      <p>${echapper(raison.charAt(0).toUpperCase() + raison.slice(1))}. Il est enregistré sur ce PC : ouvre
+      le dossier et envoie ses fichiers sur Discord à la personne qui s'occupe de StreamKit.</p>
+      <p style="margin-top:.5rem"><code>${echapper(r.dossier)}</code></p></div></div>`;
+    $('#btn-bug-dossier').hidden = !r.ouvrable;
+  }
+  viderFormulaireBug();
+}
+
+async function envoyerBug() {
+  const erreur = $('#bug-erreur');
+  const d = demandeBug();
+  if (d.description.trim().length < 10) {
+    erreur.textContent = 'Décris ton problème en quelques mots : ce que tu faisais, ce qui s’est passé.';
+    erreur.hidden = false;
+    $('#bug-description').focus();
+    return;
+  }
+  erreur.hidden = true;
+
+  try {
+    localStorage.setItem('streamkit.pseudoBug', d.pseudo.trim());
+  } catch {
+    /* le pseudo ne sera pas retenu, sans plus */
+  }
+
+  const bouton = $('#btn-bug-envoyer');
+  bouton.disabled = true;
+  bouton.textContent = 'Envoi…';
+  try {
+    const r = await api('/api/signalement', {
+      method: 'POST',
+      corps: {
+        ...d,
+        pieces: bug.pieces.map((p) => ({
+          nom: p.nom,
+          type: p.type,
+          donnees: p.url.slice(p.url.indexOf(',') + 1),
+        })),
+      },
+    });
+    afficherResultatBug(r);
+  } catch (e) {
+    erreur.textContent = e.data?.erreur || e.message;
+    erreur.hidden = false;
+  } finally {
+    bouton.disabled = false;
+    bouton.textContent = 'Envoyer';
+  }
+}
+
+function brancherSignalement() {
+  const modale = $('#modale-bug');
+
+  $('#btn-bug').addEventListener('click', ouvrirBug);
+  $('#btn-bug-annuler').addEventListener('click', () => modale.close());
+  $('#btn-bug-envoyer').addEventListener('click', envoyerBug);
+
+  $('#btn-bug-dossier').addEventListener('click', async () => {
+    try {
+      const r = await api('/api/signalement/dossier', {
+        method: 'POST',
+        corps: { reference: bug.reference },
+      });
+      if (!r.ok) toast(r.erreur || 'Ouverture impossible', true);
+    } catch (e) {
+      toast(e.message, true);
+    }
+  });
+
+  $('#bug-module').addEventListener('change', () => {
+    remplirPartiesBug();
+    demanderApercuBug();
+  });
+  $('#bug-partie').addEventListener('change', demanderApercuBug);
+
+  $('.bug-quand').addEventListener('click', (e) => {
+    const puce = e.target.closest('[data-quand]');
+    if (!puce) return;
+    bug.quand = puce.dataset.quand;
+    $$('.bug-quand .puce').forEach((p) => p.setAttribute('aria-checked', String(p === puce)));
+    demanderApercuBug();
+  });
+
+  $('#bug-description').addEventListener('input', () => {
+    $('#bug-erreur').hidden = true;
+  });
+
+  // Captures : choisies, glissées sur la fenêtre, ou collées (Win+Maj+S puis
+  // Ctrl+V), le geste que tout le monde connaît.
+  $('#bug-parcourir').addEventListener('click', () => $('#bug-fichiers').click());
+  $('#bug-fichiers').addEventListener('change', (e) => {
+    ajouterPiecesBug([...e.target.files]);
+    e.target.value = '';
+  });
+
+  modale.addEventListener('paste', (e) => {
+    const fichiers = [...(e.clipboardData?.files ?? [])];
+    if (!fichiers.length) return; // du texte : il se colle dans le champ, normalement
+    e.preventDefault();
+    ajouterPiecesBug(fichiers);
+  });
+
+  // Toute la fenêtre accepte le dépôt : lâché à côté de la zone, un fichier
+  // ferait sinon naviguer le dashboard vers lui.
+  const depot = $('#bug-depot');
+  modale.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    depot.classList.add('survol');
+  });
+  modale.addEventListener('dragleave', (e) => {
+    if (!modale.contains(e.relatedTarget)) depot.classList.remove('survol');
+  });
+  modale.addEventListener('drop', (e) => {
+    e.preventDefault();
+    depot.classList.remove('survol');
+    ajouterPiecesBug([...(e.dataTransfer?.files ?? [])]);
+  });
+
+  $('#bug-vignettes').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-retirer]');
+    if (!b) return;
+    bug.pieces.splice(Number(b.dataset.retirer), 1);
+    dessinerPiecesBug();
+  });
+}
+
 // ------------------------------------------------------------------- démarrage
 
 $('#entree-connecteurs').addEventListener('click', () => {
@@ -1388,6 +1732,7 @@ brancherRail();
 brancherDetail();
 brancherTiroir();
 brancherModales();
+brancherSignalement();
 
 await rafraichirEtat();
 await chargerModules();

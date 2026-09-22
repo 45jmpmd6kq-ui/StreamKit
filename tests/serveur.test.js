@@ -46,6 +46,14 @@ const app = {
   },
   etatGeneral: () => ({ version: 'test', port: PORT }),
   definirReglagesGeneraux: async () => ({ ok: true }),
+  // Rapport de bug : on compte les appels, pour prouver qu'un refus en amont
+  // n'atteint jamais l'envoi.
+  rapportsRecus: [],
+  envoyerSignalement: async (corps) => {
+    app.rapportsRecus.push(corps);
+    return { ok: true, reference: 'SK-TEST' };
+  },
+  apercuSignalement: async () => ({ ok: true, fichiers: [] }),
 };
 
 let serveur;
@@ -112,6 +120,42 @@ test('un type de contenu « simple » ne passe pas le corps JSON', async () => {
     corps: '{"depotMaj":"attaquant/depot"}',
   });
   assert.notEqual(r.code, 200);
+});
+
+test('un rapport de bug en multipart, comme le posterait une page web, ne part pas', async () => {
+  // Les captures voyagent en base64 dans du JSON justement pour garder cette
+  // barriere : multipart/form-data est une requete « simple », qu'un site
+  // quelconque peut envoyer sans demander la permission.
+  const avant = app.rapportsRecus.length;
+  const r = await requete({
+    methode: 'POST',
+    chemin: '/api/signalement',
+    entetes: { 'Content-Type': 'multipart/form-data; boundary=x' },
+    corps: '--x\r\nContent-Disposition: form-data; name="description"\r\n\r\nspam\r\n--x--\r\n',
+  });
+  assert.notEqual(r.code, 200);
+  assert.equal(app.rapportsRecus.length, avant);
+});
+
+test('un rapport de bug peut porter des captures, au-dela des 512 Ko des autres routes', async () => {
+  const lourd = JSON.stringify({
+    description: 'capture jointe',
+    pieces: [{ donnees: 'A'.repeat(2_000_000) }],
+  });
+  const entetes = { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(lourd) };
+
+  const r = await requete({ methode: 'POST', chemin: '/api/signalement', entetes, corps: lourd });
+  assert.equal(r.code, 200);
+  assert.equal(app.rapportsRecus.at(-1).pieces[0].donnees.length, 2_000_000);
+
+  // L'apercu, lui, garde la limite ordinaire : il n'a rien a transporter.
+  const apercu = await requete({
+    methode: 'POST',
+    chemin: '/api/signalement/apercu',
+    entetes,
+    corps: lourd,
+  }).catch((e) => ({ code: 'coupe', e }));
+  assert.notEqual(apercu.code, 200);
 });
 
 // --- Rebinding DNS : un domaine qui resout vers 127.0.0.1 -----------------

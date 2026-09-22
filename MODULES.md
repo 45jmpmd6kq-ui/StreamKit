@@ -336,6 +336,43 @@ fermé entre deux sessions de jeu est normal ; le marquer en rouge apprendrait
 seulement au streamer à ignorer les alertes. `ko` est réservé à ce qui devrait
 marcher et ne marche pas.
 
+## Le rapport de bug : ce que ton module sait de plus
+
+Le bouton **🐞 Signaler un bug** du dashboard envoie un rapport dans un salon
+Discord (voir `core/signalement.js`). Le socle y met déjà, sans rien te
+demander : l'état du module et son erreur, ses réglages (secrets masqués), ses
+connecteurs et droits Twitch, les **sources OBS branchées sur chacun de ses
+overlays**, ses abonnements EventSub (et si Twitch les a confirmés), sa ligne de
+la vue d'ensemble, ses compteurs, sa mémoire (`ctx.etat`) et ses dernières
+lignes de journal.
+
+Ce que seul ton module sait, il le dit dans `diagnostic()` :
+
+```js
+async diagnostic(ctx) {
+  const cheminLog = await trouverLaunchLog(ctx.config.cheminLaunchLog);
+  return {
+    enMarche: ctx._etatRL?.() ?? 'module arrêté',
+    launchLog: cheminLog || 'introuvable',
+    apiDansLesFichiers: etatApi(await fichiersApi(cheminLog)),
+  };
+}
+```
+
+- Appelée **seulement** quand un streamer envoie un rapport (ou en regarde
+  l'aperçu) : elle peut se permettre ce que `sante()` ne peut pas — lire le
+  disque, lancer `tasklist` —, dans la limite de 8 secondes.
+- **Aussi sur un module arrêté**, avec un contexte jetable comme pour les
+  actions : le rapport sert justement quand le module ne démarre pas. Ce qui
+  n'existe qu'en marche (`ctx._etat…()`) peut donc manquer : prévois-le.
+- Un objet simple, sérialisable en JSON. Une exception devient « diagnostic
+  illisible » dans le rapport, sans bloquer l'envoi.
+- **Jamais de secret.** Le socle remplace toute valeur secrète de
+  `tokens.json` (et tout ce que tu ranges dans `ctx.secrets`) avant l'envoi,
+  mais un mot de passe lu ailleurs n'y est pas — le lockfile du client LoL, par
+  exemple : le suivi de session dit si le fichier existe, jamais ce qu'il
+  contient.
+
 ## Les connecteurs : ne demande jamais un ID ou un secret
 
 Un module ne porte **jamais** d'identifiants d'application dans ses réglages.

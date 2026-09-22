@@ -37,6 +37,10 @@ const MIME = {
   '.log': 'text/plain; charset=utf-8',
 };
 
+// Six captures de 8 Mo au plus (voir core/signalement.js), en base64 : un tiers
+// de plus, et de quoi loger le reste du formulaire.
+const LIMITE_SIGNALEMENT = 40 * 1024 * 1024;
+
 function json(res, code, data) {
   const corps = JSON.stringify(data);
   res.writeHead(code, {
@@ -566,6 +570,26 @@ export function creerServeur(app) {
         if (chemin === '/api/reglages' && methode === 'POST') {
           const body = await corpsJson(req);
           return json(res, 200, await app.definirReglagesGeneraux(body));
+        }
+
+        // --- Signaler un bug (core/signalement.js) ---
+        if (chemin === '/api/signalement/apercu' && methode === 'POST') {
+          const r = await app.apercuSignalement(await corpsJson(req));
+          return json(res, r.ok ? 200 : 400, r);
+        }
+        if (chemin === '/api/signalement' && methode === 'POST') {
+          // Les captures voyagent en base64 DANS le JSON : c'est ce qui garde la
+          // barriere anti-CSRF de corpsJson (un multipart/form-data serait une
+          // requete « simple », qu'une page web peut envoyer sans preflight).
+          // D'ou une limite relevee pour cette route seulement.
+          const r = await app.envoyerSignalement(await corpsJson(req, LIMITE_SIGNALEMENT));
+          // Un rapport enregistre sur le PC faute d'envoi n'est pas une erreur
+          // de la requete : 200, avec ok:false et le dossier.
+          return json(res, r.erreur ? 400 : 200, r);
+        }
+        if (chemin === '/api/signalement/dossier' && methode === 'POST') {
+          const body = await corpsJson(req);
+          return json(res, 200, await app.ouvrirSignalement(String(body.reference ?? '')));
         }
 
         // --- Mise a jour ---

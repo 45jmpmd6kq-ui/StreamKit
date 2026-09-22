@@ -152,6 +152,11 @@ export default {
     return carte('inactif', 'pas de partie en cours', 'Les moments forts s’affichent pendant tes parties.');
   },
 
+  // Rapport de bug : ou en est la detection de la partie en cours.
+  async diagnostic(ctx) {
+    return { enMarche: ctx._etatMoments?.() ?? 'module arrêté' };
+  },
+
   async demarrer(ctx) {
     const c = ctx.config;
     // ctx.apiJeu : un faux jeu, injecte par les tests.

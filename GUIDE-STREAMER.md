@@ -352,9 +352,22 @@ d'ensemble — droit manquant (reconnecte ta chaîne) ou chaîne ni Affiliée ni
 Partenaire. Si rien ne s'affiche, c'est la source OBS : recopie son adresse.
 
 **Tu dois demander de l'aide.**
-Envoie le journal : en bas de la fenêtre, dans la barre **Journal**, clique sur
-**⤓** (Télécharger le journal du jour), et envoie le fichier. Tes secrets et tes
-jetons de connexion y sont masqués.
+Clique sur **🐞 Signaler un bug**, en haut de la fenêtre. Le module que tu
+regardais est déjà choisi ; précise la partie concernée si tu la connais (un
+overlay, un bouton…), quand c'est arrivé et ce qui s'est passé. Une capture aide
+beaucoup : **Win+Maj+S**, puis **Ctrl+V** dans la fenêtre du rapport (tu peux
+aussi glisser un fichier). Le journal et l'état du module et de StreamKit
+partent avec ton message ; tes mots de passe et tes jetons de connexion y sont
+masqués, et **Joint automatiquement** te montre tout ce qui part.
+
+Fais-le juste après le problème : l'état de StreamKit est photographié au
+moment de l'envoi. Garde la référence affichée (`SK-…`), elle permet de
+retrouver ton rapport.
+
+Si le rapport n'a pas pu partir (pas d'Internet, par exemple), il est enregistré
+sur ton PC : clique sur **Ouvrir le dossier** et envoie ses fichiers sur
+Discord. Et si StreamKit ne s'ouvre plus du tout, envoie le journal à la main :
+un fichier par jour dans `%APPDATA%\StreamKit\journaux`.
 
 **Tu changes de PC ou de compte Windows.**
 Réinstalle StreamKit et reconnecte Twitch et Spotify : tes accès sont chiffrés

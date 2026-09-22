@@ -399,7 +399,13 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(async () => {
     try {
-      noyau = await demarrerNoyau({ updater, demarrageAuto, coffreSysteme: safeStorage });
+      noyau = await demarrerNoyau({
+        updater,
+        demarrageAuto,
+        coffreSysteme: safeStorage,
+        // Un rapport de bug qui n'a pas pu partir : « Ouvrir le dossier ».
+        ouvrirDossier: (dossier) => shell.openPath(dossier),
+      });
     } catch (e) {
       // Typiquement : le port est deja pris. Sans fenetre ni icone, le streamer
       // n'aurait aucun moyen de comprendre pourquoi rien ne se passe.

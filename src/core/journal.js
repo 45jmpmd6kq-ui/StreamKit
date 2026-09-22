@@ -81,7 +81,9 @@ const MOTIFS_SECRETS = [
   /(["']?(?:clientSecret|client_secret|refreshToken|refresh_token|accessToken|access_token)["']?[ ]*[:=][ ]*["'])[^"']+/gi,
 ];
 
-function masquer(s) {
+// Exporte : le rapport de bug (core/signalement.js) passe son texte par le
+// meme masquage avant de l'envoyer.
+export function masquer(s) {
   let out = s;
   for (const motif of MOTIFS_SECRETS) out = out.replace(motif, '$1<masque>');
   return out;

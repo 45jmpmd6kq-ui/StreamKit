@@ -14,7 +14,14 @@
 import { abonner, PORT_PAR_DEFAUT } from './flux.js';
 import { creerSuiviParties } from './partie.js';
 import { creerLecteur, creerSuiviFichier, nomPlaylist, trouverLaunchLog } from './journal-jeu.js';
-import { activerFichiers, fichiersApi, jeuLance, rallumerApi } from './installation.js';
+import {
+  activerFichiers,
+  etatApi,
+  fichiersApi,
+  jeuLance,
+  rallumerApi,
+  trouverInstallations,
+} from './installation.js';
 import { accepter, ajouter, bilan, debutSession } from './session.js';
 
 // Evenements qui racontent la vie d'une partie : on les trace (niveau debug)
@@ -273,6 +280,20 @@ export default {
         aide: 'Lance Rocket League : le compteur se met à jour tout seul.',
       },
     ];
+  },
+
+  // Rapport de bug (core/signalement.js) : tout ce que « le compteur ne bouge
+  // pas » oblige a verifier, module arrete compris -- l'API de stats se lit
+  // dans les fichiers du jeu, jeu ferme.
+  async diagnostic(ctx) {
+    const cheminLog = await trouverLaunchLog(ctx.config.cheminLaunchLog);
+    return {
+      enMarche: ctx._etatRL?.() ?? 'module arrêté',
+      installations: (await trouverInstallations()).map((i) => i.plateforme + ' : ' + i.dossier),
+      launchLog: cheminLog || 'introuvable',
+      apiDansLesFichiers: etatApi(await fichiersApi(cheminLog)),
+      jeuLance: await jeuLance(),
+    };
   },
 
   async demarrer(ctx) {
