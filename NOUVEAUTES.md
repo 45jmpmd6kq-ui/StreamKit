@@ -16,9 +16,9 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 ### Corrections
 
 - **Random Car : les images des voitures s'affichent de nouveau dans la
-  machine à sous.** Chez certains, OBS gardait une vieille version des images
-  et la roue tournait avec des cases vides. StreamKit lui demande maintenant
-  des images fraîches à chaque chargement.
+  machine à sous.** Chez certains, la roue tournait avec des cases vides.
+  StreamKit demande maintenant à OBS des images fraîches à chaque chargement,
+  au lieu de celles qu'il a pu garder en mémoire.
 - Si une image ne peut vraiment pas s'afficher, une petite voiture 🚗 prend sa
   place : plus de case vide à l'antenne. Et le problème est noté dans ton
   journal, donc visible dans « Signaler un bug ».
