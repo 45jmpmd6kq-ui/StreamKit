@@ -194,6 +194,19 @@ function cheminSous(base, relatif) {
   return cible.startsWith(prefixe) ? cible : null;
 }
 
+// Un fichier d'overlay introuvable ne laissait aucune trace : une roue sans
+// images chez un streamer (23/09/2026) etait impossible a trancher entre
+// « fichier absent de l'installation » et « OBS n'affiche pas l'image ». On le
+// dit donc au journal, une fois par fichier -- une roue en demande des dizaines
+// par tirage. Plafonne : une page qui sonderait au hasard ne gonfle ni la
+// memoire ni le journal.
+const absentsSignales = new Set();
+function signalerAbsent(relatif) {
+  if (absentsSignales.has(relatif) || absentsSignales.size >= 50) return;
+  absentsSignales.add(relatif);
+  log.warn('Fichier introuvable : ' + relatif);
+}
+
 // Sert un fichier en empechant toute sortie du dossier autorise (../..).
 function servirFichier(res, base, relatif, { cache = false } = {}) {
   const cible = cheminSous(base, relatif);
@@ -206,7 +219,10 @@ function servirFichier(res, base, relatif, { cache = false } = {}) {
   // /overlay/roue-rl/roue/cars, posee sur n'importe quel site, suffisait donc a
   // couper le stream : une requete d'image n'envoie pas d'Origin, et l'en-tete
   // Host est legitime, les deux gardes laissent passer.
-  if (!statSync(cible, { throwIfNoEntry: false })?.isFile()) return texte(res, 404, 'Introuvable');
+  if (!statSync(cible, { throwIfNoEntry: false })?.isFile()) {
+    signalerAbsent(relatif);
+    return texte(res, 404, 'Introuvable');
+  }
 
   const flux = createReadStream(cible);
 

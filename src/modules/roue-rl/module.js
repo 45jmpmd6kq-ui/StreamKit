@@ -225,6 +225,9 @@ export default {
       enMarche: ctx._etatRoue?.() ?? 'module arrêté',
       voituresCochees: dispo.length,
       nomsInconnus: inconnues,
+      // Liste vide attendue. Sinon, l'installation a perdu des images : la roue les
+      // affichera vides, et le journal dira « Fichier introuvable : cars/… ».
+      iconesManquantes: voitures.iconesManquantes(),
     };
   },
 

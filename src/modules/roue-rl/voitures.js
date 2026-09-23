@@ -52,6 +52,14 @@ export function catalogue() {
   return cache;
 }
 
+// Voitures du catalogue dont l'icone manque sur le disque. Pour le diagnostic :
+// une roue sans images doit dire tout de suite si les fichiers sont la.
+export function iconesManquantes() {
+  return catalogue()
+    .filter((c) => !statSync(join(ICI, 'overlay', 'cars', c.file), { throwIfNoEntry: false })?.isFile())
+    .map((c) => c.file);
+}
+
 // Normalisation permissive : la casse, les accents, les apostrophes
 // typographiques et la ponctuation varient selon la facon dont un nom est saisi
 // ou recopie (« X Devil » / « X-Devil », « 007's » / « 007s »).
