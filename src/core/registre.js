@@ -15,7 +15,7 @@
 import { readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { MODULES_DIR } from './paths.js';
+import { MODULES_DIR, DONNEES } from './paths.js';
 import * as journal from './journal.js';
 import * as store from './store.js';
 import * as schema from './schema.js';
@@ -53,6 +53,8 @@ function validerManifeste(m, dossier) {
   if (m.id && m.id !== dossier) erreurs.push('"id" (' + m.id + ') different du dossier (' + dossier + ')');
   if (!m.nom) erreurs.push('"nom" manquant');
   if (typeof m.demarrer !== 'function') erreurs.push('"demarrer" doit etre une fonction');
+  if (m.disponible !== undefined && typeof m.disponible !== 'function')
+    erreurs.push('"disponible" doit etre une fonction');
   if (m.scopes && !Array.isArray(m.scopes)) erreurs.push('"scopes" doit etre un tableau');
   if (m.categorie && !categories.existe(m.categorie)) {
     // Pas une erreur bloquante : le module tombera dans « Outils ». Mais sans
@@ -81,6 +83,14 @@ export async function charger() {
       const erreurs = validerManifeste(manifeste, dossier);
       if (erreurs.length) {
         log.err('Module « ' + dossier + ' » ignore : ' + erreurs.join(' ; '));
+        continue;
+      }
+
+      // Un module peut ne concerner qu'une installation (l'agent de support
+      // n'existe que sur le PC du proprietaire de StreamKit). Il n'est alors ni
+      // inscrit, ni montre, ni compte : chez les streamers, il n'existe pas.
+      if (manifeste.disponible && !manifeste.disponible({ donnees: DONNEES })) {
+        log.debug('Module « ' + dossier + ' » : pas pour cette installation');
         continue;
       }
 
@@ -194,11 +204,16 @@ export async function demarrer(id, contexteFactory) {
   return m;
 }
 
-export async function arreter(id) {
+// `raison.desactive` : c'est le streamer qui eteint le module. Sans elle, c'est
+// StreamKit qui arrete tout pour repartir (Enregistrer, reconnexion Twitch,
+// fermeture, mise a jour) et le module reviendra. Presque aucun module n'a a
+// faire la difference ; celui qui pilote un programme externe, si : le couper a
+// chaque reconnexion Twitch serait un bug.
+export async function arreter(id, raison = {}) {
   const m = modules.get(id);
   if (!m || !m.instance) return m;
   try {
-    if (typeof m.instance.arreter === 'function') await m.instance.arreter();
+    if (typeof m.instance.arreter === 'function') await m.instance.arreter(raison);
   } catch (e) {
     log.warn('Arret de « ' + m.manifeste.nom + ' » imparfait : ' + (e?.message || e));
   }

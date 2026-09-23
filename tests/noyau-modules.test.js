@@ -125,6 +125,33 @@ test('le module redemarre proprement, sans minuteur en double', { timeout: 20000
   }
 });
 
+test("seul le streamer qui eteint un module l'arrete « desactive »", { timeout: 20000 }, async () => {
+  // Un module qui pilote un programme externe (l'agent de support) le ferme
+  // quand on l'eteint, mais pas quand StreamKit redemarre ses modules
+  // (Enregistrer, reconnexion Twitch, fermeture) : ce serait le couper en plein
+  // travail pour rien.
+  const raisons = [];
+  const espionner = () => {
+    const inst = noyau.app.registre.get('exemple').instance;
+    const avant = inst.arreter;
+    inst.arreter = async (raison) => {
+      raisons.push(raison);
+      return avant?.call(inst, raison);
+    };
+  };
+
+  await noyau.app.definirActif('exemple', true);
+  espionner();
+  await noyau.app.recharger('exemple');
+  espionner();
+  await noyau.app.definirActif('exemple', false);
+
+  assert.deepEqual(
+    raisons.map((r) => !!r?.desactive),
+    [false, true]
+  );
+});
+
 test('fermer le noyau libere le port', { timeout: 20000 }, async () => {
   await noyau.fermer();
   noyau = null;

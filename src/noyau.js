@@ -239,8 +239,8 @@ export async function demarrerNoyau({
     return ctx;
   }
 
-  async function arreterModule(id) {
-    await registre.arreter(id);
+  async function arreterModule(id, raison) {
+    await registre.arreter(id, raison);
     contextes.get(id)?._nettoyer();
     contextes.delete(id);
     vuesSante.oublier(id); // ce qu'on savait de sa sante ne vaut plus rien
@@ -432,7 +432,7 @@ export async function demarrerNoyau({
       } else {
         store.sauverModule(id, { actif: false });
         registre.get(id).actif = false;
-        await arreterModule(id);
+        await arreterModule(id, { desactive: true });
       }
       return registre.vue(id);
     },

@@ -31,6 +31,9 @@ test('les modules du depot sont tous decouverts', () => {
     .sort();
   // Si un module disparait de cette liste, c'est qu'il a ete ecarte au
   // chargement : manifeste invalide, ou fichier illisible.
+  // `agent-support` n'y est pas, et c'est voulu : sans fichier temoin dans le
+  // dossier de donnees (le cas de tous les streamers), disponible() l'ecarte.
+  // Il a son propre test (agent-support.test.js).
   assert.deepEqual(ids, [
     'clips',
     'exemple',

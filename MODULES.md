@@ -101,6 +101,43 @@ C'est pour les outils qui servent à diagnostiquer StreamKit, pas à streamer �
 `exemple` en est un : il ne dépend d'aucun service, donc s'il fonctionne, le
 problème est ailleurs.
 
+## Module réservé à une installation
+
+`disponible({ donnees })` décide, au chargement, si le module existe sur ce PC.
+Faux : il n'est ni inscrit, ni montré, ni compté — pas même dans « Afficher les
+modules de développement ».
+
+```js
+disponible({ donnees }) {
+  return existsSync(join(donnees, 'agent-support.json'));   // donnees = %APPDATA%\StreamKit
+},
+```
+
+C'est ce qui garde `agent-support` (l'agent Claude qui traite les rapports de
+bug) sur le seul PC du propriétaire : son code part chez tout le monde, mais
+sans fichier témoin il n'apparaît nulle part. À réserver à ce genre d'outil ;
+une fonctionnalité pour les streamers n'a rien à cacher.
+
+## L'arrêt : éteint, ou seulement redémarré ?
+
+StreamKit arrête **tous** ses modules quand il se ferme, se met à jour ou se
+reconnecte à Twitch, et un module à chaque Enregistrer. Il les redémarre
+aussitôt (ou au lancement suivant). `arreter()` reçoit de quoi faire la
+différence :
+
+```js
+return {
+  async arreter({ desactive } = {}) {
+    if (desactive) { /* le streamer l'a éteint : fermer pour de bon */ }
+  },
+};
+```
+
+`desactive: true` seulement quand le streamer éteint le module. Presque aucun
+module n'a à s'en soucier. Celui qui pilote un **programme externe**, si :
+l'agent de support ferme sa fenêtre quand on l'éteint, mais la laisse vivre
+quand StreamKit redémarre — il peut être en pleine publication.
+
 ## Les réglages : jamais de formulaire à la main
 
 Tu décris les champs, **le dashboard fabrique l'écran**. Ajouter une option =

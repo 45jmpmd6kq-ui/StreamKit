@@ -347,6 +347,16 @@ dans le salon ou supprimer le webhook, pas lire ce qui s'y trouve. Si ça
 arrive : nouveau webhook, nouvelle variable, une version publiée. Les rapports
 faits entre-temps ne sont pas perdus, ils attendent sur les PC.
 
+**L'agent de support** (module `agent-support`, PC du propriétaire seulement).
+Une session Claude Code reliée au salon par un bot Discord traite les rapports :
+on la mentionne dans le fil d'un rapport, elle diagnostique, corrige sur `test`
+et attend qu'on lui dise de publier. Son lanceur et ses consignes vivent **hors
+du dépôt**. Le module ne fait que la lancer, la surveiller et l'arrêter depuis
+StreamKit, et il n'existe que si `%APPDATA%\StreamKit\agent-support.json` est là
+(`disponible()`, voir MODULES.md) : chez les streamers, il n'apparaît nulle part.
+Éteindre le module ferme l'agent. Une fermeture, une mise à jour ou une
+reconnexion Twitch de StreamKit le laissent tourner.
+
 ### Un correctif d'update ne se voit qu'une version plus tard
 
 Le code qui pilote une mise à jour est **toujours celui de la version qu'on
