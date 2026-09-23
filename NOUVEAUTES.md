@@ -11,6 +11,13 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.28.2
+
+### Nouveautés
+
+- Rien qui change à l'écran : cette version prépare un traitement plus rapide
+  des bugs que tu envoies avec **🐞 Signaler un bug**.
+
 ## 0.28.1
 
 ### Corrections
