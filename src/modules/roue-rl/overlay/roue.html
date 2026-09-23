@@ -89,6 +89,12 @@
     filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .6));
     flex: 0 0 auto;
   }
+  .cell .secours {
+    width: 76px; height: 56px; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 34px;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .6));
+  }
   .cell .name {
     font-size: 16px; font-weight: 700; color: #EAF1FA;
     line-height: 1.2;
@@ -202,6 +208,8 @@ const ITEM = 104;         // doit rester synchrone avec --item dans le CSS
 const STRIP = 42;         // nombre de cases fabriquees pour un tour
 const TAIL  = 3;          // cases conservees sous la gagnante
 
+reel.addEventListener('error', iconeDeSecours, true);
+
 let hideTimer = null;
 let busy = false;
 
@@ -209,9 +217,36 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
+// Marque propre a ce chargement de la page, ajoutee a l'adresse des icones.
+// Chez un streamer (23/09/2026), la roue tournait sans une seule image alors
+// que le serveur n'avait rien refuse : un cache d'OBS qui ressert une vieille
+// reponse est l'une des pistes. Avec une adresse neuve a chaque chargement,
+// aucune reponse gardee en cache ne peut plus s'interposer. Le cout est nul :
+// les images viennent de la machine elle-meme, 1,5 Mo au pire par chargement.
+const CHARGEMENT = Date.now().toString(36);
+
+// Icone illisible (fichier absent, image refusee) : une silhouette a la place
+// plutot qu'un trou dans la case. Ecoute en phase de capture, sur le rouleau :
+// l'evenement « error » d'une image ne remonte pas, et un onerror= en ligne
+// serait bloque par la CSP (seuls les scripts a nonce s'executent).
+let iconeManquanteSignalee = false;
+function iconeDeSecours(e) {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement)) return;
+  const secours = document.createElement('div');
+  secours.className = 'secours';
+  secours.textContent = '🚗';
+  img.replaceWith(secours);
+  if (!iconeManquanteSignalee) {
+    iconeManquanteSignalee = true;
+    // Visible dans le journal d'OBS (lignes « obs-browser »).
+    console.warn('Random Car : icone illisible : ' + img.src);
+  }
+}
+
 function cell(car) {
   return '<div class="cell">'
-       +   '<img src="' + BASE + '/cars/' + encodeURIComponent(car.file) + '" alt="">'
+       +   '<img src="' + BASE + '/cars/' + encodeURIComponent(car.file) + '?v=' + CHARGEMENT + '" alt="">'
        +   '<div class="name">' + esc(car.name) + '</div>'
        + '</div>';
 }

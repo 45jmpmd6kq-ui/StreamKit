@@ -199,7 +199,8 @@ function cheminSous(base, relatif) {
 // « fichier absent de l'installation » et « OBS n'affiche pas l'image ». On le
 // dit donc au journal, une fois par fichier -- une roue en demande des dizaines
 // par tirage. Plafonne : une page qui sonderait au hasard ne gonfle ni la
-// memoire ni le journal.
+// memoire ni le journal. Seulement pour les fichiers des modules : le
+// favicon.ico que tout navigateur reclame au dashboard n'a rien a y faire.
 const absentsSignales = new Set();
 function signalerAbsent(relatif) {
   if (absentsSignales.has(relatif) || absentsSignales.size >= 50) return;
@@ -208,7 +209,7 @@ function signalerAbsent(relatif) {
 }
 
 // Sert un fichier en empechant toute sortie du dossier autorise (../..).
-function servirFichier(res, base, relatif, { cache = false } = {}) {
+function servirFichier(res, base, relatif, { cache = false, signaler = null } = {}) {
   const cible = cheminSous(base, relatif);
   if (!cible) return texte(res, 403, 'Interdit');
 
@@ -220,7 +221,7 @@ function servirFichier(res, base, relatif, { cache = false } = {}) {
   // couper le stream : une requete d'image n'envoie pas d'Origin, et l'en-tete
   // Host est legitime, les deux gardes laissent passer.
   if (!statSync(cible, { throwIfNoEntry: false })?.isFile()) {
-    signalerAbsent(relatif);
+    if (signaler) signalerAbsent(signaler + ' : ' + relatif);
     return texte(res, 404, 'Introuvable');
   }
 
@@ -396,7 +397,9 @@ export function creerServeur(app) {
           diffusion.brancher('overlay:' + idModule + ':' + vue, req, res);
           return;
         }
-        if (reste.length) return servirFichier(res, dossierOverlay, reste.join('/'), { cache: true });
+        if (reste.length) {
+          return servirFichier(res, dossierOverlay, reste.join('/'), { cache: true, signaler: idModule });
+        }
 
         const def = (m.manifeste.overlays ?? []).find((o) => o.chemin === vue);
         if (!def) return texte(res, 404, 'Overlay inconnu');
@@ -431,7 +434,10 @@ export function creerServeur(app) {
           if (dansPages && statSync(dansPages, { throwIfNoEntry: false })?.isFile()) {
             return servirFichier(res, dossierPages, relatif, { cache: true });
           }
-          return servirFichier(res, join(MODULES_DIR, m.dossier, 'overlay'), relatif, { cache: true });
+          return servirFichier(res, join(MODULES_DIR, m.dossier, 'overlay'), relatif, {
+            cache: true,
+            signaler: idModule,
+          });
         }
 
         const def = (m.manifeste.pages ?? []).find((p) => p.chemin === page);
