@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — tableau de fin de soirée Clubs</title>
+    <style>
+      /* Fond transparent obligatoire : OBS incruste la page telle quelle. La
+         source fait 868 x 400 : l'element a 24 px du haut et de la gauche. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      :root {
+        --fond: rgba(8, 13, 22, 0.93);
+        --texte: #f2f4f7;
+        --attenue: rgba(242, 244, 247, 0.62);
+        --victoire: #3ddc84;
+        --nul: #a3acbd;
+        --defaite: #ff4d5e;
+        --or: #ffd24a;
+        --club: #3b7bff;
+        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+      }
+
+      body {
+        font-family: var(--typo);
+        color: var(--texte);
+        font-variant-numeric: tabular-nums;
+      }
+
+      #cadre {
+        position: absolute;
+        top: 24px;
+        left: 24px;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+        filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.55));
+      }
+      #cadre.visible { opacity: 1; }
+
+      #tableau {
+        width: 820px;
+        box-sizing: border-box;
+        padding: 20px 22px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        background: var(--fond);
+        border-top: 3px solid var(--club);
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%);
+      }
+
+      .etiquette {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        line-height: 1;
+        color: var(--attenue);
+        white-space: nowrap;
+      }
+
+      .entete { display: flex; align-items: center; gap: 14px; }
+      .blason { width: 34px; height: 40px; flex-shrink: 0; }
+      .blason .fond-blason { fill: var(--club); }
+      .blason .initiales { font: 700 11px var(--typo); letter-spacing: 0.04em; fill: #fff; }
+      .titres { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+      .titre { font-size: 22px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; white-space: nowrap; }
+      .chiffres-soiree { margin-left: auto; display: flex; align-items: center; gap: 22px; flex-shrink: 0; }
+      .bloc { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+      .bloc[hidden] { display: none; }
+      .gros { font-size: 20px; font-weight: 700; line-height: 1; white-space: nowrap; }
+      .bilan { display: flex; align-items: baseline; gap: 8px; }
+      .v { color: var(--victoire); }
+      .n { color: var(--nul); }
+      .d { color: var(--defaite); }
+      .sr { display: flex; align-items: baseline; gap: 6px; }
+      #sr-ecart { display: flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 700; line-height: 1; }
+      #sr-ecart[hidden] { display: none; }
+      #sr-ecart svg { width: 10px; height: 10px; }
+      #sr-ecart.hausse { color: var(--victoire); }
+      #sr-ecart.hausse svg { fill: var(--victoire); }
+      #sr-ecart.baisse { color: var(--defaite); }
+      #sr-ecart.baisse svg { fill: var(--defaite); transform: rotate(180deg); }
+
+      #attente { font-size: 15px; line-height: 1; color: var(--attenue); padding: 6px 0 4px; }
+      #attente[hidden], #contenu[hidden] { display: none; }
+      #contenu { display: flex; flex-direction: column; gap: 18px; }
+
+      .trophees { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+      .trophee {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px 14px;
+        background: rgba(242, 244, 247, 0.05);
+        border-top: 2px solid var(--or);
+        min-width: 0;
+      }
+      .trophee.vide { border-top-color: rgba(242, 244, 247, 0.2); }
+      .icone {
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 210, 74, 0.12);
+      }
+      .icone svg { width: 22px; height: 22px; stroke: var(--or); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .icone svg.plein { fill: var(--or); stroke: none; }
+      .trophee.vide .icone { background: rgba(242, 244, 247, 0.06); }
+      .trophee.vide .icone svg { stroke: var(--attenue); }
+      .trophee.vide .icone svg.plein { fill: var(--attenue); }
+      .trophee .nom-trophee { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; white-space: nowrap; color: var(--or); }
+      .trophee.vide .nom-trophee { color: var(--attenue); }
+      /* Un pseudo reste tel qu'il est ecrit (pas de majuscules forcees) : c'est
+         ainsi que le chat le connait. Trop long, il retrecit (voir ajuster). */
+      .trophee .laureat { font-size: 26px; font-weight: 700; letter-spacing: 0.02em; height: 26px; line-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .trophee .detail { font-size: 13px; line-height: 1; color: rgba(242, 244, 247, 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      .matchs-bloc { display: flex; flex-direction: column; gap: 8px; }
+      .matchs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+      .match {
+        height: 50px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-right: 10px;
+        background: rgba(242, 244, 247, 0.05);
+        min-width: 0;
+      }
+      .lettre { width: 26px; height: 50px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; line-height: 1; }
+      .lettre.V { color: #062814; background: var(--victoire); }
+      .lettre.N { color: #10141c; background: var(--nul); }
+      .lettre.D { color: #2a0509; background: var(--defaite); }
+      .match .textes { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+      .match .score { font-size: 17px; font-weight: 700; line-height: 1; white-space: nowrap; }
+      .match .legende { font-size: 11px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--attenue); }
+    </style>
+  </head>
+  <body>
+    <div id="cadre">
+      <div id="tableau">
+        <div class="entete">
+          <svg class="blason" viewBox="0 0 38 44" aria-hidden="true">
+            <path class="fond-blason" d="M19 1L36 6V20C36 31 28 38 19 43C10 38 2 31 2 20V6Z" />
+            <path d="M19 5.5L32 9.3V20C32 28.6 26 34.3 19 38.3C12 34.3 6 28.6 6 20V9.3Z" fill="none" stroke="#fff" stroke-width="1.5" stroke-opacity="0.5" />
+            <text class="initiales" id="initiales" x="19" y="25.5" text-anchor="middle"></text>
+          </svg>
+          <div class="titres">
+            <span class="titre">Les trophées de la soirée</span>
+            <span class="etiquette" id="sous-titre"></span>
+          </div>
+          <div class="chiffres-soiree">
+            <div class="bloc">
+              <span class="etiquette">Bilan</span>
+              <div class="gros bilan"><span class="v" id="v"></span><span class="n" id="n"></span><span class="d" id="d"></span></div>
+            </div>
+            <div class="bloc">
+              <span class="etiquette">Buts</span>
+              <span class="gros" id="buts"></span>
+            </div>
+            <div class="bloc" id="bloc-sr" hidden>
+              <span class="etiquette">Skill rating</span>
+              <div class="sr">
+                <span class="gros" id="sr"></span>
+                <span id="sr-ecart" hidden><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1.5L9 8.5H1z" /></svg><span id="sr-ecart-texte"></span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="attente" hidden>En attente du premier match de la soirée.</div>
+        <div id="contenu">
+          <div class="trophees" id="trophees"></div>
+          <div class="matchs-bloc">
+            <span class="etiquette" id="titre-matchs">Les matchs de la soirée</span>
+            <div class="matchs" id="matchs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const cadre = $("cadre");
+      const BASE = location.pathname.replace(/\/$/, "");
+
+      function esc(s) {
+        return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      }
+
+      const ICONES = {
+        mvp: '<svg class="plein" viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" /></svg>',
+        buteur:
+          '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.6l4 2.9-1.5 4.8h-5l-1.5-4.8z" /><path d="M12 3v4.6M16 10.5l4.4-1.4M14.5 15.3l2.7 3.8M9.5 15.3l-2.7 3.8M8 10.5L3.6 9.1" /></svg>',
+        passeur: '<svg viewBox="0 0 24 24"><path d="M4 18c3-7 8-10.5 15-10.5" /><path d="M15 3.5l4 4-4 4" /><circle cx="5" cy="18.5" r="1.6" /></svg>',
+        mur: '<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.6-3 7.8-7 9.5-4-1.7-7-4.9-7-9.5V6z" /><path d="M9 12l2 2 4-4" /></svg>',
+      };
+
+      // Un nom trop long pour sa place retrecit (jusqu'a `min` px) plutot que
+      // d'etre coupe : « Mael_2008_CR7 » tronque en « MAEL_2008… » sur une vraie
+      // soiree.
+      function ajuster(el, max, min) {
+        el.style.fontSize = max + "px";
+        for (let t = max; t > min && el.scrollWidth > el.clientWidth; t--) el.style.fontSize = t - 1 + "px";
+      }
+
+      function trophee(t) {
+        const vide = t.nom === "—";
+        return (
+          '<div class="trophee' + (vide ? " vide" : "") + '">' +
+          '<div class="icone">' + (ICONES[t.cle] || "") + "</div>" +
+          '<span class="nom-trophee">' + esc(t.titre) + "</span>" +
+          '<span class="laureat">' + esc(t.nom) + "</span>" +
+          '<span class="detail">' + esc(t.detail) + "</span>" +
+          "</div>"
+        );
+      }
+
+      function match(m) {
+        return (
+          '<div class="match">' +
+          '<span class="lettre ' + esc(m.resultat) + '">' + esc(m.resultat) + "</span>" +
+          '<div class="textes"><span class="score">' + esc(m.score) + "</span>" +
+          '<span class="legende">' + esc(m.legende) + "</span></div>" +
+          "</div>"
+        );
+      }
+
+      let signature = "";
+
+      function appliquer(etat) {
+        if (!etat || !etat.visible) {
+          cadre.classList.remove("visible");
+          return;
+        }
+        const texte = JSON.stringify(etat);
+        if (texte !== signature) {
+          signature = texte;
+          rendre(etat);
+        }
+        cadre.classList.add("visible");
+      }
+
+      function rendre(etat) {
+        const club = etat.club || {};
+        document.documentElement.style.setProperty("--club", club.couleur || "#3b7bff");
+        $("initiales").textContent = club.initiales || "";
+        $("sous-titre").textContent = etat.sousTitre || "";
+
+        const b = etat.bilan || {};
+        $("v").textContent = (b.v ?? 0) + "V";
+        $("n").textContent = (b.n ?? 0) + "N";
+        $("d").textContent = (b.d ?? 0) + "D";
+        $("buts").textContent = etat.buts || "0 – 0";
+
+        $("bloc-sr").hidden = !etat.sr;
+        if (etat.sr) {
+          $("sr").textContent = etat.sr.valeur;
+          $("sr-ecart").hidden = !etat.sr.ecart;
+          $("sr-ecart").className = etat.sr.signe < 0 ? "baisse" : "hausse";
+          $("sr-ecart-texte").textContent = String(etat.sr.ecart || "").replace(/^[+−]/, "");
+        }
+
+        $("attente").hidden = !etat.vide;
+        $("contenu").hidden = !!etat.vide;
+        $("trophees").innerHTML = (etat.trophees || []).map(trophee).join("");
+        for (const el of document.querySelectorAll(".laureat")) ajuster(el, 26, 14);
+        $("matchs").innerHTML = (etat.matchs || []).map(match).join("");
+        $("titre-matchs").textContent = etat.titreMatchs || "Les matchs de la soirée";
+      }
+
+      // ?demo=1 : le tableau d'exemple, le temps de placer la source dans OBS.
+      const DEMO = {
+        visible: true,
+        vide: false,
+        club: { nom: "FC Les Potes", initiales: "FLP", couleur: "#3b7bff", division: "Div. 3" },
+        sousTitre: "FC Les Potes · 5 matchs · 1 h 44",
+        bilan: { v: 3, n: 1, d: 1 },
+        buts: "10 – 7",
+        sr: { valeur: "1 486", ecart: "+38", signe: 1 },
+        titreMatchs: "Les matchs de la soirée",
+        trophees: [
+          { cle: "mvp", titre: "MVP de la soirée", nom: "Yass", detail: "8,0 de note moyenne" },
+          { cle: "buteur", titre: "Soulier d’or", nom: "Tomzer", detail: "5 buts" },
+          { cle: "passeur", titre: "Maître passeur", nom: "Kev", detail: "4 passes décisives" },
+          { cle: "mur", titre: "Le mur", nom: "Nico", detail: "14 arrêts" },
+        ],
+        matchs: [
+          { resultat: "N", score: "1 – 1", legende: "Sporting Manette" },
+          { resultat: "D", score: "0 – 2", legende: "Olympique Canapé" },
+          { resultat: "V", score: "2 – 1", legende: "AS Dimanche" },
+          { resultat: "V", score: "3 – 1", legende: "Racing Tacos" },
+          { resultat: "V", score: "4 – 2", legende: "Inter Pantoufle" },
+        ],
+      };
+
+      const flux = new EventSource(BASE + "/flux");
+
+      if (new URLSearchParams(location.search).has("demo")) {
+        appliquer(DEMO);
+      } else {
+        flux.addEventListener("etat", (e) => appliquer(JSON.parse(e.data)));
+        flux.addEventListener("error", () => {
+          if (flux.readyState === EventSource.CLOSED) cadre.classList.remove("visible");
+        });
+      }
+    </script>
+  </body>
+</html>

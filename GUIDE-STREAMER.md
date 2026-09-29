@@ -218,6 +218,26 @@ tu veux, puis clique sur **Enregistrer** en bas.
   Vue d'ensemble demande de reconnecter ta chaîne, fais-le : le module a besoin
   du droit de créer des clips. **Afficher un exemple** joue une séquence complète
   (25 secondes) pour placer la source dans OBS, sans rien écrire dans le chat.
+- **Soirée Clubs** (EA FC 27) : rien à connecter, pas même Twitch. Écris le
+  **nom de ton club** exactement comme dans le jeu, clique **Enregistrer**, puis
+  **Chercher le club chez EA** pour vérifier que StreamKit le trouve. Un club tout
+  juste créé peut mettre quelques minutes à apparaître chez EA : StreamKit le
+  recherche tout seul toutes les 2 minutes. Trois sources OBS, à ajouter selon ce
+  que tu veux montrer : le **bandeau de soirée** (victoires, nuls, défaites et
+  série, tout le temps à l'écran), la **carte de fin de match** (le score, puis
+  pour chaque joueur du club son poste, ses buts, ses passes décisives et sa
+  note ; elle apparaît toute seule et s'efface au bout de 30 secondes, durée
+  réglable) et le **tableau de fin de soirée** (les trophées : MVP, Soulier d'or,
+  Maître passeur, Le mur, et les derniers matchs). **Tout arrive après le coup de
+  sifflet final** : EA publie chaque match quelques minutes après la fin, et rien
+  n'existe pendant le match. Seul ton club est affiché : de l'équipe adverse, juste
+  son nom à côté du score, et un réglage l'enlève. Les overlays prennent la couleur
+  du maillot de ton club. La soirée repart de zéro au premier match après 3 h sans
+  jouer, ou quand tu cliques **Commencer une nouvelle soirée**. **Revoir la
+  dernière carte** la remet à l'écran. **Afficher un exemple** remplit les trois
+  sources pendant 30 secondes pour les placer dans OBS. Les championnats, playoffs
+  et amicaux comptent (les amicaux peuvent être exclus) ; les buts d'un coéquipier
+  IA ne sont attribués à personne par EA, la carte les signale à part.
 
 ---
 
@@ -234,14 +254,18 @@ tu veux, puis clique sur **Enregistrer** en bas.
    - **Overlay W/L** : 900 × 70, puis déplace la source où tu veux ;
    - **Suivi de session LoL** : le bandeau en 840 × 150, le tableau de bord en
      920 × 620, puis déplace chaque source où tu veux (et agrandis-la ou
-     réduis-la à ton goût).
+     réduis-la à ton goût) ;
+   - **Soirée Clubs** : le bandeau en 348 × 232, la carte de fin de match en
+     488 × 720, le tableau de fin de soirée en 868 × 400, puis déplace chaque
+     source où tu veux.
 3. Pour le placer sans attendre un vrai événement, ajoute `?demo=1` à la fin de
    l'adresse (collé, sans espace). Tant que l'exemple est à l'écran, change la
    position dans les réglages du module et clique **Enregistrer** : l'exemple se
    déplace aussitôt (pour le suivi de session LoL, déplace directement la source
    dans OBS). **Retire** `?demo=1` une fois que c'est calé. Pour le suivi de
-   session LoL et les moments forts (LoL et Rocket League), le bouton **Afficher
-   un exemple** du module montre aussi un exemple, sans toucher à l'adresse.
+   session LoL, les moments forts (LoL et Rocket League) et la soirée Clubs, le
+   bouton **Afficher un exemple** du module montre aussi un exemple, sans toucher
+   à l'adresse.
 
 Pour vérifier : dans **Vue d'ensemble**, la ligne **OBS** de la carte **Connexions** compte les sources
 connectées.

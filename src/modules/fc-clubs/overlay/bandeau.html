@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — bandeau de soirée Clubs</title>
+    <style>
+      /* Fond transparent obligatoire : OBS incruste la page telle quelle. La
+         source fait 348 x 232 : l'element a 24 px du haut et de la gauche, de
+         quoi loger l'ombre a droite et en bas. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      :root {
+        --fond: rgba(8, 13, 22, 0.92);
+        --texte: #f2f4f7;
+        --attenue: rgba(242, 244, 247, 0.62);
+        --victoire: #3ddc84;
+        --nul: #a3acbd;
+        --defaite: #ff4d5e;
+        --or: #ffd24a;
+        /* La couleur du club : reecrite par le module (maillot ou reglage). */
+        --club: #3b7bff;
+        --club-trait: rgba(59, 123, 255, 0.6);
+        --club-voile: rgba(59, 123, 255, 0.16);
+        /* Bahnschrift est livree avec Windows 10 et 11 : meme famille que les
+           autres overlays StreamKit, sans police a telecharger. */
+        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+      }
+
+      body {
+        font-family: var(--typo);
+        color: var(--texte);
+        font-variant-numeric: tabular-nums;
+      }
+
+      #cadre {
+        position: absolute;
+        top: 24px;
+        left: 24px;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+        filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.5));
+      }
+      #cadre.visible { opacity: 1; }
+
+      #bandeau {
+        width: 300px;
+        box-sizing: border-box;
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        background: var(--fond);
+        border-top: 3px solid var(--club);
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%);
+      }
+
+      .entete { display: flex; align-items: center; gap: 10px; }
+      .blason { width: 24px; height: 28px; flex-shrink: 0; }
+      .blason .fond-blason { fill: var(--club); }
+      .blason .initiales { font: 700 11px var(--typo); letter-spacing: 0.04em; fill: #fff; }
+      #nom {
+        min-width: 0;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #division {
+        margin-left: auto;
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        line-height: 1;
+        padding: 4px 7px;
+        white-space: nowrap;
+        border: 1px solid var(--club-trait);
+        background: var(--club-voile);
+      }
+      #division[hidden] { display: none; }
+
+      .tuiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .tuile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 7px;
+        padding: 10px 0 9px;
+      }
+      .tuile.v { background: rgba(61, 220, 132, 0.08); }
+      .tuile.n { background: rgba(163, 172, 189, 0.08); }
+      .tuile.d { background: rgba(255, 77, 94, 0.08); }
+      .tuile .chiffre { font-size: 40px; font-weight: 700; line-height: 1; }
+      .tuile.v .chiffre { color: var(--victoire); }
+      .tuile.n .chiffre { color: var(--nul); }
+      .tuile.d .chiffre { color: var(--defaite); }
+      .tuile .libelle {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        line-height: 1;
+        color: var(--attenue);
+      }
+
+      /* Le chiffre qui vient de bouger saute : on voit tout de suite ce qui a change. */
+      .saut { animation: saut 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
+      @keyframes saut {
+        0% { transform: scale(1); }
+        35% { transform: scale(1.28); }
+        100% { transform: scale(1); }
+      }
+
+      .serie { display: flex; align-items: center; gap: 8px; min-height: 16px; }
+      .serie svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .serie svg[hidden] { display: none; }
+      #serie-texte { font-size: 14px; font-weight: 700; line-height: 1; white-space: nowrap; color: var(--attenue); }
+      .serie.or #serie-texte { color: var(--or); }
+      .serie.or svg { stroke: var(--or); }
+      .serie.rouge #serie-texte { color: var(--defaite); }
+      .serie.rouge svg { stroke: var(--defaite); }
+    </style>
+  </head>
+  <body>
+    <div id="cadre">
+      <div id="bandeau">
+        <div class="entete">
+          <svg class="blason" viewBox="0 0 38 44" aria-hidden="true">
+            <path class="fond-blason" d="M19 1L36 6V20C36 31 28 38 19 43C10 38 2 31 2 20V6Z" />
+            <path d="M19 5.5L32 9.3V20C32 28.6 26 34.3 19 38.3C12 34.3 6 28.6 6 20V9.3Z" fill="none" stroke="#fff" stroke-width="1.5" stroke-opacity="0.5" />
+            <text class="initiales" id="initiales" x="19" y="25.5" text-anchor="middle"></text>
+          </svg>
+          <span id="nom"></span>
+          <span id="division" hidden></span>
+        </div>
+        <div class="tuiles">
+          <div class="tuile v"><span class="chiffre" id="v">0</span><span class="libelle" id="lib-v">Victoire</span></div>
+          <div class="tuile n"><span class="chiffre" id="n">0</span><span class="libelle" id="lib-n">Nul</span></div>
+          <div class="tuile d"><span class="chiffre" id="d">0</span><span class="libelle" id="lib-d">Défaite</span></div>
+        </div>
+        <div class="serie" id="serie">
+          <svg id="icone-flamme" viewBox="0 0 24 24" hidden><path d="M12 3c.8 3 4.5 5 4.5 10a4.5 4.5 0 0 1-9 0c0-2.3 1.1-3.8 2.3-4.9.3 1.6 1.1 2.5 2.2 3-.5-2.9-.4-5.4 0-8.1z" /></svg>
+          <svg id="icone-baisse" viewBox="0 0 24 24" hidden><polyline points="3 7 9 13 13 9 21 17" /><polyline points="15 17 21 17 21 11" /></svg>
+          <span id="serie-texte"></span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const cadre = $("cadre");
+
+      // Chemin construit depuis location.pathname : un relatif remplacerait le
+      // dernier segment de l'URL et taperait /overlay/fc-clubs/flux.
+      const BASE = location.pathname.replace(/\/$/, "");
+
+      // Pas de color-mix() : absent du navigateur des OBS plus anciens que la 31.
+      function rvba(hex, a) {
+        const n = parseInt(String(hex || "").replace("#", "").slice(0, 6), 16) || 0x3b7bff;
+        return "rgba(" + ((n >> 16) & 255) + ", " + ((n >> 8) & 255) + ", " + (n & 255) + ", " + a + ")";
+      }
+
+      // Un nom trop long pour sa place retrecit (jusqu'a `min` px) plutot que
+      // d'etre coupe : EA accepte des noms de club de plus de 20 caracteres.
+      function ajuster(el, max, min) {
+        el.style.fontSize = max + "px";
+        for (let t = max; t > min && el.scrollWidth > el.clientWidth; t--) el.style.fontSize = t - 1 + "px";
+      }
+
+      function appliquerClub(club) {
+        const racine = document.documentElement.style;
+        racine.setProperty("--club", club.couleur || "#3b7bff");
+        racine.setProperty("--club-trait", rvba(club.couleur, 0.6));
+        racine.setProperty("--club-voile", rvba(club.couleur, 0.16));
+        $("initiales").textContent = club.initiales || "";
+        $("division").textContent = club.division || "";
+        $("division").hidden = !club.division;
+        if ($("nom").textContent !== (club.nom || "")) {
+          $("nom").textContent = club.nom || "";
+          ajuster($("nom"), 15, 10);
+        }
+      }
+
+      // Change le chiffre, et le fait sauter s'il a vraiment bouge.
+      function chiffre(el, valeur) {
+        const texte = String(valeur);
+        if (el.textContent === texte) return;
+        const premier = el.dataset.vu !== "1";
+        el.textContent = texte;
+        el.dataset.vu = "1";
+        if (premier) return;
+        el.classList.remove("saut");
+        void el.offsetWidth; // relance l'animation meme si elle vient de jouer
+        el.classList.add("saut");
+      }
+
+      function appliquer(etat) {
+        if (!etat || !etat.visible) {
+          cadre.classList.remove("visible");
+          return;
+        }
+        appliquerClub(etat.club || {});
+        const b = etat.bilan || {};
+        chiffre($("v"), b.v ?? 0);
+        chiffre($("n"), b.n ?? 0);
+        chiffre($("d"), b.d ?? 0);
+        const l = b.libelles || {};
+        $("lib-v").textContent = l.v || "Victoire";
+        $("lib-n").textContent = l.n || "Nul";
+        $("lib-d").textContent = l.d || "Défaite";
+
+        const s = etat.serie || {};
+        $("serie").className = "serie " + (s.ton || "neutre");
+        $("serie-texte").textContent = s.texte || "";
+        $("icone-flamme").hidden = s.icone !== "flamme";
+        $("icone-baisse").hidden = s.icone !== "baisse";
+        cadre.classList.add("visible");
+      }
+
+      // ?demo=1 : un exemple, le temps de placer la source dans OBS. A retirer
+      // une fois cale. (Le bouton « Afficher un exemple » du module fait la meme
+      // chose sans toucher a l'adresse.)
+      const DEMO = {
+        visible: true,
+        club: { nom: "FC Les Potes", initiales: "FLP", couleur: "#3b7bff", division: "Div. 3" },
+        bilan: { v: 3, n: 1, d: 1, libelles: { v: "Victoires", n: "Nul", d: "Défaite" } },
+        serie: { texte: "3 victoires d’affilée", ton: "or", icone: "flamme" },
+      };
+
+      const flux = new EventSource(BASE + "/flux");
+
+      if (new URLSearchParams(location.search).has("demo")) {
+        // En demo, on reste branche au flux pour que la source compte dans la
+        // carte OBS de la vue d'ensemble, sans rien en appliquer.
+        appliquer(DEMO);
+      } else {
+        flux.addEventListener("etat", (m) => appliquer(JSON.parse(m.data)));
+        // EventSource se reconnecte seul ; on ne masque que si le flux est perdu.
+        flux.addEventListener("error", () => {
+          if (flux.readyState === EventSource.CLOSED) cadre.classList.remove("visible");
+        });
+      }
+    </script>
+  </body>
+</html>

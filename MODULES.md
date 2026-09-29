@@ -66,6 +66,7 @@ catégories connues sont dans `core/categories.js` :
 | `rocket-league` | 🚀 Rocket League |
 | `lol` | ⚔️ League of Legends |
 | `valorant` | 🔫 Valorant |
+| `ea-fc` | ⚽ EA FC |
 | `outils` | 🧰 Outils *(fourre-tout, toujours en dernier)* |
 
 **Une catégorie est un regroupement d'affichage, pas une hiérarchie de code.**

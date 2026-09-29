@@ -30,6 +30,8 @@ export const CATEGORIES = [
   { id: 'rocket-league', label: 'Rocket League', icone: '🚀', couleur: '#3d8bff', ordre: 20 },
   { id: 'lol', label: 'League of Legends', icone: '⚔️', couleur: '#c8aa6e', ordre: 30 },
   { id: 'valorant', label: 'Valorant', icone: '🔫', couleur: '#ff4655', ordre: 40 },
+  // Cyan plutot que le vert d'un terrain : le vert dit « tout va bien ».
+  { id: 'ea-fc', label: 'EA FC', icone: '⚽', couleur: '#22b8cf', ordre: 50 },
   // Fourre-tout volontaire, toujours en dernier : ce qui ne depend d'aucun jeu
   // ni de Twitch (module de demonstration, futurs utilitaires).
   { id: 'outils', label: 'Outils', icone: '🧰', couleur: '#8b93a7', ordre: 90 },

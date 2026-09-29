@@ -37,6 +37,7 @@ test('les modules du depot sont tous decouverts', () => {
   assert.deepEqual(ids, [
     'clips',
     'exemple',
+    'fc-clubs',
     'lol-moments',
     'lol-session',
     'musique',
@@ -88,6 +89,9 @@ test('la taille de chaque source OBS part au dashboard', () => {
     'valorant › bandeau': { largeur: 900, hauteur: 70 },
     'lol-session › bandeau': { largeur: 840, hauteur: 150 },
     'lol-session › tableau': { largeur: 920, hauteur: 620 },
+    'fc-clubs › bandeau': { largeur: 348, hauteur: 232 },
+    'fc-clubs › carte': { largeur: 488, hauteur: 720 },
+    'fc-clubs › tableau': { largeur: 868, hauteur: 400 },
   };
   for (const m of registre.liste()) {
     for (const o of registre.vue(m.id).overlays) {
