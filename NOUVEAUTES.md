@@ -11,6 +11,23 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.29.0
+
+### Nouveautés
+
+- **Soirée Clubs, pour tes soirées Clubs sur EA FC 27.** Un nouveau module qui
+  suit ton club : un **bandeau** avec les victoires, les nuls, les défaites et la
+  série de la soirée ; une **carte de fin de match** qui apparaît toute seule
+  après chaque match, avec le score puis la note, les buts et les passes
+  décisives de chaque joueur du club ; et un **tableau de fin de soirée** avec
+  les trophées : MVP, Soulier d'or, Maître passeur et Le mur.
+- Rien à connecter : écris le nom de ton club dans le module, StreamKit le
+  retrouve chez EA. Chaque match arrive quelques minutes après le coup de
+  sifflet final, le temps qu'EA le publie. Seul ton club est affiché : de
+  l'équipe adverse, juste son nom à côté du score.
+- Les overlays prennent la couleur du maillot de ton club, et **Afficher un
+  exemple** remplit les trois sources pour les placer dans OBS.
+
 ## 0.28.2
 
 ### Nouveautés
