@@ -4,7 +4,9 @@
 // Source : l'API Clubs d'EA (voir ea.js), celle du site des clubs. Rien n'est
 // lu dans le jeu, et tout arrive APRES le coup de sifflet final, quand EA publie
 // le match : il n'existe aucune donnee en direct (pas d'equivalent de l'API de
-// Rocket League ou de celle du client LoL).
+// Rocket League ou de celle du client LoL). EA oublie parfois de publier un
+// match qu'il a pourtant compte : le bilan du club sert alors de filet (voir
+// bilan-club.js), le match entre au bilan de la soiree sans carte.
 //
 // Trois sources OBS, chacune a la taille de son element, que le streamer place
 // ou il veut : le bandeau (bilan et serie, tout le temps), la carte de fin de
@@ -20,6 +22,7 @@
 import { creerClientEA, moteurReseau, NOM_MAX } from './ea.js';
 import { choisirClub, couleurDuMaillot, nomDivision } from './club.js';
 import { analyserMatch } from './analyse.js';
+import { lireBilan, matchDuBilan, nouveauxDuBilan, provisoireDe } from './bilan-club.js';
 import { bilan, matchsDeLaSoiree } from './soiree.js';
 import { vueBandeau, vueCarte, vueClub, vueTableau } from './vue.js';
 import { CLUB_DEMO, SR_DEMO, soireeDemo } from './demo.js';
@@ -39,6 +42,9 @@ const DUREE_EXEMPLE_MS = 30_000;
 // siens, trois semaines au plus.
 const GARDER_MS = 21 * 24 * 3600_000;
 const GARDER_MAX = 120;
+// Sans nouveau match, le bilan lu n'est ecrit sur le disque que toutes les
+// 10 minutes : assez pour reprendre apres un redemarrage.
+const SAUVER_SUIVI_MS = 10 * 60_000;
 
 const VUES = ['bandeau', 'carte', 'tableau'];
 const COULEUR_DEFAUT = '#3b7bff';
@@ -60,10 +66,7 @@ const cleDuClub = (c) =>
 
 const libelleMatch = (m) =>
   RESULTATS[m.resultat] +
-  ' ' +
-  m.buts +
-  '–' +
-  m.encaisses +
+  (m.provisoire ? '' : ' ' + m.buts + '–' + m.encaisses) +
   (m.adversaire ? ' contre ' + m.adversaire : '') +
   ' (' +
   TYPES_LIBELLES[m.type] +
@@ -318,7 +321,11 @@ export default {
       'ok',
       [e.club, e.division, e.v + ' V · ' + e.n + ' N · ' + e.d + ' D'].filter(Boolean).join(' · '),
       e.dernierMatchA
-        ? 'Dernier match publié par EA à ' + heure(e.dernierMatchA)
+        ? e.dernierSansDetail
+          ? 'Dernier match compté à ' +
+            heure(e.dernierMatchA) +
+            ' d’après le bilan du club : EA n’a pas publié son détail, il n’a donc pas de carte'
+          : 'Dernier match publié par EA à ' + heure(e.dernierMatchA)
         : 'Pas encore de match ce soir'
     );
   },
@@ -350,13 +357,19 @@ export default {
     // Un autre nom de club dans les reglages : les matchs retenus ne sont plus
     // les siens.
     const cle = cleDuClub(c);
-    const stocke = ctx.etat.lire({ cle, club: null, matchs: [], sr: [], reinitA: 0 });
-    const memoire = stocke.cle === cle ? stocke : { club: null, matchs: [], sr: [], reinitA: 0 };
+    const stocke = ctx.etat.lire({ cle, club: null, matchs: [], sr: [], reinitA: 0, suivi: null });
+    const memoire = stocke.cle === cle ? stocke : { club: null, matchs: [], sr: [], reinitA: 0, suivi: null };
     let club = memoire.club ?? null;
     const matchs = Array.isArray(memoire.matchs) ? memoire.matchs : [];
     const srs = Array.isArray(memoire.sr) ? memoire.sr : [];
     let reinitA = Number(memoire.reinitA) || 0;
-    const sauver = () => ctx.etat.sauver({ cle, club, matchs, sr: srs, reinitA });
+    // La derniere lecture du bilan du club : { joues, v, n, d, sr, a }.
+    let suivi = memoire.suivi ?? null;
+    let sauveA = 0;
+    const sauver = () => {
+      sauveA = Date.now();
+      ctx.etat.sauver({ cle, club, matchs, sr: srs, reinitA, suivi });
+    };
 
     const pauseMs = c.pauseSoiree * 3600_000;
     const types =
@@ -369,7 +382,9 @@ export default {
 
     // --- Overlays ------------------------------------------------------------
 
-    let carte = { match: null, sr: null, jusqua: 0 };
+    // L'ecart de skill rating du match est range sur le match (`ecartSr`) : il
+    // peut arriver apres lui, avec le bilan du club.
+    let carte = { match: null, jusqua: 0 };
     let exempleJusqua = 0;
     const envoyes = {};
 
@@ -416,7 +431,7 @@ export default {
             club: clubVue,
             match: carte.match,
             visible: Date.now() < carte.jusqua,
-            sr: carte.sr,
+            sr: carte.match?.ecartSr ?? null,
             adversaire: c.adversaire,
           }),
           tableau: vueTableau({ club: clubVue, soiree: s, sr: srSoiree(s), adversaire: c.adversaire }),
@@ -432,8 +447,8 @@ export default {
       }
     };
 
-    const montrerCarte = (match, sr) => {
-      carte = { match, sr, jusqua: Date.now() + c.dureeCarte * 1000 };
+    const montrerCarte = (match) => {
+      carte = { match, jusqua: Date.now() + c.dureeCarte * 1000 };
       pousser();
       ctx.minuteur.delai(pousser, c.dureeCarte * 1000 + 100);
     };
@@ -470,6 +485,7 @@ export default {
         // Meme nom, autre club (recree ?) : les matchs retenus etaient ceux de l'ancien.
         matchs.length = 0;
         srs.length = 0;
+        suivi = null;
       }
       if (club && !autre && club.division !== r.club.division && r.club.division) {
         ctx.log.ok('Division : ' + nomDivision(r.club.division) + '.');
@@ -479,13 +495,15 @@ export default {
       return true;
     };
 
-    const lireSr = async () => {
-      const stats = await ea.stats(club.id);
-      const valeur = Number(stats?.[0]?.skillRating);
-      if (!Number.isFinite(valeur) || valeur <= 0) return null;
-      srs.push({ a: Date.now(), valeur });
-      while (srs.length > 60) srs.shift();
-      return valeur;
+    // Le nom d'un adversaire connu par son seul identifiant (match compte
+    // d'apres le bilan). Sans lui, le match compte quand meme.
+    const nomDuClub = async (id) => {
+      try {
+        const r = await ea.info(id);
+        return String(r?.[id]?.name ?? '').trim();
+      } catch {
+        return '';
+      }
     };
 
     const elaguer = () => {
@@ -506,14 +524,14 @@ export default {
         await lireClub().catch(() => {});
       }
 
-      const nouveaux = [];
+      // L'historique : le detail des matchs, quand EA le publie.
+      const publies = [];
       for (const type of types) {
         const liste = await ea.matchs(club.id, type);
         for (const brut of Array.isArray(liste) ? liste : []) {
           const m = analyserMatch(brut, club.id, type);
-          if (m && !matchs.some((x) => x.id === m.id)) {
-            matchs.push(m);
-            nouveaux.push(m);
+          if (m && !matchs.some((x) => x.id === m.id) && !publies.some((x) => x.id === m.id)) {
+            publies.push(m);
           }
         }
       }
@@ -521,23 +539,89 @@ export default {
       etat.message = '';
       etat.derniereLecture = Date.now();
 
-      // Le skill rating : au premier tour (celui d'avant la soiree, si elle n'a
-      // pas commence), puis apres chaque match de competition. Il est en plus :
-      // une lecture ratee ne fait pas perdre les matchs.
-      const competition = nouveaux.filter((m) => m.type !== 'amical');
-      let ecartSr = null;
-      if (premierTour || competition.length) {
-        const avant = srs.at(-1)?.valeur ?? null;
-        const apres = await lireSr().catch(() => null);
-        if (!premierTour && competition.length === 1 && avant != null && apres != null)
-          ecartSr = apres - avant;
+      // Le bilan du club, a chaque tour. Il est en plus : une lecture ratee ne
+      // fait pas perdre les matchs.
+      const lu = lireBilan(await ea.stats(club.id).catch(() => null));
+      const maintenant = Date.now();
+
+      // Les matchs qui entrent dans le bilan de la soiree (compteurs, journal)
+      // et ceux dont le detail vient d'arriver (de quoi faire une carte).
+      const comptes = [];
+      const detailles = [];
+
+      publies.sort((x, y) => x.a - y.a);
+      for (const m of publies) {
+        const p = provisoireDe(matchs, m);
+        if (p) {
+          // Deja compte d'apres le bilan : son detail arrive enfin, il prend
+          // sa place sans compter deux fois.
+          matchs.splice(matchs.indexOf(p), 1);
+          m.auBilan = true;
+          m.ecartSr = p.ecartSr ?? null;
+          if (!premierTour) ctx.log.info('Détail publié par EA : ' + libelleMatch(m) + '.');
+        } else {
+          comptes.push(m);
+        }
+        matchs.push(m);
+        detailles.push(m);
       }
 
-      if (!nouveaux.length) {
+      // Le bilan : les matchs joues depuis sa lecture precedente. Chacun est
+      // rattache a son match de l'historique ; celui qu'EA n'a pas publie est
+      // compte quand meme, sans score ni joueurs. Une lecture trop ancienne
+      // (StreamKit ferme, EA en panne) ne dit plus quand ils ont ete joues :
+      // on repart de celle-ci.
+      if (lu) {
+        const avant = suivi && maintenant - suivi.a <= pauseMs ? suivi : null;
+        const lignes = avant ? nouveauxDuBilan(avant, lu) : [];
+        // Un seul match entre deux lectures : l'ecart de skill rating est le sien.
+        const ecart = lignes.length === 1 && avant.sr && lu.sr ? lu.sr - avant.sr : null;
+        for (const [i, ligne] of lignes.entries()) {
+          const publie = matchDuBilan(matchs, ligne, { depuis: avant.a, jusqua: maintenant });
+          if (publie) {
+            publie.auBilan = true;
+            if (ecart != null) publie.ecartSr = ecart;
+            continue;
+          }
+          const p = {
+            id: 'bilan-' + maintenant + '-' + i,
+            provisoire: true,
+            auBilan: true,
+            // Son heure de fin est inconnue : entre les deux lectures du bilan.
+            a: maintenant - (lignes.length - i) * 1000,
+            depuis: avant.a,
+            type: 'championnat',
+            resultat: ligne.resultat,
+            buts: null,
+            encaisses: null,
+            abandon: false,
+            adversaireId: ligne.adversaireId,
+            adversaire: await nomDuClub(ligne.adversaireId),
+            dureeS: 0,
+            joueurs: [],
+            ecartSr: ecart,
+          };
+          matchs.push(p);
+          comptes.push(p);
+        }
+        // Le skill rating : celui d'avant la soiree (premier tour), puis a
+        // chaque changement.
+        if (lu.sr && (premierTour || lu.sr !== srs.at(-1)?.valeur)) {
+          srs.push({ a: Date.now(), valeur: lu.sr });
+          while (srs.length > 60) srs.shift();
+        }
+        if (lu.joues != null)
+          suivi = { joues: lu.joues, v: lu.v, n: lu.n, d: lu.d, sr: lu.sr, a: maintenant };
+      }
+
+      if (!comptes.length && !detailles.length) {
         premierTour = false;
+        // Le bilan lu doit survivre a un redemarrage, sans ecrire a chaque minute.
+        if (Date.now() - sauveA > SAUVER_SUIVI_MS) sauver();
         return;
       }
-      nouveaux.sort((x, y) => x.a - y.a);
+      comptes.sort((x, y) => x.a - y.a);
+      detailles.sort((x, y) => x.a - y.a);
       elaguer();
       sauver();
 
@@ -545,19 +629,28 @@ export default {
       // ou premiere installation). Repris sans carte ni compteur.
       if (premierTour) {
         premierTour = false;
-        const deCeSoir = soiree().filter((m) => nouveaux.includes(m)).length;
+        const deCeSoir = soiree().filter((m) => comptes.includes(m)).length;
         if (deCeSoir) ctx.log.info(deCeSoir + ' match(s) de la soirée en cours retrouvé(s) chez EA.');
         return;
       }
 
-      for (const m of nouveaux) {
+      for (const m of comptes) {
         ctx.compteur.incr(COMPTEURS[m.resultat]);
-        ctx.log.ok(libelleMatch(m) + ' — compté.');
+        ctx.log.ok(
+          libelleMatch(m) +
+            (m.provisoire
+              ? ' — compté d’après le bilan du club : EA n’a pas publié le détail du match.'
+              : ' — compté.')
+        );
       }
       // Une montee de division se voit sur la carte de ce match.
-      if (competition.length) await lireClub().catch(() => {});
-      const dernier = nouveaux.at(-1);
-      if (Date.now() - dernier.a <= pauseMs) montrerCarte(dernier, ecartSr);
+      if (comptes.some((m) => m.type !== 'amical')) await lireClub().catch(() => {});
+      // La carte du dernier match detaille, s'il est toujours le plus recent : un
+      // detail publie tres en retard, apres d'autres matchs, ne repasse pas a
+      // l'ecran.
+      const dernier = detailles.at(-1);
+      const plusRecent = [...matchs].sort((x, y) => x.a - y.a).at(-1);
+      if (dernier && dernier === plusRecent && Date.now() - dernier.a <= pauseMs) montrerCarte(dernier);
     };
 
     let enCours = false;
@@ -599,6 +692,9 @@ export default {
         d: b.d,
         matchsDeLaSoiree: s.length,
         dernierMatchA: s.at(-1)?.a ?? null,
+        dernierSansDetail: !!s.at(-1)?.provisoire,
+        sansDetail: s.filter((m) => m.provisoire).length,
+        bilanEA: suivi ? suivi.joues + ' matchs de championnat, lu à ' + heure(suivi.a) : 'jamais lu',
         derniereLecture: etat.derniereLecture ? heure(etat.derniereLecture) : 'jamais',
         matchsRetenus: matchs.length,
       };
@@ -610,16 +706,20 @@ export default {
       ctx.minuteur.delai(pousser, DUREE_EXEMPLE_MS + 100);
     };
 
+    // Le dernier match dont EA a publie le detail : les autres n'ont pas de carte.
     ctx._revoirCarte = () => {
-      const dernier = [...matchs].sort((x, y) => x.a - y.a).at(-1);
+      const dernier = matchs
+        .filter((m) => !m.provisoire)
+        .sort((x, y) => x.a - y.a)
+        .at(-1);
       if (!dernier) return false;
-      montrerCarte(dernier, carte.match?.id === dernier.id ? carte.sr : null);
+      montrerCarte(dernier);
       return true;
     };
 
     ctx._nouvelleSoiree = () => {
       reinitA = Date.now();
-      carte = { match: null, sr: null, jusqua: 0 };
+      carte = { match: null, jusqua: 0 };
       sauver();
       pousser();
       ctx.log.ok('Nouvelle soirée : le bilan repart de zéro.');

@@ -1,7 +1,9 @@
 // Soiree Clubs FC 27, branchee de bout en bout.
 //
 // Un faux EA : globalThis.fetch remplace par un routeur qui repond comme
-// proclubs.ea.com (recherche, matchs par type, statistiques). Hors d'Electron,
+// proclubs.ea.com (recherche, matchs par type, bilan du club, fiche d'un club).
+// Il sait aussi reproduire le trou vu le 30/09/2026 : un match compte dans le
+// bilan du club mais jamais publie dans son historique (`fantomes`). Hors d'Electron,
 // le module passe par le fetch de Node : c'est lui qu'on intercepte. Le module
 // est demarre avec un contexte de test ; son premier tour part tout seul, les
 // suivants se jouent a la main.
@@ -36,7 +38,7 @@ const joueur = (nom, pos, rating, stats = {}) => ({
   ...Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, String(v)])),
 });
 
-function matchBrut(id, finMs, buts, encaisses, type = 'leagueMatch') {
+function matchBrut(id, finMs, buts, encaisses, type = 'leagueMatch', adv = '9001', nomAdv = 'Rivaux FC') {
   const t = Math.floor(finMs / 1000);
   const code = buts > encaisses ? '1' : buts < encaisses ? '2' : '4';
   const amical = type === 'friendlyMatch';
@@ -50,11 +52,11 @@ function matchBrut(id, finMs, buts, encaisses, type = 'leagueMatch') {
         result: amical ? '0' : code,
         details: { name: 'Les Testeurs' },
       },
-      9001: {
+      [adv]: {
         goals: String(encaisses),
         goalsAgainst: String(buts),
         result: '0',
-        details: { name: 'Rivaux FC' },
+        details: { name: nomAdv },
       },
     },
     players: {
@@ -62,20 +64,52 @@ function matchBrut(id, finMs, buts, encaisses, type = 'leagueMatch') {
         1: joueur('Alpha', 'forward', 8.2, { goals: buts, mom: buts > encaisses ? 1 : 0 }),
         2: joueur('Bravo', 'goalkeeper', 6.9, { saves: 4 }),
       },
-      9001: { 9: joueur('Rival', 'forward', 7.0, { goals: encaisses }) },
+      [adv]: { 9: joueur('Rival', 'forward', 7.0, { goals: encaisses }) },
     },
     aggregate: {},
   };
 }
 
-// Le faux EA. `club` null = pas encore cree ; `panne` = EA ne repond plus.
+// Le faux EA. `club` null = pas encore cree ; `panne` = EA ne repond plus ;
+// `fantomes` = matchs de championnat comptes au bilan, absents de l'historique
+// ({ adv, resultat, fin }) ; `bilanFige` = un bilan en retard sur l'historique.
 function fauxEA() {
   const ea = {
     club: null,
     matchs: { leagueMatch: [], playoffMatch: [], friendlyMatch: [] },
+    fantomes: [],
+    bilanFige: null,
+    noms: { 9001: 'Rivaux FC' },
     sr: 1000,
     panne: false,
     requetes: [],
+  };
+  // Le bilan comme EA le rend : totaux, 10 derniers adversaires (0 = le plus
+  // recent), resultat des 5 derniers (1 V, 2 D, 3 N).
+  ea.bilan = () => {
+    const code = { 1: 'V', 2: 'D', 4: 'N' };
+    const joues = [
+      ...ea.matchs.leagueMatch.map((m) => ({
+        adv: Object.keys(m.clubs).find((k) => k !== CLUB),
+        resultat: code[m.clubs[CLUB].result],
+        fin: m.timestamp * 1000,
+      })),
+      ...ea.fantomes,
+    ].sort((x, y) => y.fin - x.fin);
+    const total = (r) => String(joues.filter((j) => j.resultat === r).length);
+    const bilan = {
+      clubId: CLUB,
+      skillRating: String(ea.sr),
+      gamesPlayed: String(joues.length),
+      wins: total('V'),
+      ties: total('N'),
+      losses: total('D'),
+    };
+    for (let i = 0; i < 10; i++) {
+      bilan['lastOpponent' + i] = joues[i]?.adv ?? '-1';
+      bilan['lastMatch' + i] = i < 5 && joues[i] ? { V: '1', D: '2', N: '3' }[joues[i].resultat] : '-1';
+    }
+    return [bilan];
   };
   const repondre = (code, corps) => ({
     ok: code >= 200 && code < 300,
@@ -109,7 +143,11 @@ function fauxEA() {
       return repondre(200, liste.slice(0, 10));
     }
     if (u.pathname.endsWith('/clubs/overallStats')) {
-      return repondre(200, [{ clubId: CLUB, skillRating: String(ea.sr) }]);
+      return repondre(200, ea.bilanFige ?? ea.bilan());
+    }
+    if (u.pathname.endsWith('/clubs/info')) {
+      const id = u.searchParams.get('clubIds');
+      return repondre(200, ea.noms[id] ? { [id]: { name: ea.noms[id], clubId: Number(id) } } : {});
     }
     return repondre(404, 'inconnu');
   };
@@ -318,4 +356,145 @@ test('exemple et recherche : les boutons repondent meme sans club', async (t) =>
   const d = await manifeste.diagnostic(ctx);
   assert.equal(d.club, 'Les Testeurs');
   assert.match(d.reseau, /Node/);
+});
+
+// Le cas vu chez un streamer le 30/09/2026 : EA compte le match dans le bilan
+// du club mais ne le publie jamais dans l'historique.
+test('un match qu’EA compte sans le publier : compte d’apres le bilan, complete si le detail arrive', async (t) => {
+  const origine = globalThis.fetch;
+  const { ea, fetch } = fauxEA();
+  globalThis.fetch = fetch;
+  t.after(() => {
+    globalThis.fetch = origine;
+  });
+  ea.club = 'Les Testeurs';
+  ea.noms[7001] = 'Dasporto';
+  ea.matchs.leagueMatch.push(matchBrut('m1', Date.now() - 30 * 60_000, 1, 2));
+
+  const { ctx, journal, compteurs, derniere, laisserFinir, tour } = contexte();
+  const module = await manifeste.demarrer(ctx);
+  await laisserFinir();
+  assert.deepEqual([ctx._etatFC().v, ctx._etatFC().n, ctx._etatFC().d], [0, 0, 1]);
+
+  // Le match suivant : au bilan du club, pas dans l'historique.
+  ea.sr = 1020;
+  ea.fantomes.push({ adv: '7001', resultat: 'V', fin: Date.now() - 60_000 });
+  await tour();
+  assert.deepEqual(compteurs, { victoires: 1 });
+  let e = ctx._etatFC();
+  assert.deepEqual([e.v, e.n, e.d, e.sansDetail], [1, 0, 1, 1]);
+  assert.equal(e.dernierSansDetail, true);
+  assert.ok(
+    journal.some(
+      ([n, m]) =>
+        n === 'ok' &&
+        m ===
+          'Victoire contre Dasporto (championnat) — compté d’après le bilan du club : EA n’a pas publié le détail du match.'
+    )
+  );
+  // Ni score ni joueurs : pas de carte, mais le bandeau et le tableau suivent.
+  assert.equal(derniere('carte').visible, false);
+  assert.equal(derniere('bandeau').bilan.v, 1);
+  assert.equal(derniere('bandeau').serie.texte, 'Dernier match : victoire');
+  assert.deepEqual(derniere('tableau').matchs.at(-1), {
+    resultat: 'V',
+    score: 'Victoire',
+    legende: 'Dasporto',
+  });
+  assert.match((await manifeste.sante(ctx))[0].aide, /d’après le bilan du club/);
+  const d = await manifeste.diagnostic(ctx);
+  assert.match(d.enMarche.bilanEA, /^2 matchs de championnat, lu à /);
+
+  // Rien de neuf : rien ne se recompte.
+  await tour();
+  assert.deepEqual(compteurs, { victoires: 1 });
+  // « Revoir la dernière carte » montre le dernier match qui en a une.
+  await manifeste.actions.revoirCarte(ctx);
+  assert.equal(derniere('carte').match.libelle, 'Défaite');
+
+  // EA publie le detail apres coup : il prend la place du match sans detail,
+  // avec sa carte et l'ecart de skill rating, sans rien compter deux fois.
+  const fantome = ea.fantomes.shift();
+  ea.matchs.leagueMatch.push(matchBrut('m2', fantome.fin, 3, 0, 'leagueMatch', '7001', 'Dasporto'));
+  await tour();
+  assert.deepEqual(compteurs, { victoires: 1 });
+  e = ctx._etatFC();
+  assert.deepEqual([e.v, e.n, e.d, e.sansDetail], [1, 0, 1, 0]);
+  const carte = derniere('carte');
+  assert.equal(carte.visible, true);
+  assert.equal(carte.match.buts, 3);
+  assert.equal(carte.match.adversaire, 'Dasporto');
+  assert.deepEqual(carte.match.sr, { texte: '+20', signe: 1 });
+  assert.ok(
+    journal.some(([, m]) => m === 'Détail publié par EA : Victoire 3–0 contre Dasporto (championnat).')
+  );
+  await module.arreter();
+});
+
+test('le bilan en retard sur l’historique : un seul compte, l’ecart de skill rating arrive ensuite', async (t) => {
+  const origine = globalThis.fetch;
+  const { ea, fetch } = fauxEA();
+  globalThis.fetch = fetch;
+  t.after(() => {
+    globalThis.fetch = origine;
+  });
+  ea.club = 'Les Testeurs';
+
+  const { ctx, compteurs, derniere, laisserFinir, tour } = contexte();
+  await manifeste.demarrer(ctx);
+  await laisserFinir();
+
+  ea.bilanFige = ea.bilan();
+  ea.matchs.leagueMatch.push(matchBrut('m1', Date.now() - 60_000, 2, 1));
+  await tour();
+  assert.deepEqual(compteurs, { victoires: 1 });
+  assert.equal(derniere('carte').visible, true);
+  assert.equal(derniere('carte').match.sr, null);
+
+  // Le bilan rattrape : le match y est deja, la carte gagne son ecart.
+  ea.bilanFige = null;
+  ea.sr = 1012;
+  await tour();
+  assert.deepEqual(compteurs, { victoires: 1 });
+  assert.equal(ctx._etatFC().sansDetail, 0);
+  assert.deepEqual(derniere('carte').match.sr, { texte: '+12', signe: 1 });
+});
+
+test('redemarrage en pleine soiree : le bilan lu avant reprend le match non publie, sans compteur', async (t) => {
+  const origine = globalThis.fetch;
+  const { ea, fetch } = fauxEA();
+  globalThis.fetch = fetch;
+  t.after(() => {
+    globalThis.fetch = origine;
+  });
+  ea.club = 'Les Testeurs';
+  ea.matchs.leagueMatch.push(matchBrut('m1', Date.now() - 40 * 60_000, 1, 0));
+
+  const premier = contexte();
+  const module = await manifeste.demarrer(premier.ctx);
+  await premier.laisserFinir();
+  await module.arreter();
+  const sauve = premier.ctx.etat.lire(null);
+  assert.equal(sauve.suivi.joues, 1);
+
+  // StreamKit ferme (mise a jour), un match se joue, EA ne le publie pas.
+  ea.fantomes.push({ adv: '9001', resultat: 'N', fin: Date.now() - 5 * 60_000 });
+  const second = contexte();
+  second.ctx.etat.sauver(sauve);
+  await manifeste.demarrer(second.ctx);
+  await second.laisserFinir();
+  const e = second.ctx._etatFC();
+  assert.deepEqual([e.v, e.n, e.d, e.sansDetail], [1, 1, 0, 1]);
+  assert.deepEqual(second.compteurs, {});
+  assert.ok(second.journal.some(([, m]) => m.includes('1 match(s) de la soirée en cours retrouvé(s)')));
+
+  // Un bilan lu il y a plus d'une pause ne dit plus quand les matchs ont eu
+  // lieu : on repart de zero, sans rien inventer.
+  ea.fantomes.push({ adv: '9001', resultat: 'D', fin: Date.now() - 60_000 });
+  const troisieme = contexte();
+  troisieme.ctx.etat.sauver({ ...sauve, suivi: { ...sauve.suivi, a: Date.now() - 4 * 3600_000 } });
+  await manifeste.demarrer(troisieme.ctx);
+  await troisieme.laisserFinir();
+  assert.equal(troisieme.ctx._etatFC().sansDetail, 0);
+  assert.equal(troisieme.ctx._etatFC().bilanEA.startsWith('3 matchs'), true);
 });

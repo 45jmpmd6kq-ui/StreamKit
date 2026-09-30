@@ -52,6 +52,8 @@ export function analyserMatch(brut, clubId, type) {
     resultat: resultatDe(code, buts, encaisses),
     abandon: code === 16385 || code === 10,
     adversaire: String(eux?.details?.name ?? '').trim(),
+    // Pour le rapprocher du bilan du club, qui ne donne que l'identifiant.
+    adversaireId: autre ?? '',
     // Duree reelle du match : EA la donne par joueur (realtimegame).
     dureeS: bruts.reduce((max, j) => Math.max(max, nombre(j.realtimegame)), 0),
     joueurs: bruts.map((j) => ({

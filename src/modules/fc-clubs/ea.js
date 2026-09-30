@@ -17,7 +17,9 @@
 //   - /clubs/matches renvoie 10 matchs au plus, quel que soit maxResultCount :
 //     le module retient donc lui-meme les matchs de la soiree ;
 //   - la recherche ignore la casse et marche par debut de nom (« Nothing »
-//     renvoie 14 clubs) ; un nom inconnu donne [] ; un nom trop long, un 500.
+//     renvoie 14 clubs) ; un nom inconnu donne [] ; un nom trop long, un 500 ;
+//   - /clubs/info ne prend qu'UN identifiant (deux : 400), et rend
+//     { "<id>": { name, customKit, ... } } (verifie le 01/10/2026).
 
 const BASE = 'https://proclubs.ea.com/api/fc/';
 
@@ -111,5 +113,6 @@ export function creerClientEA({ fetch, delaiMs = DELAI_MS }) {
     matchs: (clubId, type) =>
       lire('clubs/matches', { clubIds: clubId, matchType: TYPES[type], maxResultCount: MATCHS_PAR_REQUETE }),
     stats: (clubId) => lire('clubs/overallStats', { clubIds: clubId }),
+    info: (clubId) => lire('clubs/info', { clubIds: clubId }),
   };
 }

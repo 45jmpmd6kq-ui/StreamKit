@@ -9,6 +9,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { analyserMatch } from '../src/modules/fc-clubs/analyse.js';
+import {
+  lireBilan,
+  matchDuBilan,
+  nouveauxDuBilan,
+  provisoireDe,
+} from '../src/modules/fc-clubs/bilan-club.js';
 import { choisirClub, couleurDuMaillot, initiales, nomDivision } from '../src/modules/fc-clubs/club.js';
 import { bilan, matchsDeLaSoiree, serie, trophees } from '../src/modules/fc-clubs/soiree.js';
 import { tonNote, vueBandeau, vueCarte, vueClub, vueTableau } from '../src/modules/fc-clubs/vue.js';
@@ -85,6 +91,7 @@ test('un match EA devient un match du club, sans rien garder de l’adversaire a
   assert.equal(m.buts, 3);
   assert.equal(m.encaisses, 1);
   assert.equal(m.adversaire, 'Adversaires United');
+  assert.equal(m.adversaireId, EUX);
   assert.equal(m.dureeS, 964);
   assert.deepEqual(
     m.joueurs.map((j) => [j.nom, j.poste, j.note, j.buts]),
@@ -313,4 +320,114 @@ test('bandeau et tableau : la soiree d’exemple, celle des maquettes', () => {
   assert.equal(vide.sr, null);
   assert.equal(vide.trophees[0].nom, '—');
   assert.equal(vueBandeau({ club, soiree: [] }).bilan.libelles.v, 'Victoire');
+});
+
+// Le bilan d'un club tel qu'EA le rend (forme relevee le 01/10/2026, chiffres
+// fictifs) : 7 matchs, les 4 derniers gagnes. N = 0 est le plus recent, le
+// resultat n'est connu que pour les 5 derniers.
+const bilanBrut = (extra = {}) => [
+  {
+    clubId: NOUS,
+    gamesPlayed: '7',
+    wins: '5',
+    losses: '2',
+    ties: '0',
+    skillRating: '1584',
+    ...Object.fromEntries(
+      ['501', '502', '503', '504', '505', '506', '507', '-1', '-1', '-1'].map((id, i) => [
+        'lastOpponent' + i,
+        id,
+      ])
+    ),
+    ...Object.fromEntries(
+      ['1', '1', '1', '1', '2', '-1', '-1', '-1', '-1', '-1'].map((r, i) => ['lastMatch' + i, r])
+    ),
+    ...extra,
+  },
+];
+
+test('bilan du club : les matchs comptes par EA entre deux lectures, du plus ancien au plus recent', () => {
+  const apres = lireBilan(bilanBrut());
+  assert.deepEqual([apres.joues, apres.v, apres.n, apres.d, apres.sr], [7, 5, 0, 2, 1584]);
+  assert.equal(apres.derniers.length, 7);
+  assert.deepEqual(apres.derniers[4], { adversaireId: '505', resultat: 'D' });
+  assert.equal(apres.derniers[5].resultat, null); // au-dela des 5 derniers
+
+  // Le cas vu le 30/09 : 4 victoires depuis la lecture precedente.
+  const avant = { joues: 3, v: 1, n: 0, d: 2 };
+  assert.deepEqual(nouveauxDuBilan(avant, apres), [
+    { adversaireId: '504', resultat: 'V' },
+    { adversaireId: '503', resultat: 'V' },
+    { adversaireId: '502', resultat: 'V' },
+    { adversaireId: '501', resultat: 'V' },
+  ]);
+  // Plus de 5 : les totaux donnent les resultats qu'EA ne detaille plus.
+  assert.deepEqual(
+    nouveauxDuBilan({ joues: 1, v: 0, n: 0, d: 1 }, apres).map((e) => e.adversaireId + e.resultat),
+    ['506V', '505D', '504V', '503V', '502V', '501V']
+  );
+  // Premiere lecture, rien de neuf, ou compteurs remis a zero par EA : rien.
+  assert.deepEqual(nouveauxDuBilan(null, apres), []);
+  assert.deepEqual(nouveauxDuBilan({ joues: 7, v: 5, n: 0, d: 2 }, apres), []);
+  assert.deepEqual(nouveauxDuBilan({ joues: 40, v: 20, n: 5, d: 15 }, apres), []);
+
+  // Un bilan illisible garde son skill rating, pas le reste.
+  const abime = lireBilan(bilanBrut({ gamesPlayed: undefined }));
+  assert.equal(abime.joues, null);
+  assert.equal(abime.sr, 1584);
+  assert.deepEqual(nouveauxDuBilan(avant, abime), []);
+  assert.equal(lireBilan(null), null);
+  assert.equal(lireBilan([]), null);
+});
+
+test('bilan du club : chaque ligne retrouve son match publie, sinon un match sans detail la complete', () => {
+  const T = 100 * H;
+  const publie = match(T - 2 * 60_000, 'V', { adversaireId: '501' });
+  const ancien = match(T - 2 * H, 'V', { adversaireId: '501' });
+  const amical = match(T - 60_000, 'V', { adversaireId: '502', type: 'amical' });
+  const matchs = [ancien, publie, amical];
+  const ligne = (id) => ({ adversaireId: id, resultat: 'V' });
+
+  // Meme adversaire, fini entre les deux lectures : c'est lui (pas celui d'il y a 2 h).
+  assert.equal(matchDuBilan(matchs, ligne('501'), { depuis: T - 60_000, jusqua: T }), publie);
+  // Deja rattache a une ligne : plus disponible.
+  assert.equal(
+    matchDuBilan([{ ...publie, auBilan: true }], ligne('501'), { depuis: T - 60_000, jusqua: T }),
+    null
+  );
+  // Un amical n'est jamais dans le bilan.
+  assert.equal(matchDuBilan(matchs, ligne('502'), { depuis: T - 60_000, jusqua: T }), null);
+
+  // Le detail arrive apres coup : il remplace le match sans detail du meme adversaire.
+  const provisoire = { ...match(T, 'V'), provisoire: true, depuis: T - 60_000, adversaireId: '501' };
+  assert.equal(provisoireDe([provisoire], publie), provisoire);
+  assert.equal(provisoireDe([provisoire], { ...publie, adversaireId: '999' }), null);
+  // Un match contre le meme club, mais joue bien plus tard : un autre match.
+  assert.equal(provisoireDe([provisoire], { ...publie, a: T + H }), null);
+  assert.equal(provisoireDe([provisoire], { ...publie, type: 'amical' }), null);
+});
+
+test('un match sans detail : compte dans le bilan et la serie, pas dans les buts ni les trophees', () => {
+  const club = vueClub({ club: { nom: 'FC Les Potes', division: 4 }, couleur: '#3b7bff' });
+  const s = soireeDemo(10 * H);
+  const sansDetail = {
+    ...match(10 * H + 60_000, 'V'),
+    provisoire: true,
+    buts: null,
+    encaisses: null,
+    adversaire: 'Dasporto',
+  };
+  const soiree = [...s, sansDetail];
+  assert.deepEqual(bilan(soiree), { v: 4, n: 1, d: 1, pour: 10, contre: 7 });
+  assert.equal(serie([match(1, 'D'), sansDetail]).texte, 'Dernier match : victoire');
+  assert.equal(vueBandeau({ club, soiree }).serie.texte, '4 victoires d’affilée');
+
+  const t = vueTableau({ club, soiree });
+  assert.equal(t.sousTitre.includes('6 matchs'), true);
+  assert.deepEqual(t.matchs.at(-1), { resultat: 'V', score: 'Victoire', legende: 'Dasporto' });
+  // Le MVP se juge sur les matchs detailles : les memes trophees qu'avant.
+  assert.deepEqual(
+    t.trophees.map((x) => x.nom),
+    vueTableau({ club, soiree: s }).trophees.map((x) => x.nom)
+  );
 });

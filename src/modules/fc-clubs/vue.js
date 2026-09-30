@@ -181,9 +181,10 @@ export function vueTableau({ club, soiree, sr = null, adversaire = true }) {
     ],
     // Les cinq derniers, du plus ancien au plus recent.
     titreMatchs: soiree.length > 5 ? 'Les 5 derniers matchs' : 'Les matchs de la soirée',
+    // Sans score connu (EA n'a publie que le resultat), le mot a sa place.
     matchs: soiree.slice(-5).map((m) => ({
       resultat: m.resultat,
-      score: m.buts + ' – ' + m.encaisses,
+      score: m.provisoire ? RESULTATS[m.resultat] : m.buts + ' – ' + m.encaisses,
       legende: (adversaire && m.adversaire) || TYPES[m.type] || '',
     })),
   };

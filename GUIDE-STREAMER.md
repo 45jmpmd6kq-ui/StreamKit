@@ -230,7 +230,9 @@ tu veux, puis clique sur **Enregistrer** en bas.
   réglable) et le **tableau de fin de soirée** (les trophées : MVP, Soulier d'or,
   Maître passeur, Le mur, et les derniers matchs). **Tout arrive après le coup de
   sifflet final** : EA publie chaque match quelques minutes après la fin, et rien
-  n'existe pendant le match. Seul ton club est affiché : de l'équipe adverse, juste
+  n'existe pendant le match. Il arrive qu'EA compte un match sans jamais en
+  publier le détail : StreamKit le compte quand même d'après le bilan du club
+  (bandeau, série et tableau), mais sans score ni carte. Seul ton club est affiché : de l'équipe adverse, juste
   son nom à côté du score, et un réglage l'enlève. Les overlays prennent la couleur
   du maillot de ton club. La soirée repart de zéro au premier match après 3 h sans
   jouer, ou quand tu cliques **Commencer une nouvelle soirée**. **Revoir la

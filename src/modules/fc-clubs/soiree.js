@@ -17,14 +17,17 @@ export function matchsDeLaSoiree(matchs, { pauseMs, reinitA = 0, maintenant = Da
   return tries.slice(debut);
 }
 
+// Un match compte d'apres le bilan du club (`provisoire`, voir bilan-club.js)
+// entre dans le bilan et la serie, mais pas dans les buts ni les trophees : EA
+// n'en donne ni le score ni les joueurs.
 export function bilan(soiree) {
   const compte = (r) => soiree.filter((m) => m.resultat === r).length;
   return {
     v: compte('V'),
     n: compte('N'),
     d: compte('D'),
-    pour: soiree.reduce((s, m) => s + m.buts, 0),
-    contre: soiree.reduce((s, m) => s + m.encaisses, 0),
+    pour: soiree.reduce((s, m) => s + (m.buts ?? 0), 0),
+    contre: soiree.reduce((s, m) => s + (m.encaisses ?? 0), 0),
   };
 }
 
@@ -49,7 +52,8 @@ export function serie(soiree) {
 
   const m = soiree.at(-1);
   const mot = { V: 'victoire', N: 'nul', D: 'défaite' }[dernier];
-  return { texte: 'Dernier match : ' + mot + ' ' + m.buts + '–' + m.encaisses, ton: 'neutre', icone: '' };
+  const score = m.provisoire ? '' : ' ' + m.buts + '–' + m.encaisses;
+  return { texte: 'Dernier match : ' + mot + score, ton: 'neutre', icone: '' };
 }
 
 // Les chiffres de chaque joueur sur la soiree.
@@ -97,8 +101,9 @@ function premier(joueurs, valeur, puis) {
 // moyenne parmi ceux qui ont joue au moins la moitie des matchs : un 9 sur un
 // seul match ne doit pas battre une soiree entiere a 8.
 export function trophees(soiree) {
-  const joueurs = statsJoueurs(soiree);
-  const assidus = joueurs.filter((j) => j.matchs >= Math.max(1, Math.ceil(soiree.length / 2)));
+  const detailles = soiree.filter((m) => !m.provisoire);
+  const joueurs = statsJoueurs(detailles);
+  const assidus = joueurs.filter((j) => j.matchs >= Math.max(1, Math.ceil(detailles.length / 2)));
   const parNote = (j) => j.moyenne;
   const parMatchs = (j) => j.matchs;
 
