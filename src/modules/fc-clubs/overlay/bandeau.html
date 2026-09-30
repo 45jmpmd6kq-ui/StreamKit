@@ -159,6 +159,7 @@
       </div>
     </div>
 
+    <script src="/commun/flux.js"></script>
     <script>
       const $ = (id) => document.getElementById(id);
       const cadre = $("cadre");
@@ -240,7 +241,7 @@
         serie: { texte: "3 victoires d’affilée", ton: "or", icone: "flamme" },
       };
 
-      const flux = new EventSource(BASE + "/flux");
+      const flux = new FluxStreamKit(BASE + "/flux");
 
       if (new URLSearchParams(location.search).has("demo")) {
         // En demo, on reste branche au flux pour que la source compte dans la
@@ -248,9 +249,9 @@
         appliquer(DEMO);
       } else {
         flux.addEventListener("etat", (m) => appliquer(JSON.parse(m.data)));
-        // EventSource se reconnecte seul ; on ne masque que si le flux est perdu.
+        // Le flux se reconnecte seul ; on ne masque que si le flux est perdu.
         flux.addEventListener("error", () => {
-          if (flux.readyState === EventSource.CLOSED) cadre.classList.remove("visible");
+          if (flux.readyState === FluxStreamKit.CLOSED) cadre.classList.remove("visible");
         });
       }
     </script>

@@ -229,6 +229,7 @@
       </div>
     </div>
 
+    <script src="/commun/flux.js"></script>
     <script>
       const $ = (id) => document.getElementById(id);
       const cadre = $("cadre");
@@ -358,14 +359,14 @@
         },
       };
 
-      const flux = new EventSource(BASE + "/flux");
+      const flux = new FluxStreamKit(BASE + "/flux");
 
       if (new URLSearchParams(location.search).has("demo")) {
         appliquer(DEMO);
       } else {
         flux.addEventListener("etat", (e) => appliquer(JSON.parse(e.data)));
         flux.addEventListener("error", () => {
-          if (flux.readyState === EventSource.CLOSED) cadre.classList.remove("visible");
+          if (flux.readyState === FluxStreamKit.CLOSED) cadre.classList.remove("visible");
         });
       }
     </script>

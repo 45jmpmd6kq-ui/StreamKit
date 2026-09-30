@@ -64,6 +64,16 @@ export default [
     },
   },
 
+  // --- Les scripts communs des overlays : navigateur, script classique -----
+  {
+    files: ['src/commun/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'script',
+      globals: globals.browser,
+    },
+  },
+
   // --- Les overlays et les pages de module : <script> inline ---------------
   {
     files: ['**/*.html'],
@@ -71,7 +81,8 @@ export default [
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'script', // un <script> sans type="module"
-      globals: globals.browser,
+      // FluxStreamKit : pose par /commun/flux.js, charge avant le script inline.
+      globals: { ...globals.browser, FluxStreamKit: 'readonly' },
     },
     rules: {
       // Sans `const`, une affectation cree un global sur window : deux overlays

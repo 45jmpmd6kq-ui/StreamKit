@@ -328,6 +328,7 @@
     <div id="cartes" class="cartes" data-position="sous-bandeau"></div>
     <div id="annonce" class="annonce" data-position="haut"></div>
 
+    <script src="/commun/flux.js"></script>
     <script>
       const $ = (id) => document.getElementById(id);
 
@@ -568,7 +569,7 @@
 
       // En demo aussi, le flux donne les positions : l'exemple suit les reglages
       // des qu'on les enregistre. Les vrais moments, eux, ne s'y melent pas.
-      const flux = new EventSource(BASE + "/flux");
+      const flux = new FluxStreamKit(BASE + "/flux");
       flux.addEventListener("etat", (e) => theme(lire(e)?.theme));
 
       if (new URLSearchParams(location.search).has("demo")) {

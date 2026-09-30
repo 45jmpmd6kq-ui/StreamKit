@@ -4,7 +4,9 @@
 //   /                        le dashboard
 //   /api/...                 l'API que consomme le dashboard
 //   /overlay/<module>/<vue>  les sources Navigateur a coller dans OBS
-//   /overlay/<module>/<vue>/flux   le flux temps reel de cet overlay
+//   /overlay/<module>/<vue>/flux   le flux temps reel de cet overlay (WebSocket,
+//                                  ou SSE pour un overlay d'avant la 0.29.1)
+//   /commun/<fichier>        les scripts partages par les overlays
 //
 // Le serveur n'ecoute que sur les boucles locales (127.0.0.1 et ::1, voir
 // ecouter) : rien n'est expose sur le reseau ni sur internet. C'est volontaire
@@ -15,7 +17,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync, readdirSync, createReadStream, statSync } from 'node:fs';
 import { join, normalize, extname, sep } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { DASHBOARD_DIR, MODULES_DIR, JOURNAUX_DIR } from './paths.js';
+import { DASHBOARD_DIR, MODULES_DIR, JOURNAUX_DIR, COMMUN_DIR } from './paths.js';
 import * as journal from './journal.js';
 import * as diffusion from './diffusion.js';
 
@@ -132,7 +134,8 @@ function csp(nonce) {
     // deja le second (constate en septembre 2026) ; ddragon.leagueoflegends.com
     // pour les icones de champions du suivi de session LoL (le CDN de Riot).
     "img-src 'self' data: https://media.valorant-api.com https://i.scdn.co https://*.spotifycdn.com https://ddragon.leagueoflegends.com",
-    // fetch et EventSource des overlays : tout est local, rien ne sort.
+    // fetch, EventSource et WebSocket des overlays : tout est local, rien ne
+    // sort. 'self' couvre ws:// sur la meme adresse (CSP niveau 3).
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
@@ -344,33 +347,40 @@ export function creerServeur(app) {
   // `app` fournit les dependances (registre, twitch, maj...) : le serveur ne
   // connait rien du reste, il ne fait que router.
 
+  // Hote, origine, Fetch Metadata : les memes gardes pour une requete HTTP et
+  // pour l'ouverture d'un WebSocket.
+  function refuser(req, methode, chemin) {
+    if (
+      hoteLocal(req.headers.host, app.port) &&
+      origineLocale(req.headers.origin, app.port) &&
+      siteAutorise(req, methode)
+    ) {
+      return false;
+    }
+    // On ne dit pas pourquoi : une page qui sonde n'a pas a savoir si elle
+    // s'est trompee d'hote ou d'origine. Le journal, lui, le dit.
+    log.warn(
+      'Requete refusee (hote « ' +
+        (req.headers.host ?? '?') +
+        ' »' +
+        (req.headers.origin ? ', origine « ' + req.headers.origin + ' »' : '') +
+        (req.headers['sec-fetch-site']
+          ? ', site « ' + req.headers['sec-fetch-site'] + ' » / ' + (req.headers['sec-fetch-dest'] ?? '?')
+          : '') +
+        ') : ' +
+        methode +
+        ' ' +
+        chemin
+    );
+    return true;
+  }
+
   const handler = async (req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     const methode = req.method ?? 'GET';
     let chemin = url.pathname;
 
-    if (
-      !hoteLocal(req.headers.host, app.port) ||
-      !origineLocale(req.headers.origin, app.port) ||
-      !siteAutorise(req, methode)
-    ) {
-      // On ne dit pas pourquoi : une page qui sonde n'a pas a savoir si elle
-      // s'est trompee d'hote ou d'origine. Le journal, lui, le dit.
-      log.warn(
-        'Requete refusee (hote « ' +
-          (req.headers.host ?? '?') +
-          ' »' +
-          (req.headers.origin ? ', origine « ' + req.headers.origin + ' »' : '') +
-          (req.headers['sec-fetch-site']
-            ? ', site « ' + req.headers['sec-fetch-site'] + ' » / ' + (req.headers['sec-fetch-dest'] ?? '?')
-            : '') +
-          ') : ' +
-          methode +
-          ' ' +
-          chemin
-      );
-      return texte(res, 403, 'Interdit');
-    }
+    if (refuser(req, methode, chemin)) return texte(res, 403, 'Interdit');
 
     // Le decodage est fait APRES le controle d'acces, et surtout dans un try :
     // « /overlay/%E0%A4%A » est une sequence percent tronquee, decodeURIComponent
@@ -383,6 +393,12 @@ export function creerServeur(app) {
     }
 
     try {
+      // --- Scripts communs des overlays ------------------------------------
+      // /commun/flux.js : le flux temps reel en WebSocket (voir diffusion.js).
+      if (chemin.startsWith('/commun/')) {
+        return servirFichier(res, COMMUN_DIR, chemin.slice('/commun/'.length));
+      }
+
       // --- Overlays OBS ----------------------------------------------------
       // /overlay/<module>/<vue>[/flux][/<fichier>]
       if (chemin.startsWith('/overlay/')) {
@@ -663,8 +679,35 @@ export function creerServeur(app) {
     }
   };
 
+  // Une ouverture de WebSocket refusee : une reponse HTTP ordinaire, puis on raccroche.
+  const fermerWs = (socket, statut) => socket.end('HTTP/1.1 ' + statut + '\r\nConnection: close\r\n\r\n');
+
+  // Ouverture d'un WebSocket : seul le flux d'un overlay en accepte un.
+  // /overlay/<module>/<vue>/flux, meme adresse que le flux SSE.
+  const upgrade = (req, socket) => {
+    socket.on('error', () => {}); // une socket coupee net ne doit rien faire tomber
+    let chemin;
+    try {
+      chemin = decodeURIComponent(new URL(req.url, 'http://127.0.0.1').pathname);
+    } catch {
+      return fermerWs(socket, '400 Bad Request');
+    }
+    if (refuser(req, 'GET', chemin)) {
+      return fermerWs(socket, '403 Forbidden');
+    }
+    const m = chemin.match(/^\/overlay\/([^/]+)\/([^/]+)\/flux$/);
+    const mod = m && app.registre.get(m[1]);
+    if (!mod || !(mod.manifeste.overlays ?? []).some((o) => o.chemin === m[2])) {
+      return fermerWs(socket, '404 Not Found');
+    }
+    diffusion.brancherWs('overlay:' + m[1] + ':' + m[2], req, socket);
+  };
+
   const serveur = http.createServer(handler);
-  serveur.handler = handler; // reutilise par l'ecoute IPv6 (voir ecouter)
+  serveur.on('upgrade', upgrade);
+  // Reutilises par l'ecoute IPv6 (voir ecouter)
+  serveur.handler = handler;
+  serveur.upgrade = upgrade;
   return serveur;
 }
 
@@ -695,6 +738,7 @@ export function ecouter(serveur, port) {
 
     serveur.listen(port, '127.0.0.1', () => {
       const jumeau = http.createServer(serveur.handler);
+      if (serveur.upgrade) jumeau.on('upgrade', serveur.upgrade);
       // Machine sans IPv6 : on continue simplement en IPv4.
       jumeau.on('error', () => {});
       jumeau.listen(port, '::1');

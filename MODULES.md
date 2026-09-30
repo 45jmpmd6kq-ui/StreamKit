@@ -245,15 +245,27 @@ ni coupé à l'arrêt du module.
 
 ## Les overlays
 
-Une page HTML par vue, dans `overlay/`. Elle s'abonne au flux du module :
+Une page HTML par vue, dans `overlay/`. Elle charge le script commun, puis
+s'abonne au flux du module :
+
+```html
+<script src="/commun/flux.js"></script>
+```
 
 ```js
-const flux = new EventSource(location.pathname.replace(/\/$/, "") + "/flux");
+const flux = new FluxStreamKit(location.pathname.replace(/\/$/, "") + "/flux");
 flux.addEventListener("etat", (e) => appliquer(JSON.parse(e.data)));
 flux.addEventListener("notification", (e) => afficher(JSON.parse(e.data)));
 ```
 
-⚠️ **N'écris pas `new EventSource("flux")`.** L'URL de l'overlay n'a pas de
+⚠️ **Pas d'`EventSource` dans un overlay.** Toutes les sources Navigateur
+d'OBS partagent un moteur Chromium limité à 6 connexions HTTP ouvertes par
+hôte : un flux SSE en garde une pour toujours, et au 7e overlay StreamKit chargé
+dans OBS (toutes scènes confondues), la page reste vide. `FluxStreamKit` passe
+par un WebSocket, qui n'entre pas dans ce compte, avec la même interface
+(`addEventListener`, `readyState`, `FluxStreamKit.CLOSED`).
+
+⚠️ **N'écris pas `new FluxStreamKit("flux")`.** L'URL de l'overlay n'a pas de
 slash final : un chemin relatif remplacerait le dernier segment et appellerait
 `/overlay/<module>/flux` au lieu de `/overlay/<module>/<vue>/flux`. L'overlay
 resterait désespérément vide, sans erreur visible dans OBS.
@@ -263,7 +275,7 @@ Trois règles apprises sur les projets précédents :
 1. **Fond transparent** — jamais de `background` sur `<body>`.
 2. **`?demo=1`** — affiche un contenu factice pour placer la source dans OBS
    sans lancer StreamKit. Le streamer place, puis retire le paramètre.
-3. **`EventSource` reconnecte tout seul** : un redémarrage de StreamKit (ou une
+3. **Le flux se reconnecte tout seul** : un redémarrage de StreamKit (ou une
    mise à jour) ne casse pas l'overlay en plein live.
 
 Dans OBS : Source ▸ Navigateur ▸ `http://127.0.0.1:47455/overlay/<module>/<vue>`

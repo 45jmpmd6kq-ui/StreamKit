@@ -198,6 +198,7 @@
     </div>
   </div>
 
+<script src="/commun/flux.js"></script>
 <script>
 const machine = document.getElementById('machine');
 const reel    = document.getElementById('reel');
@@ -305,8 +306,8 @@ const BASE = location.pathname.replace(/\/$/, '');
 
 // Theme et flux temps reel arrivent ensemble dans l'evenement « etat », qui est
 // memorise cote serveur : une source OBS rechargee en plein live retrouve
-// immediatement ses couleurs. EventSource se reconnecte tout seul.
-const flux = new EventSource(BASE + '/flux');
+// immediatement ses couleurs. Le flux se reconnecte tout seul.
+const flux = new FluxStreamKit(BASE + '/flux');
 
 // « #00b0ff » -> « 0, 176, 255 », pour les rgba() du CSS. null si la couleur
 // est illisible : la valeur par defaut du CSS reste alors.

@@ -269,6 +269,7 @@
       </div>
     </div>
 
+    <script src="/commun/flux.js"></script>
     <script>
       const notif = document.getElementById("notif");
       const nIco = document.getElementById("n-ico");
@@ -605,8 +606,8 @@
       // ---- Flux temps réel ---------------------------------------------------
       // Chemin construit depuis location.pathname : un simple "flux" relatif
       // remplacerait le dernier segment et taperait /overlay/musique/flux.
-      // EventSource reconnecte tout seul (redémarrage de StreamKit, mise à jour).
-      const flux = new EventSource(chemin + "/flux");
+      // Le flux se reconnecte tout seul (redémarrage de StreamKit, mise à jour).
+      const flux = new FluxStreamKit(chemin + "/flux");
 
       // L'état porte le thème ET la liste : il est mémorisé côté serveur, donc
       // une source OBS qui se reconnecte en plein live retrouve tout de suite

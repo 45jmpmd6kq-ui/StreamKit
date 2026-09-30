@@ -19,6 +19,8 @@ import { homedir } from 'node:os';
 export const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const MODULES_DIR = join(RACINE, 'src', 'modules');
 export const DASHBOARD_DIR = join(RACINE, 'src', 'dashboard');
+// Les scripts partages par les overlays de tous les modules (/commun/...).
+export const COMMUN_DIR = join(RACINE, 'src', 'commun');
 
 const defaut =
   process.platform === 'win32' && process.env.APPDATA

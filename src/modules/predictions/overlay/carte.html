@@ -320,6 +320,7 @@
       </div>
     </div>
 
+    <script src="/commun/flux.js"></script>
     <script>
       const sb = document.getElementById('sb');
       const $ = (id) => document.getElementById(id);
@@ -562,7 +563,7 @@
       // Chemin construit depuis location.pathname : un relatif remplacerait le
       // dernier segment de l'URL et taperait /overlay/predictions/flux.
       const BASE = location.pathname.replace(/\/$/, '');
-      const flux = new EventSource(BASE + '/flux');
+      const flux = new FluxStreamKit(BASE + '/flux');
 
       if (demo !== null) {
         const statut = ['verrouillee', 'resolue', 'annulee'].includes(demo) ? demo : 'active';

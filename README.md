@@ -59,7 +59,7 @@ src/
     registre.js         découverte, validation, cycle de vie des modules
     twitch.js           UNE connexion chat + UN EventSub partagés
     auth.js             OAuth Twitch (l'app appartient au streamer)
-    diffusion.js        SSE (overlays + flux du journal)
+    diffusion.js        WebSocket (overlays) + SSE (flux du journal)
     serveur.js          serveur HTTP unique : dashboard, API, overlays
     maj.js              mise à jour depuis les releases GitHub
     connecteurs.js      services externes : identifiants + autorisation
@@ -477,6 +477,10 @@ casser les réglages de tout le monde à la 3ᵉ mise à jour.
 
 ## Pièges rencontrés (à ne pas refaire)
 
+- **Un `EventSource` par overlay** : les sources Navigateur d'OBS partagent un
+  Chromium limité à 6 connexions HTTP par hôte ; au 7e flux SSE ouvert, la page
+  suivante reste vide (streamer, 30/09/2026). Les overlays passent par
+  `FluxStreamKit` (WebSocket, `/commun/flux.js`).
 - **`new EventSource("flux")` dans un overlay** résout vers
   `/overlay/<module>/flux`, pas `/overlay/<module>/<vue>/flux` : l'URL n'a pas de
   slash final, donc le dernier segment est remplacé. L'overlay reste vide sans

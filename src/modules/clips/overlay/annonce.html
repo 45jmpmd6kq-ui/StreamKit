@@ -71,6 +71,7 @@
       </div>
     </div>
 
+    <script src="/commun/flux.js"></script>
     <script>
       const carte = document.getElementById('carte');
       const $ = (id) => document.getElementById(id);
@@ -103,7 +104,7 @@
       // Chemin construit depuis location.pathname : un relatif remplacerait le
       // dernier segment de l'URL et taperait /overlay/clips/flux.
       const BASE = location.pathname.replace(/\/$/, '');
-      const flux = new EventSource(BASE + '/flux');
+      const flux = new FluxStreamKit(BASE + '/flux');
 
       flux.addEventListener('etat', (e) => appliquerTheme(JSON.parse(e.data).theme));
       flux.addEventListener('clip', (e) => {

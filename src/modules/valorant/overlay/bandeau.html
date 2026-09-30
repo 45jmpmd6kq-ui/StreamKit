@@ -297,10 +297,11 @@ body {
 
 </div>
 
+<script src="/commun/flux.js"></script>
 <script>
 /* ==========================================================================
    Valorant Overlay — bandeau de session
-   Alimenté par le flux temps réel du module (SSE) : plus de sondage.
+   Alimenté par le flux temps réel du module (WebSocket) : plus de sondage.
    Paramètres d'URL acceptés :
      ?scale=1.25   agrandit tout le bandeau (OBS sait aussi redimensionner)
      ?pips=0       masque les losanges des derniers matchs
@@ -448,11 +449,11 @@ function renderOffline(message) {
 const BASE = location.pathname.replace(/\/$/, '');
 
 function brancher() {
-  const flux = new EventSource(BASE + '/flux');
+  const flux = new FluxStreamKit(BASE + '/flux');
   flux.addEventListener('etat', (e) => render(JSON.parse(e.data)));
-  // EventSource se reconnecte seul : on ne signale la coupure que si elle dure.
+  // Le flux se reconnecte seul : on ne signale la coupure que si elle dure.
   flux.addEventListener('error', () => {
-    if (flux.readyState === EventSource.CLOSED) renderOffline('StreamKit arrete');
+    if (flux.readyState === FluxStreamKit.CLOSED) renderOffline('StreamKit arrete');
   });
 }
 

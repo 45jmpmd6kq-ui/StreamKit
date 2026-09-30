@@ -433,3 +433,146 @@ test('un refus OAuth ne peut pas injecter de script dans la page de retour', asy
   assert.ok(!html.includes('<img'), 'la balise est passee telle quelle');
   assert.ok(html.includes('&lt;img'), 'le message doit apparaitre, mais echappe');
 });
+
+// --- Flux des overlays en WebSocket ---------------------------------------
+//
+// Les sources Navigateur d'OBS partagent un Chromium limite a 6 connexions HTTP
+// par hote : au 7e flux SSE, la page suivante restait vide (30/09/2026). Les
+// overlays passent donc par un WebSocket.
+
+// Ouverture brute : on maitrise chaque en-tete, Origin compris.
+function ouvertureWs({ chemin, entetes = {}, hote = '127.0.0.1' }) {
+  return new Promise((resolve, reject) => {
+    const r = http.request({
+      host: hote,
+      port: PORT,
+      path: chemin,
+      headers: {
+        Connection: 'Upgrade',
+        Upgrade: 'websocket',
+        'Sec-WebSocket-Version': '13',
+        'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
+        ...entetes,
+      },
+    });
+    r.on('upgrade', (res, socket) => {
+      socket.destroy();
+      resolve({ code: res.statusCode, entetes: res.headers });
+    });
+    r.on('response', (res) => {
+      res.resume();
+      resolve({ code: res.statusCode });
+    });
+    r.on('error', reject);
+    r.end();
+  });
+}
+
+test('le flux d un overlay s ouvre en WebSocket et recoit le dernier etat', { timeout: 5000 }, async () => {
+  const diffusion = await import('../src/core/diffusion.js');
+  diffusion.diffuser('overlay:roue-rl:roue', 'etat', { theme: 'sombre', n: 1 });
+
+  const ws = new WebSocket('ws://127.0.0.1:' + PORT + '/overlay/roue-rl/roue/flux');
+  const recus = [];
+  const attendre = (n) =>
+    new Promise((resolve) => {
+      const t = setInterval(() => {
+        if (recus.length >= n) {
+          clearInterval(t);
+          resolve();
+        }
+      }, 10);
+    });
+  ws.onmessage = (m) => recus.push(String(m.data));
+  await new Promise((resolve, reject) => {
+    ws.onopen = resolve;
+    ws.onerror = reject;
+  });
+
+  await attendre(1);
+  assert.equal(recus[0], 'etat\n{"theme":"sombre","n":1}', 'l etat memorise doit arriver des l ouverture');
+  assert.equal(
+    diffusion.nbClients('overlay:roue-rl:roue'),
+    1,
+    'la source doit compter dans la vue d ensemble'
+  );
+
+  // Un message au-dela de 125 octets : longueur sur 16 bits.
+  const long = 'é'.repeat(200);
+  diffusion.diffuser('overlay:roue-rl:roue', 'spin', { long });
+  await attendre(2);
+  assert.equal(recus[1], 'spin\n' + JSON.stringify({ long }));
+
+  ws.close();
+  for (let i = 0; i < 50 && diffusion.nbClients('overlay:roue-rl:roue'); i++) {
+    await new Promise((r) => {
+      setTimeout(r, 20);
+    });
+  }
+  assert.equal(diffusion.nbClients('overlay:roue-rl:roue'), 0, 'un overlay ferme doit quitter le canal');
+});
+
+test('le flux WebSocket repond aussi sur la boucle IPv6', async () => {
+  const r = await ouvertureWs({ chemin: '/overlay/roue-rl/roue/flux', hote: '::1' });
+  assert.equal(r.code, 101);
+  assert.equal(r.entetes['sec-websocket-accept'], 's3pPLMBiTxaQ9kYGzzhZRbK+xOo=');
+});
+
+test('un WebSocket ouvert depuis un site tiers est refuse', async () => {
+  const r = await ouvertureWs({
+    chemin: '/overlay/roue-rl/roue/flux',
+    entetes: { Origin: 'https://attaquant.example' },
+  });
+  assert.equal(r.code, 403);
+});
+
+test('un WebSocket sous un Host inconnu (rebinding DNS) est refuse', async () => {
+  const r = await ouvertureWs({
+    chemin: '/overlay/roue-rl/roue/flux',
+    entetes: { Host: 'attaquant.example' },
+  });
+  assert.equal(r.code, 403);
+});
+
+test('seul le flux d un overlay declare accepte un WebSocket', async () => {
+  for (const chemin of [
+    '/api/etat',
+    '/overlay/roue-rl/inconnu/flux',
+    '/overlay/inconnu/roue/flux',
+    '/overlay/roue-rl/roue',
+  ]) {
+    const r = await ouvertureWs({ chemin });
+    assert.equal(r.code, 404, chemin);
+  }
+});
+
+test('le script commun des overlays est servi', async () => {
+  const r = await requete({ chemin: '/commun/flux.js' });
+  assert.equal(r.code, 200);
+  assert.match(r.entetes['content-type'], /javascript/);
+  assert.match(r.corps, /FluxStreamKit/);
+});
+
+test('aucun overlay n ouvre plus de flux SSE', async () => {
+  const { readdirSync, readFileSync, existsSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const racine = join(import.meta.dirname, '..', 'src', 'modules');
+  for (const m of readdirSync(racine)) {
+    const d = join(racine, m, 'overlay');
+    if (!existsSync(d)) continue;
+    for (const f of readdirSync(d).filter((x) => x.endsWith('.html'))) {
+      const html = readFileSync(join(d, f), 'utf8');
+      assert.doesNotMatch(
+        html,
+        /new EventSource\(/,
+        m + '/' + f + ' : EventSource bloque OBS au-dela de 6 overlays'
+      );
+      if (html.includes('FluxStreamKit')) {
+        assert.ok(
+          html.indexOf('/commun/flux.js') < html.indexOf('new FluxStreamKit('),
+          m + '/' + f + ' : /commun/flux.js doit etre charge avant le script'
+        );
+      }
+    }
+  }
+});
