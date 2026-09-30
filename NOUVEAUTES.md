@@ -11,6 +11,16 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.29.1
+
+### Corrections
+
+- **Tes overlays s'affichent tous dans OBS, même quand tu en as beaucoup.** OBS
+  n'arrivait à charger que 6 overlays StreamKit à la fois, toutes scènes
+  confondues : au-delà, les nouveaux restaient vides, alors qu'ils s'affichaient
+  très bien dans ton navigateur. Il n'y a plus de limite. Après la mise à jour,
+  clique une fois sur **Actualiser** sous chaque source restée vide.
+
 ## 0.29.0
 
 ### Nouveautés
