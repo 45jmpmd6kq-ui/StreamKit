@@ -11,6 +11,19 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.29.2
+
+### Corrections
+
+- **Soirée Clubs : ton bilan reste juste même quand EA oublie un match.** Il
+  arrive qu'EA compte un match dans le bilan de ton club sans jamais le publier
+  dans son historique : le bandeau restait alors bloqué sur le dernier match
+  publié. StreamKit lit maintenant aussi le bilan du club, et compte ces matchs
+  (victoire, nul ou défaite) dans le bandeau, la série et le tableau. Sans score
+  ni joueurs, ils n'ont pas de carte de fin de match et ne comptent pas pour les
+  trophées. Si EA publie le détail plus tard, le match le récupère sans être
+  compté deux fois, et sa carte s'affiche si aucun autre match n'a suivi.
+
 ## 0.29.1
 
 ### Corrections
