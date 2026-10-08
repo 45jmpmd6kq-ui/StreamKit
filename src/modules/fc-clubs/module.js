@@ -234,6 +234,10 @@ export default {
     {
       chemin: 'formation',
       nom: 'Formation du club',
+      icone: '⚽',
+      // Une ligne dans le rail, sous Soiree Clubs : la section « Interfaces »
+      // du module n'etait pas assez visible (retour du user le 08/10/2026).
+      raccourci: true,
       description: 'Inscris tes joueurs, tire leurs postes au sort, puis retourne les cartes sur le terrain.',
       fichier: 'formation.html',
     },

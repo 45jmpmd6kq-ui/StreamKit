@@ -502,7 +502,20 @@ function dessinerRail() {
                 ${pointDeModule(m)}
                 <span class="icone">${m.icone}</span>
                 <span class="nom">${echapper(m.nom)}</span>
-              </button>`
+              </button>${(m.pages ?? [])
+                .filter((p) => p.raccourci)
+                .map(
+                  // Raccourci vers une interface du module, juste sous lui : elle
+                  // s'ouvre dans le navigateur, comme son bouton « Ouvrir ».
+                  (p) => `
+              <a class="entree sous-entree" href="${p.url}" target="_blank" rel="noreferrer"
+                 title="${echapper(p.description)}">
+                <span class="icone">${echapper(p.icone || '↗')}</span>
+                <span class="nom">${echapper(p.nom)}</span>
+                <span class="ouvre">↗</span>
+              </a>`
+                )
+                .join('')}`
               )
               .join('')}
           </div>

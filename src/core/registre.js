@@ -312,6 +312,9 @@ export function vue(id) {
       chemin: p.chemin,
       nom: p.nom,
       description: p.description ?? '',
+      // `raccourci` : la page a aussi sa ligne dans le rail, sous son module.
+      raccourci: !!p.raccourci,
+      icone: p.icone ?? '',
       url: '/module/' + m.id + '/' + p.chemin,
     })),
   };

@@ -330,6 +330,14 @@ pages: [{ chemin: 'voitures', nom: 'Mes voitures', fichier: 'voitures.html' }]
 Le fichier va dans `pages/`, StreamKit le sert sous
 `/module/<module>/<chemin>`, et le dashboard y met un bouton **Ouvrir**.
 
+Une page dont le streamer se sert souvent peut aussi avoir **sa ligne dans le
+rail**, juste sous son module : `raccourci: true` (et une `icone`). Elle s'ouvre
+dans le navigateur, comme son bouton :
+
+```js
+pages: [{ chemin: 'formation', nom: 'Formation du club', icone: '⚽', raccourci: true, fichier: 'formation.html' }]
+```
+
 Une page dialogue avec son module **par ses actions**, exactement comme le
 dashboard — elle n'a aucune route à elle :
 
