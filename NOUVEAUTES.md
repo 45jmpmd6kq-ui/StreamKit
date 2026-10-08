@@ -11,21 +11,22 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
-## 0.30.5
+## 0.30.6
 
 ### Nouveautés
 
 - **Soirée Clubs : la formation de ton club, tirée au sort.** Dans le module
   Soirée Clubs, ouvre l'interface « Formation du club » : choisis ton schéma
   (4-3-3, 4-2-3-1, 4-1-2-1-2 serré ou large, 3-5-2…), puis clique sur les
-  joueurs de ton club (StreamKit les lit chez EA) ou tape leurs pseudos, de 1
-  à 11. Impose un poste à ceux qui y tiennent ; les autres sont tirés au sort,
-  d'abord au milieu et en attaque, puis en défense, dans les buts en dernier.
-  Choisir une formation pose aussitôt ses 11 cartes de dos sur le terrain.
-  Au tirage, des cartes au format FC 27 arrivent face cachée, et la
-  roulette les retourne une à une pour dévoiler qui joue où. Les places sans
-  joueur ont leur carte argent « IA », visible d'emblée. Ta liste de joueurs
-  est gardée d'une soirée à l'autre.
+  joueurs de ton club (les 12 plus assidus, que StreamKit lit chez EA) ou tape
+  leurs pseudos, de 1 à 11. Impose un poste à ceux qui y tiennent ; les autres
+  sont tirés au sort, d'abord au milieu et en attaque, puis en défense, dans
+  les buts en dernier. Choisir une formation pose aussitôt ses 11 cartes de
+  dos sur le terrain, chacune marquée de son poste. Au tirage, des cartes au
+  format FC 27 arrivent face cachée, et la roulette les retourne une à une
+  pour dévoiler qui joue où. Les places sans joueur ont leur carte argent
+  « IA », visible d'emblée. Ta liste de joueurs est gardée d'une soirée à
+  l'autre.
 
 ## 0.29.2
 
