@@ -20,7 +20,7 @@
 // Aucun droit Twitch : le module tourne meme sans chaine connectee.
 
 import { creerClientEA, moteurReseau, NOM_MAX } from './ea.js';
-import { choisirClub, couleurDuMaillot, nomDivision } from './club.js';
+import { choisirClub, couleurDuMaillot, lireMembres, membresDesMatchs, nomDivision } from './club.js';
 import { analyserMatch } from './analyse.js';
 import { lireBilan, matchDuBilan, nouveauxDuBilan, provisoireDe } from './bilan-club.js';
 import { bilan, matchsDeLaSoiree } from './soiree.js';
@@ -308,9 +308,9 @@ export default {
         : { ok: false, erreur: 'Aucun match du club n’est encore connu.' };
     },
 
-    // Les trois suivantes servent la page « Formation du club » : pas de bouton
+    // Les suivantes servent la page « Formation du club » : pas de bouton
     // (un clic sans donnees viderait la liste des joueurs). Elles marchent
-    // module arrete : rien ne passe par EA.
+    // module arrete ; seule la liste des membres passe par EA.
     async formation(ctx) {
       const c = ctx.config;
       const club = ctx.etat.lire({}).club;
@@ -331,6 +331,49 @@ export default {
       const propre = nettoyer(corps);
       sauverFormation(ctx, { ...lireFormation(ctx), ...propre });
       return { message: propre.joueurs.length + ' joueur(s) enregistré(s).', ...propre };
+    },
+
+    // Les membres du club chez EA, pour les ajouter d'un clic. Le club deja
+    // retrouve par le module sert tel quel ; sinon on le cherche par son nom.
+    // EA muet : les joueurs des matchs deja retenus, s'il y en a.
+    async membresDuClub(ctx) {
+      if (!String(ctx.config.club ?? '').trim()) {
+        return {
+          ok: false,
+          erreur: 'Indique le nom du club dans les réglages du module pour lire ses joueurs.',
+        };
+      }
+      const stocke = ctx.etat.lire({});
+      const memeClub = stocke.cle === cleDuClub(ctx.config);
+      let id = memeClub ? stocke.club?.id : '';
+      const moteur = await moteurReseau();
+      const repli = (erreur) => {
+        const vus = memeClub ? membresDesMatchs(stocke.matchs) : [];
+        return vus.length
+          ? {
+              message: 'EA ne répond pas : joueurs vus dans les derniers matchs.',
+              membres: vus,
+              depuisMatchs: true,
+            }
+          : { ok: false, erreur };
+      };
+      try {
+        if (!id) {
+          const r = await chercher(ctx.config);
+          if (r.statut === 'erreur') return repli(r.message);
+          if (r.statut !== 'trouve') {
+            return {
+              ok: false,
+              erreur: 'Club introuvable chez EA : clique « Chercher le club chez EA » dans le module.',
+            };
+          }
+          id = r.club.id;
+        }
+        const membres = lireMembres(await creerClientEA({ fetch: moteur.fetch }).membres(id));
+        return { message: membres.length + ' joueur(s) dans le club.', membres };
+      } catch (e) {
+        return repli(messageErreur(e, moteur));
+      }
     },
 
     async tirerFormation(ctx, corps) {

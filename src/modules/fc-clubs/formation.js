@@ -215,18 +215,41 @@ export function probleme({ joueurs }) {
   return null;
 }
 
-// Le tirage. Les postes imposes d'abord, puis chaque autre joueur prend une
-// place libre au hasard (Fisher-Yates sur les places libres). `hasard` rend un
-// nombre dans [0, 1[ : remplace dans les tests.
+// L'ordre dans lequel les joueurs sans poste impose remplissent la formation
+// (demande du user le 08/10/2026) : d'abord l'attaque et le milieu, puis la
+// defense, le gardien en dernier. A 5 joueurs dans un 4-3-3, tous sont donc
+// milieux ou attaquants ; l'IA tient le reste.
+const PRIORITE = { ATT: 0, MIL: 0, DEF: 1, G: 2 };
+
+function melanger(liste, hasard) {
+  const l = [...liste];
+  for (let i = l.length - 1; i > 0; i--) {
+    const k = Math.floor(hasard() * (i + 1));
+    [l[i], l[k]] = [l[k], l[i]];
+  }
+  return l;
+}
+
+// Le tirage. Les postes imposes d'abord ; les places libres sont ensuite
+// melangees a l'interieur de chaque niveau de priorite, et les autres joueurs,
+// melanges eux aussi, les prennent dans cet ordre. `hasard` rend un nombre
+// dans [0, 1[ : remplace dans les tests.
 export function tirer({ code, joueurs }, hasard = Math.random) {
   const f = formation(code);
-  const libres = f.places.map((pl) => pl.id).filter((id) => !joueurs.some((j) => j.force === id));
-  for (let i = libres.length - 1; i > 0; i--) {
-    const k = Math.floor(hasard() * (i + 1));
-    [libres[i], libres[k]] = [libres[k], libres[i]];
+  const libres = f.places.filter((pl) => !joueurs.some((j) => j.force === pl.id));
+  const ordre = [0, 1, 2].flatMap((niveau) =>
+    melanger(
+      libres.filter((pl) => PRIORITE[pl.ligne] === niveau).map((pl) => pl.id),
+      hasard
+    )
+  );
+  const attribue = new Map(joueurs.filter((j) => j.force).map((j) => [j.nom, j.force]));
+  for (const [i, j] of melanger(
+    joueurs.filter((x) => !x.force),
+    hasard
+  ).entries()) {
+    attribue.set(j.nom, ordre[i]);
   }
-  let suivant = 0;
-  const attribue = new Map(joueurs.map((j) => [j.nom, j.force || libres[suivant++]]));
   const joueurDe = new Map([...attribue].map(([nom, id]) => [id, nom]));
   // Les 11 places, du gardien vers l'attaque et de gauche a droite (l'ordre de
   // « Tout retourner ») ; celles sans joueur sont a l'IA.

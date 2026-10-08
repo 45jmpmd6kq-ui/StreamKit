@@ -12,6 +12,7 @@ import {
   probleme,
   tirer,
 } from '../src/modules/fc-clubs/formation.js';
+import { lireMembres } from '../src/modules/fc-clubs/club.js';
 import manifeste from '../src/modules/fc-clubs/module.js';
 
 // Un hasard rejouable.
@@ -126,7 +127,7 @@ test('tirage : les postes imposes sont respectes, a chaque fois', () => {
   }
 });
 
-test('tirage : moins de 11 joueurs, l’IA complete la formation, et le hasard varie les places', () => {
+test('tirage : moins de 11 joueurs, l’IA complete la formation, le hasard varie les places de devant', () => {
   const vues = new Set();
   for (let s = 1; s < 200; s++) {
     const r = tirer({ code: '4-3-3', joueurs: noms(3) }, graine(s));
@@ -137,8 +138,57 @@ test('tirage : moins de 11 joueurs, l’IA complete la formation, et le hasard v
     assert.ok(ia.every((pl) => pl.nom === 'IA' && !pl.impose));
     vues.add(r.find((pl) => pl.nom === 'Joueur1').id);
   }
-  // Sur 200 tirages, le premier joueur a connu presque toutes les places.
-  assert.ok(vues.size >= 9, [...vues].join(','));
+  // Sur 200 tirages, le premier joueur a connu toutes les places du milieu et
+  // de l'attaque, et aucune autre.
+  assert.deepEqual([...vues].sort(), ['AD', 'AG', 'BU', 'MC1', 'MC2', 'MC3']);
+});
+
+const ligneDe = (r, nom) => r.find((pl) => pl.nom === nom).ligne;
+
+test('priorite : a 5 joueurs, tous milieux ou attaquants', () => {
+  for (const code of ['4-3-3', '4-4-2', '3-5-2', '5-3-2', '4-1-2-1-2 (2)']) {
+    for (let s = 1; s < 50; s++) {
+      const r = tirer({ code, joueurs: noms(5) }, graine(s));
+      const lignes = r.filter((pl) => !pl.ia).map((pl) => pl.ligne);
+      assert.equal(lignes.length, 5);
+      assert.ok(
+        lignes.every((l) => l === 'ATT' || l === 'MIL'),
+        code + ' : ' + lignes
+      );
+    }
+  }
+});
+
+test('priorite : au-dela du milieu et de l’attaque, la defense, le gardien en dernier', () => {
+  for (let s = 1; s < 50; s++) {
+    const huit = tirer({ code: '4-3-3', joueurs: noms(8) }, graine(s)).filter((pl) => !pl.ia);
+    assert.equal(huit.filter((pl) => pl.ligne === 'DEF').length, 2);
+    assert.ok(!huit.some((pl) => pl.ligne === 'G'));
+    const dix = tirer({ code: '4-3-3', joueurs: noms(10) }, graine(s)).filter((pl) => !pl.ia);
+    assert.ok(!dix.some((pl) => pl.ligne === 'G'));
+  }
+});
+
+test('priorite : un poste impose passe avant, meme en defense ou dans les buts', () => {
+  for (let s = 1; s < 50; s++) {
+    const joueurs = noms(5);
+    joueurs[2].force = 'DC1';
+    joueurs[4].force = 'GB';
+    const r = tirer({ code: '4-3-3', joueurs }, graine(s));
+    assert.equal(ligneDe(r, 'Joueur3'), 'DEF');
+    assert.equal(ligneDe(r, 'Joueur5'), 'G');
+    for (const nom of ['Joueur1', 'Joueur2', 'Joueur4']) assert.ok(['ATT', 'MIL'].includes(ligneDe(r, nom)));
+  }
+});
+
+test('priorite : le premier inscrit n’est pas avantage', () => {
+  // 7 joueurs en 4-3-3 : 6 places devant, une en defense. Chacun doit y passer.
+  const enDefense = new Set();
+  for (let s = 1; s < 200; s++) {
+    const r = tirer({ code: '4-3-3', joueurs: noms(7) }, graine(s));
+    enDefense.add(r.find((pl) => !pl.ia && pl.ligne === 'DEF').nom);
+  }
+  assert.equal(enDefense.size, 7);
 });
 
 test('4-1-2-1-2 (2) : le losange large, MG et MD a la place des deux MC', () => {
@@ -228,8 +278,93 @@ test('la page est declaree, et ses actions ne sont pas des boutons', () => {
     manifeste.pages.map((p) => p.fichier),
     ['formation.html']
   );
-  for (const nom of ['formation', 'enregistrerFormation', 'tirerFormation']) {
+  for (const nom of ['formation', 'enregistrerFormation', 'tirerFormation', 'membresDuClub']) {
     assert.equal(typeof manifeste.actions[nom], 'function');
     assert.ok(!(nom in manifeste.libellesActions), nom);
   }
+});
+
+// --- Joueurs du club, lus chez EA ---------------------------------------------
+
+test('lireMembres : les plus assidus d’abord, poste favori traduit, pseudos vides ecartes', () => {
+  const m = lireMembres({
+    members: [
+      { name: 'aceofspade26', gamesPlayed: '8', favoritePosition: 'defender' },
+      { name: 'Mael_2008_CR7', gamesPlayed: '25', favoritePosition: 'forward' },
+      { name: 'Blaksssiinho', gamesPlayed: '0', favoritePosition: '' },
+      { name: '  ', gamesPlayed: '3' },
+      { name: 'lseeY0uXX', gamesPlayed: '25', favoritePosition: 'midfielder' },
+    ],
+    positionCount: {},
+  });
+  assert.deepEqual(m, [
+    { nom: 'lseeY0uXX', matchs: 25, ligne: 'MIL' },
+    { nom: 'Mael_2008_CR7', matchs: 25, ligne: 'ATT' },
+    { nom: 'aceofspade26', matchs: 8, ligne: 'DEF' },
+    { nom: 'Blaksssiinho', matchs: 0, ligne: '' },
+  ]);
+  assert.deepEqual(lireMembres(null), []);
+});
+
+test('membresDuClub : lit EA avec l’identifiant du club deja retrouve', async (t) => {
+  const appels = [];
+  const fetchOrigine = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    appels.push(String(url));
+    return new Response(
+      JSON.stringify({ members: [{ name: 'RiCoTh0rp3', gamesPlayed: '21', favoritePosition: 'midfielder' }] })
+    );
+  };
+  t.after(() => {
+    globalThis.fetch = fetchOrigine;
+  });
+
+  const ctx = contexte({ cle: '|mafia enjoyer', club: { id: '508816', nom: 'mafia enjoyer' } });
+  ctx.config.clubId = '';
+  const r = await manifeste.actions.membresDuClub(ctx);
+  assert.deepEqual(r.membres, [{ nom: 'RiCoTh0rp3', matchs: 21, ligne: 'MIL' }]);
+  assert.equal(appels.length, 1);
+  assert.match(appels[0], /members\/stats\?platform=common-gen5&clubId=508816$/);
+
+  globalThis.fetch = async () => new Response('', { status: 503 });
+  const panne = await manifeste.actions.membresDuClub(ctx);
+  assert.equal(panne.ok, false);
+
+  const sansClub = await manifeste.actions.membresDuClub({ ...ctx, config: { club: '' } });
+  assert.equal(sansClub.ok, false);
+});
+
+test('membresDuClub : EA muet, repli sur les joueurs des derniers matchs', async (t) => {
+  const fetchOrigine = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error('ERR_HTTP2_PROTOCOL_ERROR');
+  };
+  t.after(() => {
+    globalThis.fetch = fetchOrigine;
+  });
+  const j = (nom, poste) => ({ nom, poste });
+  const ctx = contexte({
+    cle: '|mafia enjoyer',
+    club: { id: '508816', nom: 'mafia enjoyer' },
+    matchs: [
+      { joueurs: [j('Weylaax_', 'ATT'), j('aceofspade26', 'DEF')] },
+      { joueurs: [j('Weylaax_', 'MIL'), j('Weylaax_x', 'ATT')] },
+      { joueurs: [j('Weylaax_', 'ATT'), j('Joueur', 'MIL')] },
+      { provisoire: true, joueurs: [] },
+    ],
+  });
+  ctx.config.clubId = '';
+  const r = await manifeste.actions.membresDuClub(ctx);
+  assert.equal(r.depuisMatchs, true);
+  assert.deepEqual(r.membres, [
+    { nom: 'Weylaax_', matchs: 3, ligne: 'ATT' },
+    { nom: 'aceofspade26', matchs: 1, ligne: 'DEF' },
+    { nom: 'Weylaax_x', matchs: 1, ligne: 'ATT' },
+  ]);
+
+  // Aucun match retenu : l'erreur d'EA remonte telle quelle.
+  const vide = await manifeste.actions.membresDuClub(
+    contexte({ cle: '|mafia enjoyer', club: { id: '508816' } })
+  );
+  assert.equal(vide.ok, false);
 });

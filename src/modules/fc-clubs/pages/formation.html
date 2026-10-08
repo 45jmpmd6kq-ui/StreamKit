@@ -50,6 +50,27 @@
   }
   select:focus, input[type="text"]:focus { border-color: var(--club); }
 
+  /* Les membres du club lus chez EA : un clic les inscrit (ou les retire). */
+  .membres { margin-top: 16px; }
+  .membres .tete { display: flex; align-items: baseline; justify-content: space-between; }
+  .lien {
+    background: none; border: 0; padding: 0; cursor: pointer;
+    color: var(--discret); font: inherit; font-size: 12px;
+  }
+  .lien:hover { color: var(--texte); }
+  .puces { display: flex; flex-wrap: wrap; gap: 6px; }
+  .puce {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--ligne); background: var(--champ); color: var(--texte);
+    font: inherit; font-size: 13px; font-weight: 600;
+  }
+  .puce:hover { border-color: var(--club); }
+  .puce .ligne { font-size: 10.5px; font-weight: 800; color: var(--discret); }
+  .puce.pris { background: color-mix(in srgb, var(--club) 25%, var(--champ)); border-color: var(--club); }
+  .puce.pris::before { content: '✓'; color: var(--club); font-weight: 900; }
+  .discret { color: var(--discret); font-size: 12.5px; line-height: 1.4; }
+
   .joueurs { display: flex; flex-direction: column; gap: 7px; margin: 16px 0 10px; }
   .joueur { display: grid; grid-template-columns: 22px minmax(0, 1fr) 128px 30px; gap: 7px; align-items: center; }
   .joueur .num { color: var(--discret); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
@@ -218,10 +239,18 @@
 <div class="page">
   <section class="panneau">
     <h1>Formation <span class="club" id="club"></span></h1>
-    <div class="sous">Inscris tes joueurs (1 à 11) et tire leurs postes au sort. Un poste choisi dans le menu est imposé à ce joueur ; les autres se partagent les places restantes. Les places sans joueur sont tenues par l’IA : leur carte argent est visible d’emblée.</div>
+    <div class="sous">Clique sur les joueurs du club ou tape leurs pseudos (1 à 11), puis tire leurs postes au sort. Un poste choisi dans le menu est imposé à ce joueur ; les autres prennent d’abord le milieu et l’attaque, puis la défense, les buts en dernier. Les places sans joueur sont tenues par l’IA : leur carte argent est visible d’emblée.</div>
 
     <label class="titre" for="schema">Formation</label>
     <select id="schema"></select>
+
+    <div class="membres">
+      <div class="tete">
+        <label class="titre">Joueurs du club</label>
+        <button class="lien" id="recharger" title="Relire la liste chez EA">↻ Recharger</button>
+      </div>
+      <div class="puces" id="puces"><span class="discret">Lecture des joueurs chez EA…</span></div>
+    </div>
 
     <div class="joueurs" id="joueurs"></div>
     <button class="btn ajouter" id="ajouter">+ Ajouter un joueur</button>
@@ -331,12 +360,74 @@ function rendreJoueurs() {
     })
     .join('');
   $('ajouter').style.display = joueurs.length >= donnees.nbMax ? 'none' : '';
+  rendrePuces();
 }
+
+// --- Joueurs du club (EA) ------------------------------------------------------
+
+const pucesEl = $('puces');
+const LIGNES = { G: 'GB', DEF: 'DEF', MIL: 'MIL', ATT: 'ATT' };
+let membres = null; // null : pas encore lus
+let noteMembres = '';
+const memeNom = (a, b) => a.trim().toLocaleLowerCase('fr') === b.trim().toLocaleLowerCase('fr');
+const inscrit = (nom) => joueurs.findIndex((j) => memeNom(j.nom, nom));
+
+function rendrePuces() {
+  if (!membres) return;
+  if (!membres.length) {
+    pucesEl.innerHTML = '<span class="discret">EA ne connaît encore aucun joueur dans ce club. Tape les pseudos à la main.</span>';
+    return;
+  }
+  pucesEl.innerHTML = membres
+    .map((m) =>
+      '<button class="puce' + (inscrit(m.nom) >= 0 ? ' pris' : '') + '" data-nom="' + esc(m.nom) + '" title="'
+      + m.matchs + (m.matchs > 1 ? ' matchs' : ' match') + ' dans le club">'
+      + esc(m.nom) + (m.ligne ? ' <span class="ligne">' + LIGNES[m.ligne] + '</span>' : '') + '</button>'
+    )
+    .join('') + noteMembres;
+}
+
+pucesEl.addEventListener('click', (e) => {
+  const b = e.target.closest('.puce');
+  if (!b) return;
+  const nom = b.dataset.nom;
+  const i = inscrit(nom);
+  if (i >= 0) {
+    // Deja inscrit : le clic le retire.
+    joueurs.splice(i, 1);
+    if (!joueurs.length) joueurs.push({ nom: '', force: '' });
+  } else {
+    const vide = joueurs.findIndex((j) => !j.nom.trim());
+    if (vide >= 0) joueurs[vide].nom = nom;
+    else if (joueurs.length < donnees.nbMax) joueurs.push({ nom, force: '' });
+    else return dire('11 joueurs au plus : retire quelqu’un avant d’en ajouter un autre.', 'ko');
+  }
+  rendreJoueurs();
+  modifie();
+});
+
+async function chargerMembres() {
+  pucesEl.innerHTML = '<span class="discret">Lecture des joueurs chez EA…</span>';
+  try {
+    const r = await action('membresDuClub');
+    membres = r.membres;
+    noteMembres = r.depuisMatchs
+      ? '<span class="discret">EA ne répond pas : voici les joueurs vus dans les derniers matchs.</span>'
+      : '';
+    rendrePuces();
+  } catch (err) {
+    membres = null;
+    pucesEl.innerHTML = '<span class="discret">Liste du club indisponible : ' + esc(err.message.replace(/\.$/, ''))
+      + '. Tape les pseudos à la main.</span>';
+  }
+}
+$('recharger').addEventListener('click', chargerMembres);
 
 listeEl.addEventListener('input', (e) => {
   const ligne = e.target.closest('.joueur');
   if (!ligne || e.target.tagName !== 'INPUT') return;
   joueurs[+ligne.dataset.i].nom = e.target.value;
+  rendrePuces();
   modifie();
 });
 
@@ -540,6 +631,7 @@ action('formation')
     rendreJoueurs();
     rendreTerrain();
     if (tirage) dire('Dernier tirage repris, cartes cachées.');
+    chargerMembres();
   })
   .catch((err) => {
     dire('Impossible de charger la formation : ' + err.message + '. StreamKit doit tourner pour que cette page fonctionne.', 'ko');

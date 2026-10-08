@@ -8,6 +8,45 @@ const normaliser = (s) =>
     .replace(/\s+/g, ' ')
     .toLocaleLowerCase('fr');
 
+const LIGNES = { goalkeeper: 'G', defender: 'DEF', midfielder: 'MIL', forward: 'ATT' };
+
+// Les membres du club, pour remplir la formation sans tout taper : les plus
+// assidus d'abord (matchs joues dans le club), puis par pseudo.
+export function lireMembres(reponse) {
+  const membres = Array.isArray(reponse?.members) ? reponse.members : [];
+  return membres
+    .map((m) => ({
+      nom: String(m?.name ?? '').trim(),
+      matchs: Number(m?.gamesPlayed) || 0,
+      ligne: LIGNES[m?.favoritePosition] ?? '',
+    }))
+    .filter((m) => m.nom)
+    .sort((a, b) => b.matchs - a.matchs || a.nom.localeCompare(b.nom, 'fr'));
+}
+
+// Repli quand EA ne rend pas la liste : les joueurs vus dans les matchs que le
+// module a retenus (trois semaines au plus), au poste qu'ils jouent le plus.
+export function membresDesMatchs(matchs) {
+  const vus = new Map();
+  for (const m of Array.isArray(matchs) ? matchs : []) {
+    for (const j of m?.joueurs ?? []) {
+      const nom = String(j?.nom ?? '').trim();
+      if (!nom || nom === 'Joueur') continue;
+      const v = vus.get(nom) ?? { nom, matchs: 0, postes: {} };
+      v.matchs++;
+      if (j.poste) v.postes[j.poste] = (v.postes[j.poste] ?? 0) + 1;
+      vus.set(nom, v);
+    }
+  }
+  return [...vus.values()]
+    .map(({ nom, matchs: n, postes }) => ({
+      nom,
+      matchs: n,
+      ligne: Object.entries(postes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '',
+    }))
+    .sort((a, b) => b.matchs - a.matchs || a.nom.localeCompare(b.nom, 'fr'));
+}
+
 // Une ligne de la recherche EA -> ce que le module en garde.
 export function depuisRecherche(c) {
   return {

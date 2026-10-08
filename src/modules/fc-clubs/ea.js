@@ -19,7 +19,11 @@
 //   - la recherche ignore la casse et marche par debut de nom (« Nothing »
 //     renvoie 14 clubs) ; un nom inconnu donne [] ; un nom trop long, un 500 ;
 //   - /clubs/info ne prend qu'UN identifiant (deux : 400), et rend
-//     { "<id>": { name, customKit, ... } } (verifie le 01/10/2026).
+//     { "<id>": { name, customKit, ... } } (verifie le 01/10/2026) ;
+//   - /members/stats (clubId au singulier) rend { members: [{ name,
+//     gamesPlayed, favoritePosition, ... }], positionCount } : name est le
+//     pseudo du joueur, favoritePosition « goalkeeper », « defender »,
+//     « midfielder », « forward » ou vide (verifie le 08/10/2026).
 
 const BASE = 'https://proclubs.ea.com/api/fc/';
 
@@ -114,5 +118,6 @@ export function creerClientEA({ fetch, delaiMs = DELAI_MS }) {
       lire('clubs/matches', { clubIds: clubId, matchType: TYPES[type], maxResultCount: MATCHS_PAR_REQUETE }),
     stats: (clubId) => lire('clubs/overallStats', { clubIds: clubId }),
     info: (clubId) => lire('clubs/info', { clubIds: clubId }),
+    membres: (clubId) => lire('members/stats', { clubId }),
   };
 }
