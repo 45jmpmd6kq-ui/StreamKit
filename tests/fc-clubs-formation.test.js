@@ -12,7 +12,7 @@ import {
   probleme,
   tirer,
 } from '../src/modules/fc-clubs/formation.js';
-import { lireMembres } from '../src/modules/fc-clubs/club.js';
+import { lireMembres, membresDesMatchs } from '../src/modules/fc-clubs/club.js';
 import manifeste from '../src/modules/fc-clubs/module.js';
 
 // Un hasard rejouable.
@@ -386,4 +386,14 @@ test('les formations sont rangees dans l’ordre croissant', () => {
     FORMATIONS.map((f) => f.code),
     ['3-4-3', '3-5-2', '4-1-2-1-2', '4-1-2-1-2 (2)', '4-2-3-1', '4-3-3', '4-3-3 (MDC)', '4-4-2', '5-3-2']
   );
+});
+
+test('membres : 12 au plus, ceux qui ont le plus de matchs', () => {
+  const membres = Array.from({ length: 15 }, (_, i) => ({ name: 'J' + i, gamesPlayed: String(i) }));
+  const m = lireMembres({ members: membres });
+  assert.equal(m.length, 12);
+  assert.equal(m[0].nom, 'J14');
+  assert.equal(m.at(-1).nom, 'J3');
+  const matchs = [{ joueurs: Array.from({ length: 14 }, (_, i) => ({ nom: 'P' + i, poste: 'MIL' })) }];
+  assert.equal(membresDesMatchs(matchs).length, 12);
 });

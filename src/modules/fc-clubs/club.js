@@ -10,6 +10,10 @@ const normaliser = (s) =>
 
 const LIGNES = { goalkeeper: 'G', defender: 'DEF', midfielder: 'MIL', forward: 'ATT' };
 
+// Les membres proposes dans la page : les 12 plus assidus au plus (demande du
+// user le 08/10/2026), une liste plus longue noierait les habitues.
+export const MEMBRES_MAX = 12;
+
 // Les membres du club, pour remplir la formation sans tout taper : les plus
 // assidus d'abord (matchs joues dans le club), puis par pseudo.
 export function lireMembres(reponse) {
@@ -21,7 +25,8 @@ export function lireMembres(reponse) {
       ligne: LIGNES[m?.favoritePosition] ?? '',
     }))
     .filter((m) => m.nom)
-    .sort((a, b) => b.matchs - a.matchs || a.nom.localeCompare(b.nom, 'fr'));
+    .sort((a, b) => b.matchs - a.matchs || a.nom.localeCompare(b.nom, 'fr'))
+    .slice(0, MEMBRES_MAX);
 }
 
 // Repli quand EA ne rend pas la liste : les joueurs vus dans les matchs que le
@@ -44,7 +49,8 @@ export function membresDesMatchs(matchs) {
       matchs: n,
       ligne: Object.entries(postes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '',
     }))
-    .sort((a, b) => b.matchs - a.matchs || a.nom.localeCompare(b.nom, 'fr'));
+    .sort((a, b) => b.matchs - a.matchs || a.nom.localeCompare(b.nom, 'fr'))
+    .slice(0, MEMBRES_MAX);
 }
 
 // Une ligne de la recherche EA -> ce que le module en garde.

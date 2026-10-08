@@ -324,12 +324,6 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
-function initiales(nom) {
-  const mots = String(nom).replace(/[_.-]+/g, ' ').trim().split(/\s+/).filter(Boolean);
-  if (mots.length > 1) return (mots[0][0] + mots[1][0]).toUpperCase();
-  return String(nom).slice(0, 2).toUpperCase();
-}
-
 function dire(texte, ton = '') {
   statutEl.textContent = texte;
   statutEl.className = 'statut' + (ton ? ' ' + ton : '');
@@ -495,7 +489,8 @@ function modifie() {
 
 // --- Terrain -----------------------------------------------------------------
 
-const DOS = () => '<div class="tourne"><div class="face dos"><div class="marque">' + esc(initiales(donnees.club || 'FC')) + '</div></div></div>';
+// Le dos d'une carte porte le nom de son poste (demande du user le 08/10/2026).
+const DOS = (poste) => '<div class="tourne"><div class="face dos"><div class="marque">' + esc(poste) + '</div></div></div>';
 
 // Avant le tirage : la formation choisie, ses 11 cartes de dos. Les cartes deja
 // sur le terrain sont reprises et glissent vers leurs nouvelles places.
@@ -505,14 +500,13 @@ function apercu(f) {
   if (cartes.length !== f.places.length) {
     placesEl.innerHTML = f.places
       .map((pl, i) =>
-        '<div class="carte apercu arrive" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + i * 40 + 'ms">' + DOS() + '</div>')
+        '<div class="carte apercu arrive" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + i * 40 + 'ms">' + DOS(pl.poste) + '</div>')
       .join('');
   } else {
     cartes.forEach((carte, i) => {
-      if (!carte.classList.contains('apercu')) {
-        carte.className = 'carte apercu';
-        carte.innerHTML = DOS();
-      }
+      // Le poste change avec la formation : le dos est toujours refait.
+      carte.className = 'carte apercu';
+      carte.innerHTML = DOS(f.places[i].poste);
       carte.style.left = f.places[i].x + '%';
       carte.style.top = f.places[i].y + '%';
     });
@@ -534,7 +528,7 @@ function rendreTerrain({ arrivee = false } = {}) {
     .map((pl, i) =>
       '<div class="carte' + (pl.ia ? ' ia retournee' : '') + (arrivee ? ' arrive' : '') + '" data-i="' + i + '" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + (arrivee ? i * 70 : 0) + 'ms">'
       + '<div class="tourne">'
-      + '<div class="face dos"><div class="marque">' + esc(initiales(donnees.club || 'FC')) + '</div></div>'
+      + '<div class="face dos"><div class="marque">' + esc(pl.poste) + '</div></div>'
       + '<div class="face recto' + (pl.ia ? ' ia' : BRONZE.has(pl.nom.toLocaleLowerCase('fr')) ? ' bronze' : '') + '">'
       + (pl.impose ? '<span class="cadenas" title="Poste imposé">🔒</span>' : '')
       + '<div class="poste">' + esc(pl.poste) + '</div>'
