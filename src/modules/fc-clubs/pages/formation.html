@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formation du club — Soirée Clubs</title>
+<style>
+  :root {
+    --bg: #0B1220;
+    --panneau: #111A2B;
+    --champ: #0E1626;
+    --ligne: #223047;
+    --texte: #E8EFF8;
+    --discret: #8A9BB4;
+    --club: #3b7bff;
+    --ok: #4ADE80;
+    --ko: #FF6B7A;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--texte);
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+  }
+
+  .page {
+    display: grid; gap: 24px; padding: 24px;
+    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    align-items: start; max-width: 1180px; margin: 0 auto;
+  }
+  @media (max-width: 860px) {
+    .page { grid-template-columns: 1fr; padding: 16px; }
+  }
+
+  /* --- Panneau de gauche -------------------------------------------------- */
+  .panneau {
+    background: var(--panneau); border: 1px solid var(--ligne);
+    border-radius: 14px; padding: 18px;
+  }
+  h1 { margin: 0 0 2px; font-size: 20px; }
+  h1 .club { color: var(--club); }
+  .sous { color: var(--discret); font-size: 13px; margin-bottom: 16px; line-height: 1.45; }
+  label.titre { display: block; font-size: 12px; font-weight: 700; color: var(--discret);
+    text-transform: uppercase; letter-spacing: .6px; margin: 0 0 6px; }
+
+  select, input[type="text"] {
+    width: 100%; padding: 9px 11px; border-radius: 8px;
+    border: 1px solid var(--ligne); background: var(--champ); color: var(--texte);
+    font: inherit; font-size: 14px; outline: none;
+  }
+  select:focus, input[type="text"]:focus { border-color: var(--club); }
+
+  .joueurs { display: flex; flex-direction: column; gap: 7px; margin: 16px 0 10px; }
+  .joueur { display: grid; grid-template-columns: 22px minmax(0, 1fr) 128px 30px; gap: 7px; align-items: center; }
+  .joueur .num { color: var(--discret); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+  .joueur select { padding: 9px 6px; font-size: 13px; }
+  .joueur select.impose { border-color: var(--club); color: var(--texte); font-weight: 700; }
+  .retirer {
+    width: 30px; height: 36px; padding: 0; border-radius: 8px; cursor: pointer;
+    border: 1px solid transparent; background: transparent; color: var(--discret); font-size: 17px;
+  }
+  .retirer:hover { border-color: var(--ligne); color: var(--ko); }
+
+  button.btn {
+    padding: 10px 14px; border-radius: 9px; cursor: pointer;
+    border: 1px solid var(--ligne); background: #182236; color: var(--texte);
+    font: inherit; font-size: 13.5px; font-weight: 600;
+  }
+  button.btn:hover:not(:disabled) { border-color: var(--club); }
+  button.btn:disabled { opacity: .45; cursor: default; }
+  button.primaire { background: var(--club); border-color: var(--club); color: #fff; font-weight: 800; }
+  button.primaire:hover:not(:disabled) { filter: brightness(1.1); }
+  .ajouter { width: 100%; border-style: dashed !important; background: transparent !important; color: var(--discret) !important; }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .actions .large { grid-column: 1 / -1; padding: 13px; font-size: 15px; }
+  .statut { min-height: 20px; margin-top: 12px; font-size: 13px; color: var(--discret); line-height: 1.4; }
+  .statut.ok { color: var(--ok); }
+  .statut.ko { color: var(--ko); }
+
+  /* --- Terrain ------------------------------------------------------------ */
+  .scene { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  /* Le terrain tient en hauteur dans la fenetre : 92 de long pour 68 de large. */
+  .scene { --largeur: min(600px, calc((100vh - 110px) * 68 / 92)); }
+  .entete-terrain { display: flex; align-items: baseline; gap: 12px; width: 100%; max-width: var(--largeur); }
+  .schema { font-size: 30px; font-weight: 900; letter-spacing: 1px; }
+  .schema-sous { color: var(--discret); font-size: 13px; }
+
+  .terrain {
+    position: relative; width: 100%; max-width: max(320px, var(--largeur)); aspect-ratio: 68 / 92;
+    border-radius: 16px; overflow: hidden; perspective: 1100px;
+    background:
+      repeating-linear-gradient(180deg, #1c6b3a 0 9.09%, #1a6336 9.09% 18.18%);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .06);
+  }
+  .terrain svg.lignes { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  .repere {
+    position: absolute; transform: translate(-50%, -50%);
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, .35);
+    display: grid; place-items: center;
+    font-size: 10.5px; font-weight: 800; color: rgba(255, 255, 255, .7);
+  }
+
+  /* Une carte : deux faces dos a dos, qui tournent ensemble. */
+  .carte {
+    position: absolute; width: 14%; aspect-ratio: 4 / 5;
+    transform: translate(-50%, -50%);
+    cursor: pointer; z-index: 1;
+  }
+  .carte .tourne {
+    position: absolute; inset: 0; transform-style: preserve-3d;
+    transition: transform .75s cubic-bezier(.3, 1.35, .45, 1);
+  }
+  .carte.retournee .tourne { transform: rotateY(180deg); }
+  .carte .face {
+    position: absolute; inset: 0; border-radius: 10%  / 7%;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .45);
+  }
+
+  .dos {
+    background:
+      radial-gradient(circle at 50% 42%, rgba(255, 255, 255, .22), transparent 55%),
+      repeating-linear-gradient(45deg, rgba(255, 255, 255, .07) 0 6px, transparent 6px 12px),
+      linear-gradient(160deg, color-mix(in srgb, var(--club) 85%, #fff 15%), color-mix(in srgb, var(--club) 55%, #000 45%));
+    border: 2px solid rgba(255, 255, 255, .55);
+    display: grid; place-items: center;
+  }
+  .dos .marque {
+    width: 46%; aspect-ratio: 1; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .7);
+    display: grid; place-items: center;
+    font-weight: 900; color: #fff; font-size: clamp(11px, 2.4vw, 19px);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  }
+
+  .recto {
+    transform: rotateY(180deg);
+    background: linear-gradient(170deg, #fdfaf0 0%, #efe4c2 100%);
+    border: 2px solid color-mix(in srgb, var(--club) 70%, #fff 30%);
+    color: #121a28;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0 0 6%;
+  }
+  .recto .poste {
+    width: 100%; padding: 7% 0 6%; text-align: center;
+    background: var(--club); color: #fff;
+    font-weight: 900; letter-spacing: .5px; line-height: 1;
+    font-size: clamp(11px, 2vw, 19px);
+  }
+  /* Le pseudo prend toute la place restante : c'est lui qu'on attend. */
+  .recto .nom {
+    flex: 1; width: 100%; padding: 0 6%;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; font-weight: 800; line-height: 1.1;
+    overflow: hidden;
+  }
+  .recto .cadenas { position: absolute; top: 3%; right: 5%; font-size: 9px; }
+
+  /* Arrivee des cartes apres le tirage, une a une. */
+  .carte.arrive { animation: arrivee .5s cubic-bezier(.2, 1.3, .5, 1) both; }
+  @keyframes arrivee {
+    from { opacity: 0; transform: translate(-50%, -50%) translateY(-40px) scale(.6) rotate(-8deg); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+
+  /* La roulette : un halo qui court d'une carte cachee a l'autre. */
+  .carte.halo { z-index: 3; }
+  .carte.halo .dos {
+    border-color: #fff;
+    box-shadow: 0 0 0 3px #fff, 0 0 26px 6px color-mix(in srgb, var(--club) 60%, #fff 40%);
+  }
+  .carte.choisie { z-index: 4; animation: choisie .35s ease-out; }
+  @keyframes choisie {
+    50% { transform: translate(-50%, -50%) scale(1.14); }
+  }
+  .carte.retournee { z-index: 2; }
+
+  .vide {
+    position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+    color: rgba(255, 255, 255, .8); font-size: 14px; padding: 0 18%; pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .carte .tourne { transition-duration: .01s; }
+    .carte.arrive, .carte.choisie { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <section class="panneau">
+    <h1>Formation <span class="club" id="club"></span></h1>
+    <div class="sous">Inscris tes joueurs (1 à 11) et tire leurs postes au sort. Un poste choisi dans le menu est imposé à ce joueur ; les autres se partagent les places restantes. Les places sans joueur sont tenues par l’IA et n’ont pas de carte.</div>
+
+    <label class="titre" for="schema">Formation</label>
+    <select id="schema"></select>
+
+    <div class="joueurs" id="joueurs"></div>
+    <button class="btn ajouter" id="ajouter">+ Ajouter un joueur</button>
+
+    <div class="actions">
+      <button class="btn primaire large" id="tirer">🎲 Tirer les postes au sort</button>
+      <button class="btn" id="roulette" disabled>Retourner une carte</button>
+      <button class="btn" id="tout" disabled>Tout retourner</button>
+    </div>
+    <div class="statut" id="statut"></div>
+  </section>
+
+  <section class="scene">
+    <div class="entete-terrain">
+      <div class="schema" id="schema-titre"></div>
+      <div class="schema-sous" id="schema-sous"></div>
+    </div>
+    <div class="terrain" id="terrain">
+      <svg class="lignes" viewBox="0 0 68 92" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".35">
+          <rect x="2" y="2" width="64" height="88" />
+          <line x1="2" y1="46" x2="66" y2="46" />
+          <circle cx="34" cy="46" r="7" />
+          <rect x="15" y="2" width="38" height="13" />
+          <rect x="25" y="2" width="18" height="5" />
+          <rect x="15" y="77" width="38" height="13" />
+          <rect x="25" y="85" width="18" height="5" />
+          <path d="M27.5 15 A7 7 0 0 0 40.5 15" />
+          <path d="M27.5 77 A7 7 0 0 1 40.5 77" />
+        </g>
+        <g fill="rgba(255,255,255,.6)">
+          <circle cx="34" cy="46" r=".6" />
+          <circle cx="34" cy="11" r=".5" />
+          <circle cx="34" cy="81" r=".5" />
+        </g>
+      </svg>
+      <div id="places"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const ID = 'fc-clubs';
+
+const $ = (id) => document.getElementById(id);
+const statutEl = $('statut');
+const listeEl = $('joueurs');
+const placesEl = $('places');
+
+let donnees = null;   // ce que rend l'action « formation »
+let code = '';
+let joueurs = [];     // [{ nom, force }]
+let tirage = null;    // { code, places: [...] }
+let roulette = false; // un halo court deja
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+function initiales(nom) {
+  const mots = String(nom).replace(/[_.-]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (mots.length > 1) return (mots[0][0] + mots[1][0]).toUpperCase();
+  return String(nom).slice(0, 2).toUpperCase();
+}
+
+function dire(texte, ton = '') {
+  statutEl.textContent = texte;
+  statutEl.className = 'statut' + (ton ? ' ' + ton : '');
+}
+
+// Cette page parle a son module par ses actions, comme le dashboard.
+async function action(nom, corps = {}) {
+  const r = await fetch('/api/modules/' + ID + '/action/' + nom, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corps),
+  });
+  const j = await r.json();
+  if (!r.ok || j.ok === false) throw new Error(j.erreur || 'erreur ' + r.status);
+  return j;
+}
+
+const schemaCourant = () => donnees.formations.find((f) => f.code === code);
+
+// --- Liste des joueurs -----------------------------------------------------
+
+function rendreJoueurs() {
+  const f = schemaCourant();
+  const prises = new Set(joueurs.map((j) => j.force).filter(Boolean));
+  listeEl.innerHTML = joueurs
+    .map((j, i) => {
+      const options = ['<option value="">Au hasard</option>']
+        .concat(
+          f.places.map((pl) => {
+            const autre = prises.has(pl.id) && j.force !== pl.id;
+            return '<option value="' + esc(pl.id) + '"' + (j.force === pl.id ? ' selected' : '') + (autre ? ' disabled' : '') + '>'
+              + esc(pl.libelle) + '</option>';
+          })
+        )
+        .join('');
+      return '<div class="joueur" data-i="' + i + '">'
+        + '<span class="num">' + (i + 1) + '</span>'
+        + '<input type="text" maxlength="' + donnees.pseudoMax + '" placeholder="Pseudo du joueur" value="' + esc(j.nom) + '" autocomplete="off">'
+        + '<select class="' + (j.force ? 'impose' : '') + '" title="Poste imposé">' + options + '</select>'
+        + '<button class="retirer" title="Retirer ce joueur">×</button>'
+        + '</div>';
+    })
+    .join('');
+  $('ajouter').style.display = joueurs.length >= donnees.nbMax ? 'none' : '';
+}
+
+listeEl.addEventListener('input', (e) => {
+  const ligne = e.target.closest('.joueur');
+  if (!ligne || e.target.tagName !== 'INPUT') return;
+  joueurs[+ligne.dataset.i].nom = e.target.value;
+  modifie();
+});
+
+listeEl.addEventListener('change', (e) => {
+  const ligne = e.target.closest('.joueur');
+  if (!ligne || e.target.tagName !== 'SELECT') return;
+  joueurs[+ligne.dataset.i].force = e.target.value;
+  rendreJoueurs();
+  modifie();
+});
+
+listeEl.addEventListener('click', (e) => {
+  const b = e.target.closest('.retirer');
+  if (!b) return;
+  joueurs.splice(+b.closest('.joueur').dataset.i, 1);
+  if (!joueurs.length) joueurs.push({ nom: '', force: '' });
+  rendreJoueurs();
+  modifie();
+});
+
+$('ajouter').addEventListener('click', () => {
+  if (joueurs.length >= donnees.nbMax) return;
+  joueurs.push({ nom: '', force: '' });
+  rendreJoueurs();
+  listeEl.lastElementChild.querySelector('input').focus();
+});
+
+$('schema').addEventListener('change', (e) => {
+  code = e.target.value;
+  // Un poste impose qui n'existe pas dans ce schema retombe sur « au hasard ».
+  const ids = new Set(schemaCourant().places.map((pl) => pl.id));
+  for (const j of joueurs) if (!ids.has(j.force)) j.force = '';
+  rendreJoueurs();
+  modifie();
+  if (!tirage) rendreTerrain();
+});
+
+// Enregistre la liste un instant apres la derniere frappe : rouvrir la page
+// la retrouve, sans bouton « Enregistrer » a penser.
+let attente = 0;
+function modifie() {
+  clearTimeout(attente);
+  attente = setTimeout(() => {
+    action('enregistrerFormation', { code, joueurs }).catch((err) => dire('Échec de l’enregistrement : ' + err.message, 'ko'));
+  }, 500);
+  if (tirage) dire('La liste a changé depuis le tirage : relance-le pour en tenir compte.');
+}
+
+// --- Terrain -----------------------------------------------------------------
+
+function rendreTerrain({ arrivee = false } = {}) {
+  const f = tirage ? donnees.formations.find((x) => x.code === tirage.code) : schemaCourant();
+  $('schema-titre').textContent = f.code;
+  if (!tirage) {
+    $('schema-sous').textContent = 'en attente du tirage';
+    placesEl.innerHTML = f.places
+      .map((pl) => '<div class="repere" style="left:' + pl.x + '%;top:' + pl.y + '%">' + esc(pl.poste) + '</div>')
+      .join('');
+    majBoutons();
+    return;
+  }
+  const n = tirage.places.length;
+  $('schema-sous').textContent = n + (n > 1 ? ' joueurs' : ' joueur') + (n < 11 ? ' · ' + (11 - n) + ' place(s) pour l’IA' : '');
+  placesEl.innerHTML = tirage.places
+    .map((pl, i) =>
+      '<div class="carte' + (arrivee ? ' arrive' : '') + '" data-i="' + i + '" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + (arrivee ? i * 70 : 0) + 'ms">'
+      + '<div class="tourne">'
+      + '<div class="face dos"><div class="marque">' + esc(initiales(donnees.club || 'FC')) + '</div></div>'
+      + '<div class="face recto">'
+      + (pl.impose ? '<span class="cadenas" title="Poste imposé">🔒</span>' : '')
+      + '<div class="poste">' + esc(pl.poste) + '</div>'
+      // Un pseudo peut passer a la ligne apres un « _ » ou un « . ».
+      + '<div class="nom">' + esc(pl.nom).replace(/([_.])/g, '$1<wbr>') + '</div>'
+      + '</div></div></div>'
+    )
+    .join('');
+  ajusterNoms();
+  majBoutons();
+}
+
+// Le pseudo au plus gros qui tient sur la carte. Il ne se coupe qu'aux
+// espaces ; un mot trop long pour tenir meme en petit est coupe en dernier
+// recours.
+function ajusterNoms() {
+  const deborde = (el) => el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
+  for (const el of placesEl.querySelectorAll('.nom')) {
+    let taille = Math.min(22, el.clientWidth / 4);
+    el.style.overflowWrap = 'normal';
+    el.style.fontSize = taille + 'px';
+    while (deborde(el) && taille > 9) el.style.fontSize = (taille -= 0.5) + 'px';
+    if (!deborde(el)) continue;
+    el.style.overflowWrap = 'anywhere';
+    while (deborde(el) && taille > 7) el.style.fontSize = (taille -= 0.5) + 'px';
+  }
+}
+window.addEventListener('resize', ajusterNoms);
+
+const cachees = () => [...placesEl.querySelectorAll('.carte:not(.retournee)')];
+
+function majBoutons() {
+  const reste = tirage ? cachees().length : 0;
+  $('roulette').disabled = roulette || !reste;
+  $('tout').disabled = roulette || !reste;
+  $('tirer').disabled = roulette;
+}
+
+function retourner(carte) {
+  carte.classList.remove('halo');
+  carte.classList.add('retournee');
+  majBoutons();
+}
+
+placesEl.addEventListener('click', (e) => {
+  const carte = e.target.closest('.carte');
+  if (!carte || roulette || carte.classList.contains('retournee')) return;
+  retourner(carte);
+});
+
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+const lent = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// La roulette : le halo saute de carte cachee en carte cachee, ralentit, et
+// s'arrete sur celle qui se retourne.
+async function tournerRoulette() {
+  const liste = cachees();
+  if (!liste.length || roulette) return;
+  roulette = true;
+  majBoutons();
+  const cible = liste[Math.floor(Math.random() * liste.length)];
+  if (liste.length > 1 && !lent()) {
+    // Assez de sauts pour que ca tourne, et le dernier tombe sur la cible.
+    const sauts = 14 + Math.floor(Math.random() * 6);
+    let i = Math.floor(Math.random() * liste.length);
+    while ((i + sauts) % liste.length !== liste.indexOf(cible)) i++;
+    for (let s = 0; s <= sauts; s++) {
+      const carte = liste[(i + s) % liste.length];
+      for (const c of liste) c.classList.toggle('halo', c === carte);
+      await pause(55 + Math.pow(s / sauts, 3) * 380);
+    }
+  }
+  for (const c of liste) c.classList.remove('halo');
+  cible.classList.add('halo', 'choisie');
+  await pause(lent() ? 0 : 380);
+  cible.classList.remove('choisie');
+  retourner(cible);
+  roulette = false;
+  majBoutons();
+}
+
+$('roulette').addEventListener('click', tournerRoulette);
+
+// Du gardien vers l'attaque (l'ordre du tirage).
+$('tout').addEventListener('click', async () => {
+  roulette = true;
+  majBoutons();
+  for (const carte of cachees()) {
+    retourner(carte);
+    await pause(lent() ? 0 : 180);
+  }
+  roulette = false;
+  majBoutons();
+});
+
+$('tirer').addEventListener('click', async () => {
+  clearTimeout(attente);
+  $('tirer').disabled = true;
+  try {
+    const r = await action('tirerFormation', { code, joueurs });
+    tirage = r.tirage;
+    joueurs = r.joueurs.length ? r.joueurs : [{ nom: '', force: '' }];
+    rendreJoueurs();
+    rendreTerrain({ arrivee: true });
+    dire('Postes tirés au sort. Retourne les cartes une à une, ou toutes d’un coup.', 'ok');
+  } catch (err) {
+    dire(err.message, 'ko');
+  }
+  majBoutons();
+});
+
+// --- Demarrage ---------------------------------------------------------------
+
+action('formation')
+  .then((d) => {
+    donnees = d;
+    document.documentElement.style.setProperty('--club', d.couleur);
+    $('club').textContent = d.club ? '· ' + d.club : '';
+    code = d.code;
+    joueurs = d.joueurs.length ? d.joueurs : [{ nom: '', force: '' }];
+    tirage = d.tirage;
+    $('schema').innerHTML = d.formations
+      .map((f) => '<option value="' + esc(f.code) + '"' + (f.code === code ? ' selected' : '') + '>' + esc(f.code) + '</option>')
+      .join('');
+    rendreJoueurs();
+    rendreTerrain();
+    if (tirage) dire('Dernier tirage repris, cartes cachées.');
+  })
+  .catch((err) => {
+    dire('Impossible de charger la formation : ' + err.message + '. StreamKit doit tourner pour que cette page fonctionne.', 'ko');
+  });
+</script>
+</body>
+</html>

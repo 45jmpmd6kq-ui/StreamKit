@@ -26,6 +26,16 @@ import { lireBilan, matchDuBilan, nouveauxDuBilan, provisoireDe } from './bilan-
 import { bilan, matchsDeLaSoiree } from './soiree.js';
 import { vueBandeau, vueCarte, vueClub, vueTableau } from './vue.js';
 import { CLUB_DEMO, SR_DEMO, soireeDemo } from './demo.js';
+import {
+  FORMATIONS,
+  FORMATION_DEFAUT,
+  NB_MAX,
+  PSEUDO_MAX,
+  libellePlace,
+  nettoyer,
+  probleme,
+  tirer,
+} from './formation.js';
 
 // Un tour par minute : deux ou trois requetes (une par type de match). EA
 // publie un match quelques minutes apres la fin ; lire plus souvent ne le ferait
@@ -56,6 +66,13 @@ const heure = (ms) => {
   const d = new Date(ms);
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 };
+
+// La formation vit dans le meme fichier d'etat que la soiree, sous sa propre
+// cle : la page l'ecrit module arrete comme demarre, et la soiree ne l'efface
+// pas en sauvant.
+const lireFormation = (ctx) =>
+  ctx.etat.lire({}).formation ?? { code: FORMATION_DEFAUT, joueurs: [], tirage: null };
+const sauverFormation = (ctx, f) => ctx.etat.sauver({ ...ctx.etat.lire({}), formation: f });
 
 const cleDuClub = (c) =>
   String(c.clubId ?? '').trim() +
@@ -212,6 +229,16 @@ export default {
     },
   ],
 
+  // Pas un overlay : un ecran dans StreamKit, que le streamer montre ou non.
+  pages: [
+    {
+      chemin: 'formation',
+      nom: 'Formation du club',
+      description: 'Inscris tes joueurs, tire leurs postes au sort, puis retourne les cartes sur le terrain.',
+      fichier: 'formation.html',
+    },
+  ],
+
   libellesActions: {
     exemple: 'Afficher un exemple',
     chercherClub: 'Chercher le club chez EA',
@@ -279,6 +306,47 @@ export default {
       return ctx._revoirCarte()
         ? { message: 'La carte du dernier match est de nouveau à l’écran.' }
         : { ok: false, erreur: 'Aucun match du club n’est encore connu.' };
+    },
+
+    // Les trois suivantes servent la page « Formation du club » : pas de bouton
+    // (un clic sans donnees viderait la liste des joueurs). Elles marchent
+    // module arrete : rien ne passe par EA.
+    async formation(ctx) {
+      const c = ctx.config;
+      const club = ctx.etat.lire({}).club;
+      return {
+        club: club?.nom || String(c.club ?? '').trim(),
+        couleur: (c.couleurMaillot && couleurDuMaillot(club?.kit)) || c.couleur || COULEUR_DEFAUT,
+        nbMax: NB_MAX,
+        pseudoMax: PSEUDO_MAX,
+        formations: FORMATIONS.map((f) => ({
+          code: f.code,
+          places: f.places.map((pl) => ({ ...pl, libelle: libellePlace(f, pl) })),
+        })),
+        ...lireFormation(ctx),
+      };
+    },
+
+    async enregistrerFormation(ctx, corps) {
+      const propre = nettoyer(corps);
+      sauverFormation(ctx, { ...lireFormation(ctx), ...propre });
+      return { message: propre.joueurs.length + ' joueur(s) enregistré(s).', ...propre };
+    },
+
+    async tirerFormation(ctx, corps) {
+      const propre = nettoyer(corps);
+      const souci = probleme(propre);
+      if (souci) return { ok: false, erreur: souci };
+      const tirage = { a: Date.now(), code: propre.code, places: tirer(propre) };
+      sauverFormation(ctx, { ...propre, tirage });
+      ctx.log.ok(
+        'Formation tirée (' +
+          propre.code +
+          ') : ' +
+          tirage.places.map((pl) => pl.poste + ' ' + pl.nom).join(', ') +
+          '.'
+      );
+      return { message: 'Formation tirée.', ...propre, tirage };
     },
 
     async nouvelleSoiree(ctx) {
@@ -368,7 +436,7 @@ export default {
     let sauveA = 0;
     const sauver = () => {
       sauveA = Date.now();
-      ctx.etat.sauver({ cle, club, matchs, sr: srs, reinitA, suivi });
+      ctx.etat.sauver({ ...ctx.etat.lire({}), cle, club, matchs, sr: srs, reinitA, suivi });
     };
 
     const pauseMs = c.pauseSoiree * 3600_000;
