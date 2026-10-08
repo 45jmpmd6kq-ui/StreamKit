@@ -329,7 +329,10 @@ export default {
 
     async enregistrerFormation(ctx, corps) {
       const propre = nettoyer(corps);
-      sauverFormation(ctx, { ...lireFormation(ctx), ...propre });
+      const avant = lireFormation(ctx);
+      // Autre formation : l'ancien tirage ne vaut plus.
+      const tirage = avant.tirage?.code === propre.code ? avant.tirage : null;
+      sauverFormation(ctx, { ...avant, ...propre, tirage });
       return { message: propre.joueurs.length + ' joueur(s) enregistré(s).', ...propre };
     },
 

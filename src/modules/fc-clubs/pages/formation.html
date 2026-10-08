@@ -121,14 +121,6 @@
   }
   .terrain svg.lignes { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-  .repere {
-    position: absolute; transform: translate(-50%, -50%);
-    width: 34px; height: 34px; border-radius: 50%;
-    border: 2px dashed rgba(255, 255, 255, .35);
-    display: grid; place-items: center;
-    font-size: 10.5px; font-weight: 800; color: rgba(255, 255, 255, .7);
-  }
-
   /* La silhouette des cartes de FC 27 : coins du haut creuses, bas en pointe. */
   :root {
     --forme: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140' preserveAspectRatio='none'%3E%3Cpath d='M14 0H86C86 7 91 11 100 11V108C100 114 97 117 92 119L58 134C54 136 52 140 50 140C48 140 46 136 42 134L8 119C3 117 0 114 0 108V11C9 11 14 7 14 0Z'/%3E%3C/svg%3E");
@@ -147,6 +139,9 @@
     transition: transform .75s cubic-bezier(.3, 1.35, .45, 1);
   }
   .carte.retournee .tourne { transform: rotateY(180deg); }
+  /* Changer de formation fait glisser les cartes vers leurs nouvelles places. */
+  .carte { transition: left .5s cubic-bezier(.3, 1.1, .4, 1), top .5s cubic-bezier(.3, 1.1, .4, 1); }
+  .carte.apercu { cursor: default; }
   /* Chaque face : le cadre (sa couleur de fond) et, par-dessus, le fond de la
      carte un peu en retrait, decoupes tous deux a la forme FC. */
   .carte .face {
@@ -464,9 +459,12 @@ $('schema').addEventListener('change', (e) => {
   // Un poste impose qui n'existe pas dans ce schema retombe sur « au hasard ».
   const ids = new Set(schemaCourant().places.map((pl) => pl.id));
   for (const j of joueurs) if (!ids.has(j.force)) j.force = '';
+  // Le tirage affiche etait celui d'une autre formation : place a l'apercu.
+  tirage = null;
   rendreJoueurs();
   modifie();
-  if (!tirage) rendreTerrain();
+  rendreTerrain();
+  dire('');
 });
 
 // Enregistre la liste un instant apres la derniere frappe : rouvrir la page
@@ -482,15 +480,36 @@ function modifie() {
 
 // --- Terrain -----------------------------------------------------------------
 
+const DOS = () => '<div class="tourne"><div class="face dos"><div class="marque">' + esc(initiales(donnees.club || 'FC')) + '</div></div></div>';
+
+// Avant le tirage : la formation choisie, ses 11 cartes de dos. Les cartes deja
+// sur le terrain sont reprises et glissent vers leurs nouvelles places.
+function apercu(f) {
+  $('schema-sous').textContent = 'en attente du tirage';
+  const cartes = [...placesEl.querySelectorAll('.carte')];
+  if (cartes.length !== f.places.length) {
+    placesEl.innerHTML = f.places
+      .map((pl, i) =>
+        '<div class="carte apercu arrive" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + i * 40 + 'ms">' + DOS() + '</div>')
+      .join('');
+  } else {
+    cartes.forEach((carte, i) => {
+      if (!carte.classList.contains('apercu')) {
+        carte.className = 'carte apercu';
+        carte.innerHTML = DOS();
+      }
+      carte.style.left = f.places[i].x + '%';
+      carte.style.top = f.places[i].y + '%';
+    });
+  }
+  majBoutons();
+}
+
 function rendreTerrain({ arrivee = false } = {}) {
   const f = tirage ? donnees.formations.find((x) => x.code === tirage.code) : schemaCourant();
   $('schema-titre').textContent = f.code;
   if (!tirage) {
-    $('schema-sous').textContent = 'en attente du tirage';
-    placesEl.innerHTML = f.places
-      .map((pl) => '<div class="repere" style="left:' + pl.x + '%;top:' + pl.y + '%">' + esc(pl.poste) + '</div>')
-      .join('');
-    majBoutons();
+    apercu(f);
     return;
   }
   const n = tirage.places.filter((pl) => !pl.ia).length;
@@ -537,7 +556,7 @@ function ajusterNoms() {
 }
 window.addEventListener('resize', ajusterNoms);
 
-const cachees = () => [...placesEl.querySelectorAll('.carte:not(.retournee)')];
+const cachees = () => [...placesEl.querySelectorAll('.carte:not(.retournee):not(.apercu)')];
 
 function majBoutons() {
   const reste = tirage ? cachees().length : 0;
@@ -554,7 +573,7 @@ function retourner(carte) {
 
 placesEl.addEventListener('click', (e) => {
   const carte = e.target.closest('.carte');
-  if (!carte || roulette || carte.classList.contains('retournee')) return;
+  if (!carte || roulette || carte.matches('.retournee, .apercu')) return;
   retourner(carte);
 });
 

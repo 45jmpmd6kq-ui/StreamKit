@@ -368,3 +368,15 @@ test('membresDuClub : EA muet, repli sur les joueurs des derniers matchs', async
   );
   assert.equal(vide.ok, false);
 });
+
+test('enregistrerFormation : changer de formation efface l’ancien tirage, la garder le conserve', async () => {
+  const ctx = contexte({});
+  const a = manifeste.actions;
+  const joueurs = [{ nom: 'Titi', force: '' }];
+  await a.tirerFormation(ctx, { code: '4-4-2', joueurs });
+  await a.enregistrerFormation(ctx, { code: '4-4-2', joueurs: [...joueurs, { nom: 'Grominet' }] });
+  assert.equal(ctx.stocke.formation.tirage.code, '4-4-2');
+  await a.enregistrerFormation(ctx, { code: '3-5-2', joueurs });
+  assert.equal(ctx.stocke.formation.tirage, null);
+  assert.equal((await a.formation(ctx)).code, '3-5-2');
+});
