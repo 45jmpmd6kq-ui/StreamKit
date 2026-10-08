@@ -37,9 +37,8 @@
     background: var(--panneau); border: 1px solid var(--ligne);
     border-radius: 14px; padding: 18px;
   }
-  h1 { margin: 0 0 2px; font-size: 20px; }
+  h1 { margin: 0 0 16px; font-size: 20px; }
   h1 .club { color: var(--club); }
-  .sous { color: var(--discret); font-size: 13px; margin-bottom: 16px; line-height: 1.45; }
   label.titre { display: block; font-size: 12px; font-weight: 700; color: var(--discret);
     text-transform: uppercase; letter-spacing: .6px; margin: 0 0 6px; }
 
@@ -58,17 +57,23 @@
     color: var(--discret); font: inherit; font-size: 12px;
   }
   .lien:hover { color: var(--texte); }
-  .puces { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* Toutes les pastilles a la meme taille : deux colonnes egales. */
+  .puces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .puces .discret { grid-column: 1 / -1; }
   .puce {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 10px; border-radius: 999px; cursor: pointer;
+    position: relative; width: 100%;
+    padding: 7px 22px; border-radius: 999px; cursor: pointer;
     border: 1px solid var(--ligne); background: var(--champ); color: var(--texte);
-    font: inherit; font-size: 13px; font-weight: 600;
+    font: inherit; font-size: 13px; font-weight: 600; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    outline: none;
   }
   .puce:hover { border-color: var(--club); }
-  .puce .ligne { font-size: 10.5px; font-weight: 800; color: var(--discret); }
   .puce.pris { background: color-mix(in srgb, var(--club) 25%, var(--champ)); border-color: var(--club); }
-  .puce.pris::before { content: '✓'; color: var(--club); font-weight: 900; }
+  .puce.pris::before {
+    content: '✓'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--club); font-weight: 900;
+  }
   .discret { color: var(--discret); font-size: 12.5px; line-height: 1.4; }
 
   .joueurs { display: flex; flex-direction: column; gap: 7px; margin: 16px 0 10px; }
@@ -239,7 +244,6 @@
 <div class="page">
   <section class="panneau">
     <h1>Formation <span class="club" id="club"></span></h1>
-    <div class="sous">Clique sur les joueurs du club ou tape leurs pseudos (1 à 11), puis tire leurs postes au sort. Un poste choisi dans le menu est imposé à ce joueur ; les autres prennent d’abord le milieu et l’attaque, puis la défense, les buts en dernier. Les places sans joueur sont tenues par l’IA : leur carte argent est visible d’emblée.</div>
 
     <label class="titre" for="schema">Formation</label>
     <select id="schema"></select>
@@ -366,7 +370,6 @@ function rendreJoueurs() {
 // --- Joueurs du club (EA) ------------------------------------------------------
 
 const pucesEl = $('puces');
-const LIGNES = { G: 'GB', DEF: 'DEF', MIL: 'MIL', ATT: 'ATT' };
 let membres = null; // null : pas encore lus
 let noteMembres = '';
 const memeNom = (a, b) => a.trim().toLocaleLowerCase('fr') === b.trim().toLocaleLowerCase('fr');
@@ -381,8 +384,9 @@ function rendrePuces() {
   pucesEl.innerHTML = membres
     .map((m) =>
       '<button class="puce' + (inscrit(m.nom) >= 0 ? ' pris' : '') + '" data-nom="' + esc(m.nom) + '" title="'
-      + m.matchs + (m.matchs > 1 ? ' matchs' : ' match') + ' dans le club">'
-      + esc(m.nom) + (m.ligne ? ' <span class="ligne">' + LIGNES[m.ligne] + '</span>' : '') + '</button>'
+      // Le pseudo complet au survol : une pastille trop etroite le coupe.
+      + esc(m.nom) + ' · ' + m.matchs + (m.matchs > 1 ? ' matchs' : ' match') + ' dans le club">'
+      + esc(m.nom) + '</button>'
     )
     .join('') + noteMembres;
 }
