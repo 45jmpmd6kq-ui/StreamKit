@@ -110,6 +110,7 @@ test('tirage : 11 joueurs, chacun une place, toutes prises', () => {
   assert.equal(r.length, 11);
   assert.equal(new Set(r.map((pl) => pl.id)).size, 11);
   assert.equal(new Set(r.map((pl) => pl.nom)).size, 11);
+  assert.ok(r.every((pl) => !pl.ia));
 });
 
 test('tirage : les postes imposes sont respectes, a chaque fois', () => {
@@ -118,22 +119,34 @@ test('tirage : les postes imposes sont respectes, a chaque fois', () => {
     joueurs[0].force = 'GB';
     joueurs[3].force = 'BU';
     const r = tirer({ code: '4-3-3', joueurs }, graine(s));
-    assert.equal(r.length, 6);
+    assert.equal(r.filter((pl) => !pl.ia).length, 6);
     assert.equal(r.find((pl) => pl.id === 'GB').nom, 'Joueur1');
     assert.equal(r.find((pl) => pl.id === 'BU').nom, 'Joueur4');
     assert.equal(r.filter((pl) => pl.impose).length, 2);
   }
 });
 
-test('tirage : moins de 11 joueurs, seules leurs places sortent, et le hasard les varie', () => {
+test('tirage : moins de 11 joueurs, l’IA complete la formation, et le hasard varie les places', () => {
   const vues = new Set();
   for (let s = 1; s < 200; s++) {
     const r = tirer({ code: '4-3-3', joueurs: noms(3) }, graine(s));
-    assert.equal(r.length, 3);
+    assert.equal(r.length, 11);
+    assert.equal(new Set(r.map((pl) => pl.id)).size, 11);
+    const ia = r.filter((pl) => pl.ia);
+    assert.equal(ia.length, 8);
+    assert.ok(ia.every((pl) => pl.nom === 'IA' && !pl.impose));
     vues.add(r.find((pl) => pl.nom === 'Joueur1').id);
   }
   // Sur 200 tirages, le premier joueur a connu presque toutes les places.
   assert.ok(vues.size >= 9, [...vues].join(','));
+});
+
+test('4-1-2-1-2 (2) : le losange large, MG et MD a la place des deux MC', () => {
+  const postes = (code) => formation(code).places.map((pl) => pl.poste);
+  assert.deepEqual(postes('4-1-2-1-2').filter((x) => x === 'MC').length, 2);
+  const large = postes('4-1-2-1-2 (2)');
+  assert.ok(!large.includes('MC'));
+  assert.ok(large.includes('MG') && large.includes('MD') && large.includes('MDC') && large.includes('MOC'));
 });
 
 test('tirage : rendu du gardien vers l’attaque', () => {
@@ -197,15 +210,17 @@ test('actions : liste enregistree, tirage sauve, la soiree du club n’est pas t
       { nom: 'Gros Minet', force: '' },
     ],
   });
-  assert.equal(r.tirage.places.length, 2);
+  assert.equal(r.tirage.places.length, 11);
+  assert.equal(r.tirage.places.filter((pl) => !pl.ia).length, 2);
   assert.equal(r.tirage.places.find((pl) => pl.nom === 'Titi').id, 'MOC');
   assert.equal(ctx.stocke.formation.tirage.code, '3-5-2');
   assert.deepEqual(ctx.stocke.matchs, [{ id: 'm1' }]);
   assert.match(ctx.journal.at(-1), /Formation tirée \(3-5-2\)/);
+  assert.doesNotMatch(ctx.journal.at(-1), /IA/);
 
   const relu = await a.formation(ctx);
   assert.equal(relu.code, '3-5-2');
-  assert.equal(relu.tirage.places.length, 2);
+  assert.equal(relu.tirage.places.length, 11);
 });
 
 test('la page est declaree, et ses actions ne sont pas des boutons', () => {

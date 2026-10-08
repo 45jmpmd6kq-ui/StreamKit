@@ -26,7 +26,7 @@
   .page {
     display: grid; gap: 24px; padding: 24px;
     grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
-    align-items: start; max-width: 1180px; margin: 0 auto;
+    align-items: start; max-width: 1340px; margin: 0 auto;
   }
   @media (max-width: 860px) {
     .page { grid-template-columns: 1fr; padding: 16px; }
@@ -81,7 +81,7 @@
   /* --- Terrain ------------------------------------------------------------ */
   .scene { display: flex; flex-direction: column; align-items: center; gap: 12px; }
   /* Le terrain tient en hauteur dans la fenetre : 92 de long pour 68 de large. */
-  .scene { --largeur: min(600px, calc((100vh - 110px) * 68 / 92)); }
+  .scene { --largeur: min(760px, calc((100vh - 110px) * 68 / 92)); }
   .entete-terrain { display: flex; align-items: baseline; gap: 12px; width: 100%; max-width: var(--largeur); }
   .schema { font-size: 30px; font-weight: 900; letter-spacing: 1px; }
   .schema-sous { color: var(--discret); font-size: 13px; }
@@ -103,62 +103,86 @@
     font-size: 10.5px; font-weight: 800; color: rgba(255, 255, 255, .7);
   }
 
+  /* La silhouette des cartes de FC 27 : coins du haut creuses, bas en pointe. */
+  :root {
+    --forme: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140' preserveAspectRatio='none'%3E%3Cpath d='M14 0H86C86 7 91 11 100 11V108C100 114 97 117 92 119L58 134C54 136 52 140 50 140C48 140 46 136 42 134L8 119C3 117 0 114 0 108V11C9 11 14 7 14 0Z'/%3E%3C/svg%3E");
+  }
+
   /* Une carte : deux faces dos a dos, qui tournent ensemble. */
   .carte {
-    position: absolute; width: 14%; aspect-ratio: 4 / 5;
+    position: absolute; width: 13%; aspect-ratio: 5 / 7;
     transform: translate(-50%, -50%);
+    perspective: 700px; container-type: inline-size;
     cursor: pointer; z-index: 1;
+    filter: drop-shadow(0 6px 7px rgba(0, 0, 0, .5));
   }
   .carte .tourne {
     position: absolute; inset: 0; transform-style: preserve-3d;
     transition: transform .75s cubic-bezier(.3, 1.35, .45, 1);
   }
   .carte.retournee .tourne { transform: rotateY(180deg); }
+  /* Chaque face : le cadre (sa couleur de fond) et, par-dessus, le fond de la
+     carte un peu en retrait, decoupes tous deux a la forme FC. */
   .carte .face {
-    position: absolute; inset: 0; border-radius: 10%  / 7%;
+    position: absolute; inset: 0;
     backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    overflow: hidden;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, .45);
+    -webkit-mask: var(--forme) center / 100% 100% no-repeat;
+    mask: var(--forme) center / 100% 100% no-repeat;
+    background: var(--cadre);
   }
+  .carte .face::before {
+    content: ''; position: absolute; inset: 3.5% 4.5% 4%;
+    -webkit-mask: var(--forme) center / 100% 100% no-repeat;
+    mask: var(--forme) center / 100% 100% no-repeat;
+    background: var(--fond);
+  }
+  .carte .face > * { position: absolute; z-index: 1; }
 
   .dos {
-    background:
-      radial-gradient(circle at 50% 42%, rgba(255, 255, 255, .22), transparent 55%),
-      repeating-linear-gradient(45deg, rgba(255, 255, 255, .07) 0 6px, transparent 6px 12px),
-      linear-gradient(160deg, color-mix(in srgb, var(--club) 85%, #fff 15%), color-mix(in srgb, var(--club) 55%, #000 45%));
-    border: 2px solid rgba(255, 255, 255, .55);
-    display: grid; place-items: center;
+    --cadre: color-mix(in srgb, var(--club) 35%, #fff 65%);
+    --fond:
+      radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .25), transparent 55%),
+      repeating-linear-gradient(45deg, rgba(255, 255, 255, .08) 0 6px, transparent 6px 12px),
+      linear-gradient(160deg, color-mix(in srgb, var(--club) 85%, #fff 15%), color-mix(in srgb, var(--club) 50%, #000 50%));
   }
   .dos .marque {
-    width: 46%; aspect-ratio: 1; border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, .7);
+    left: 25%; top: 30%; width: 50%; aspect-ratio: 1; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .75);
     display: grid; place-items: center;
-    font-weight: 900; color: #fff; font-size: clamp(11px, 2.4vw, 19px);
+    font-weight: 900; color: #fff; font-size: 15cqw;
     text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
   }
 
+  /* Recto d'un joueur : la carte or de FC. */
   .recto {
     transform: rotateY(180deg);
-    background: linear-gradient(170deg, #fdfaf0 0%, #efe4c2 100%);
-    border: 2px solid color-mix(in srgb, var(--club) 70%, #fff 30%);
-    color: #121a28;
-    display: flex; flex-direction: column; align-items: center;
-    padding: 0 0 6%;
+    color: #3a2a06;
+    --cadre: linear-gradient(160deg, #fff4c4, #b88a2e 55%, #f3dc8e);
+    --fond:
+      linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .45) 42%, transparent 54%),
+      linear-gradient(165deg, #f8e7a6 0%, #e5c160 45%, #f1d784 70%, #c99b3e 100%);
+  }
+  /* Recto d'une place de l'IA : argent, sans pseudo a decouvrir. */
+  .recto.ia {
+    color: #39424d;
+    --cadre: linear-gradient(160deg, #ffffff, #8c96a2 55%, #e2e6ea);
+    --fond: linear-gradient(165deg, #f1f3f6 0%, #c3cad3 50%, #e3e7ec 72%, #a2abb6 100%);
   }
   .recto .poste {
-    width: 100%; padding: 7% 0 6%; text-align: center;
-    background: var(--club); color: #fff;
-    font-weight: 900; letter-spacing: .5px; line-height: 1;
-    font-size: clamp(11px, 2vw, 19px);
+    left: 14%; top: 13%;
+    font-weight: 900; line-height: 1; font-size: 17cqw; letter-spacing: -.5px;
   }
-  /* Le pseudo prend toute la place restante : c'est lui qu'on attend. */
+  .recto .silhouette { left: 31%; top: 15%; width: 52%; fill: currentColor; opacity: .2; }
+  .recto.ia .silhouette { opacity: .14; }
+  /* Le pseudo, sous la silhouette, comme le nom du joueur sur la carte FC. */
   .recto .nom {
-    flex: 1; width: 100%; padding: 0 6%;
+    left: 9%; right: 9%; top: 57%; height: 22%;
     display: flex; align-items: center; justify-content: center;
-    text-align: center; font-weight: 800; line-height: 1.1;
+    text-align: center; font-weight: 800; line-height: 1.05;
     overflow: hidden;
   }
-  .recto .cadenas { position: absolute; top: 3%; right: 5%; font-size: 9px; }
+  .recto .filet { left: 22%; right: 22%; top: 81%; height: 1px; background: currentColor; opacity: .3; }
+  .recto .cadenas { right: 13%; top: 13%; font-size: 9cqw; }
 
   /* Arrivee des cartes apres le tirage, une a une. */
   .carte.arrive { animation: arrivee .5s cubic-bezier(.2, 1.3, .5, 1) both; }
@@ -168,16 +192,16 @@
   }
 
   /* La roulette : un halo qui court d'une carte cachee a l'autre. */
-  .carte.halo { z-index: 3; }
-  .carte.halo .dos {
-    border-color: #fff;
-    box-shadow: 0 0 0 3px #fff, 0 0 26px 6px color-mix(in srgb, var(--club) 60%, #fff 40%);
+  .carte.halo {
+    z-index: 3;
+    filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 12px color-mix(in srgb, var(--club) 50%, #fff 50%));
   }
   .carte.choisie { z-index: 4; animation: choisie .35s ease-out; }
   @keyframes choisie {
     50% { transform: translate(-50%, -50%) scale(1.14); }
   }
   .carte.retournee { z-index: 2; }
+  .carte.ia { cursor: default; z-index: 1; }
 
   .vide {
     position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
@@ -194,7 +218,7 @@
 <div class="page">
   <section class="panneau">
     <h1>Formation <span class="club" id="club"></span></h1>
-    <div class="sous">Inscris tes joueurs (1 à 11) et tire leurs postes au sort. Un poste choisi dans le menu est imposé à ce joueur ; les autres se partagent les places restantes. Les places sans joueur sont tenues par l’IA et n’ont pas de carte.</div>
+    <div class="sous">Inscris tes joueurs (1 à 11) et tire leurs postes au sort. Un poste choisi dans le menu est imposé à ce joueur ; les autres se partagent les places restantes. Les places sans joueur sont tenues par l’IA : leur carte argent est visible d’emblée.</div>
 
     <label class="titre" for="schema">Formation</label>
     <select id="schema"></select>
@@ -374,24 +398,32 @@ function rendreTerrain({ arrivee = false } = {}) {
     majBoutons();
     return;
   }
-  const n = tirage.places.length;
-  $('schema-sous').textContent = n + (n > 1 ? ' joueurs' : ' joueur') + (n < 11 ? ' · ' + (11 - n) + ' place(s) pour l’IA' : '');
+  const n = tirage.places.filter((pl) => !pl.ia).length;
+  $('schema-sous').textContent = n + (n > 1 ? ' joueurs' : ' joueur') + (n < 11 ? ' · ' + (11 - n) + ' IA' : '');
+  // Les cartes de l'IA arrivent face visible : seuls les joueurs sont a decouvrir.
   placesEl.innerHTML = tirage.places
     .map((pl, i) =>
-      '<div class="carte' + (arrivee ? ' arrive' : '') + '" data-i="' + i + '" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + (arrivee ? i * 70 : 0) + 'ms">'
+      '<div class="carte' + (pl.ia ? ' ia retournee' : '') + (arrivee ? ' arrive' : '') + '" data-i="' + i + '" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + (arrivee ? i * 70 : 0) + 'ms">'
       + '<div class="tourne">'
       + '<div class="face dos"><div class="marque">' + esc(initiales(donnees.club || 'FC')) + '</div></div>'
-      + '<div class="face recto">'
+      + '<div class="face recto' + (pl.ia ? ' ia' : '') + '">'
       + (pl.impose ? '<span class="cadenas" title="Poste imposé">🔒</span>' : '')
       + '<div class="poste">' + esc(pl.poste) + '</div>'
+      + SILHOUETTE
       // Un pseudo peut passer a la ligne apres un « _ » ou un « . ».
       + '<div class="nom">' + esc(pl.nom).replace(/([_.])/g, '$1<wbr>') + '</div>'
+      + '<div class="filet"></div>'
       + '</div></div></div>'
     )
     .join('');
   ajusterNoms();
   majBoutons();
 }
+
+// A la place de la photo du joueur.
+const SILHOUETTE =
+  '<svg class="silhouette" viewBox="0 0 40 40" aria-hidden="true">'
+  + '<circle cx="20" cy="13" r="8.5"/><path d="M3 40c0-10 7.5-16.5 17-16.5S37 30 37 40z"/></svg>';
 
 // Le pseudo au plus gros qui tient sur la carte. Il ne se coupe qu'aux
 // espaces ; un mot trop long pour tenir meme en petit est coupe en dernier

@@ -1,8 +1,8 @@
 // La formation du club : le streamer donne les pseudos de ses joueurs (1 a 11),
 // choisit un schema, et une roulette tire le poste de chacun. Un poste peut etre
 // impose a un joueur ; les autres se partagent au hasard les places restantes.
-// Moins de 11 joueurs : les places non tirees sont tenues par l'IA du jeu et
-// n'apparaissent pas.
+// Moins de 11 joueurs : les places non tirees sont tenues par l'IA du jeu,
+// chacune avec sa carte « IA » (demande du user le 08/10/2026).
 //
 // Rien ne vient d'EA ici : l'API des clubs ne publie ni formation ni tactique
 // (verifie le 08/10/2026), seulement la ligne des joueurs humains apres le match.
@@ -86,6 +86,20 @@ const SCHEMAS = [
       p('MDC', 'MIL', 50, 59),
       p('MC', 'MIL', 25, 48),
       p('MC', 'MIL', 75, 48),
+      p('MOC', 'MIL', 50, 36),
+      p('BU', 'ATT', 35, 16),
+      p('BU', 'ATT', 65, 16),
+    ],
+  },
+  // Le losange « large » de FC : un MG et un MD a la place des deux MC.
+  {
+    code: '4-1-2-1-2 (2)',
+    places: [
+      G(),
+      ...QUATRE,
+      p('MDC', 'MIL', 50, 59),
+      p('MG', 'MIL', 13, 46),
+      p('MD', 'MIL', 87, 46),
       p('MOC', 'MIL', 50, 36),
       p('BU', 'ATT', 35, 16),
       p('BU', 'ATT', 65, 16),
@@ -213,13 +227,14 @@ export function tirer({ code, joueurs }, hasard = Math.random) {
   }
   let suivant = 0;
   const attribue = new Map(joueurs.map((j) => [j.nom, j.force || libres[suivant++]]));
-  // Dans l'ordre du devoilement : du gardien vers l'attaque, de gauche a droite.
+  const joueurDe = new Map([...attribue].map(([nom, id]) => [id, nom]));
+  // Les 11 places, du gardien vers l'attaque et de gauche a droite (l'ordre de
+  // « Tout retourner ») ; celles sans joueur sont a l'IA.
   return f.places
-    .filter((pl) => [...attribue.values()].includes(pl.id))
-    .map((pl) => ({
-      ...pl,
-      nom: [...attribue].find(([, id]) => id === pl.id)[0],
-      impose: joueurs.some((j) => j.force === pl.id),
-    }))
+    .map((pl) =>
+      joueurDe.has(pl.id)
+        ? { ...pl, nom: joueurDe.get(pl.id), ia: false, impose: joueurs.some((j) => j.force === pl.id) }
+        : { ...pl, nom: 'IA', ia: true, impose: false }
+    )
     .sort((a, b) => b.y - a.y || a.x - b.x);
 }

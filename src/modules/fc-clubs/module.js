@@ -343,7 +343,10 @@ export default {
         'Formation tirée (' +
           propre.code +
           ') : ' +
-          tirage.places.map((pl) => pl.poste + ' ' + pl.nom).join(', ') +
+          tirage.places
+            .filter((pl) => !pl.ia)
+            .map((pl) => pl.poste + ' ' + pl.nom)
+            .join(', ') +
           '.'
       );
       return { message: 'Formation tirée.', ...propre, tirage };
