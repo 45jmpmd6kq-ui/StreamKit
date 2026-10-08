@@ -11,16 +11,17 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
-## 0.30.0
+## 0.30.1
 
 ### Nouveautés
 
 - **Soirée Clubs : la formation de ton club, tirée au sort.** Dans le module
   Soirée Clubs, ouvre l'interface « Formation du club » : choisis ton schéma
-  (4-3-3, 4-2-3-1, 3-5-2…), inscris de 1 à 11 joueurs, et impose un poste à
-  ceux qui y tiennent. Un clic tire les postes des autres au sort : les cartes
-  arrivent face cachée sur le terrain, et la roulette les retourne une à une
-  pour dévoiler qui joue où. Les places sans joueur sont laissées à l'IA. Ta
+  (4-3-3, 4-2-3-1, 4-1-2-1-2 serré ou large, 3-5-2…), inscris de 1 à 11
+  joueurs, et impose un poste à ceux qui y tiennent. Un clic tire les postes
+  des autres au sort : des cartes au format FC 27 arrivent face cachée sur le
+  terrain, et la roulette les retourne une à une pour dévoiler qui joue où.
+  Les places sans joueur ont leur carte argent « IA », visible d'emblée. Ta
   liste de joueurs est gardée d'une soirée à l'autre.
 
 ## 0.29.2
