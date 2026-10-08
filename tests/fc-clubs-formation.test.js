@@ -380,3 +380,10 @@ test('enregistrerFormation : changer de formation efface l’ancien tirage, la g
   assert.equal(ctx.stocke.formation.tirage, null);
   assert.equal((await a.formation(ctx)).code, '3-5-2');
 });
+
+test('les formations sont rangees dans l’ordre croissant', () => {
+  assert.deepEqual(
+    FORMATIONS.map((f) => f.code),
+    ['3-4-3', '3-5-2', '4-1-2-1-2', '4-1-2-1-2 (2)', '4-2-3-1', '4-3-3', '4-3-3 (MDC)', '4-4-2', '5-3-2']
+  );
+});

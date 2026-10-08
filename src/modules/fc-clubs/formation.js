@@ -153,6 +153,8 @@ const SCHEMAS = [
 
 // Chaque place recoit un identifiant stable dans son schema (« DC2 » = le
 // deuxieme DC en partant de la gauche) : c'est lui qu'un poste impose retient.
+// Dans l'ordre croissant des schemas (3-4-3, 3-5-2, 4-1-2-1-2...), comme le
+// menu de la page les montre.
 export const FORMATIONS = SCHEMAS.map((s) => {
   const vus = {};
   return {
@@ -163,7 +165,7 @@ export const FORMATIONS = SCHEMAS.map((s) => {
       return { id: pl.poste + (double ? vus[pl.poste] : ''), ...pl };
     }),
   };
-});
+}).sort((a, b) => a.code.localeCompare(b.code, 'fr', { numeric: true }));
 
 export const FORMATION_DEFAUT = '4-3-3';
 

@@ -108,7 +108,15 @@
   .scene { display: flex; flex-direction: column; align-items: center; gap: 12px; }
   /* Le terrain tient en hauteur dans la fenetre : 92 de long pour 68 de large. */
   .scene { --largeur: min(760px, calc((100vh - 110px) * 68 / 92)); }
-  .entete-terrain { display: flex; align-items: baseline; gap: 12px; width: 100%; max-width: var(--largeur); }
+  .entete-terrain {
+    display: flex; align-items: baseline; gap: 12px; width: 100%; max-width: var(--largeur);
+    height: 40px; overflow: hidden;
+  }
+  /* Le panneau commence a la hauteur du terrain, sous le titre de la formation
+     (40 px de titre + 12 px d'ecart). */
+  @media (min-width: 861px) {
+    .panneau { margin-top: 52px; }
+  }
   .schema { font-size: 30px; font-weight: 900; letter-spacing: 1px; }
   .schema-sous { color: var(--discret); font-size: 13px; }
 
@@ -188,6 +196,13 @@
     color: #39424d;
     --cadre: linear-gradient(160deg, #ffffff, #8c96a2 55%, #e2e6ea);
     --fond: linear-gradient(165deg, #f1f3f6 0%, #c3cad3 50%, #e3e7ec 72%, #a2abb6 100%);
+  }
+  /* Clin d'oeil : la carte bronze commune, la plus mauvaise de FC, pour un
+     pseudo bien precis (voir BRONZE). Mate, sans reflet. */
+  .recto.bronze {
+    color: #3b2412;
+    --cadre: linear-gradient(160deg, #e7b98c, #7a4a26 55%, #c88f5e);
+    --fond: linear-gradient(165deg, #d9a678 0%, #b07547 50%, #c48a5b 72%, #8a5631 100%);
   }
   .recto .poste {
     left: 14%; top: 13%;
@@ -520,7 +535,7 @@ function rendreTerrain({ arrivee = false } = {}) {
       '<div class="carte' + (pl.ia ? ' ia retournee' : '') + (arrivee ? ' arrive' : '') + '" data-i="' + i + '" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + (arrivee ? i * 70 : 0) + 'ms">'
       + '<div class="tourne">'
       + '<div class="face dos"><div class="marque">' + esc(initiales(donnees.club || 'FC')) + '</div></div>'
-      + '<div class="face recto' + (pl.ia ? ' ia' : '') + '">'
+      + '<div class="face recto' + (pl.ia ? ' ia' : BRONZE.has(pl.nom.toLocaleLowerCase('fr')) ? ' bronze' : '') + '">'
       + (pl.impose ? '<span class="cadenas" title="Poste imposé">🔒</span>' : '')
       + '<div class="poste">' + esc(pl.poste) + '</div>'
       + SILHOUETTE
@@ -533,6 +548,10 @@ function rendreTerrain({ arrivee = false } = {}) {
   ajusterNoms();
   majBoutons();
 }
+
+// Clin d'oeil demande par le user le 08/10/2026 : ce joueur-la a droit a la
+// carte bronze, la plus mauvaise du jeu.
+const BRONZE = new Set(['snr_bendark']);
 
 // A la place de la photo du joueur.
 const SILHOUETTE =
