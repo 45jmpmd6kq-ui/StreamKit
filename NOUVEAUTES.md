@@ -11,7 +11,7 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
-## 0.30.3
+## 0.30.4
 
 ### Nouveautés
 
@@ -21,7 +21,8 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   joueurs de ton club (StreamKit les lit chez EA) ou tape leurs pseudos, de 1
   à 11. Impose un poste à ceux qui y tiennent ; les autres sont tirés au sort,
   d'abord au milieu et en attaque, puis en défense, dans les buts en dernier.
-  Des cartes au format FC 27 arrivent face cachée sur le terrain, et la
+  Choisir une formation pose aussitôt ses 11 cartes de dos sur le terrain.
+  Au tirage, des cartes au format FC 27 arrivent face cachée, et la
   roulette les retourne une à une pour dévoiler qui joue où. Les places sans
   joueur ont leur carte argent « IA », visible d'emblée. Ta liste de joueurs
   est gardée d'une soirée à l'autre.
