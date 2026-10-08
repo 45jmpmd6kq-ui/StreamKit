@@ -320,7 +320,6 @@ export default {
       const club = ctx.etat.lire({}).club;
       return {
         club: club?.nom || String(c.club ?? '').trim(),
-        couleur: (c.couleurMaillot && couleurDuMaillot(club?.kit)) || c.couleur || COULEUR_DEFAUT,
         nbMax: NB_MAX,
         pseudoMax: PSEUDO_MAX,
         formations: FORMATIONS.map((f) => ({

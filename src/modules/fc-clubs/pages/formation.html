@@ -5,14 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Formation du club — Soirée Clubs</title>
 <style>
+  /* « Nuit de stade » (choix du user le 08/10/2026) : bleu nuit et or, qui
+     s'accordent avec les cartes or. La couleur du club ne pilote plus l'ecran. */
   :root {
-    --bg: #0B1220;
-    --panneau: #111A2B;
-    --champ: #0E1626;
-    --ligne: #223047;
-    --texte: #E8EFF8;
-    --discret: #8A9BB4;
-    --club: #3b7bff;
+    --bg: #0a1222;
+    --panneau: #111c33;
+    --champ: #0c1629;
+    --ligne: #22324f;
+    --texte: #ecf0f7;
+    --discret: #8c9bb5;
+    --or: #d6ae55;
+    --or-clair: #e8c878;
+    --nuit: #0f1a30;
     --ok: #4ADE80;
     --ko: #FF6B7A;
   }
@@ -38,7 +42,7 @@
     border-radius: 14px; padding: 18px;
   }
   h1 { margin: 0 0 16px; font-size: 20px; }
-  h1 .club { color: var(--club); }
+  h1 .club { color: var(--or); }
   label.titre { display: block; font-size: 12px; font-weight: 700; color: var(--discret);
     text-transform: uppercase; letter-spacing: .6px; margin: 0 0 6px; }
 
@@ -47,7 +51,7 @@
     border: 1px solid var(--ligne); background: var(--champ); color: var(--texte);
     font: inherit; font-size: 14px; outline: none;
   }
-  select:focus, input[type="text"]:focus { border-color: var(--club); }
+  select:focus, input[type="text"]:focus { border-color: var(--or); }
 
   /* Les membres du club lus chez EA : un clic les inscrit (ou les retire). */
   .membres { margin-top: 16px; }
@@ -68,11 +72,11 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     outline: none;
   }
-  .puce:hover { border-color: var(--club); }
-  .puce.pris { background: color-mix(in srgb, var(--club) 25%, var(--champ)); border-color: var(--club); }
+  .puce:hover { border-color: var(--or); }
+  .puce.pris { background: color-mix(in srgb, var(--or) 25%, var(--champ)); border-color: var(--or); }
   .puce.pris::before {
     content: '✓'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-    color: var(--club); font-weight: 900;
+    color: var(--or); font-weight: 900;
   }
   .discret { color: var(--discret); font-size: 12.5px; line-height: 1.4; }
 
@@ -80,7 +84,7 @@
   .joueur { display: grid; grid-template-columns: 22px minmax(0, 1fr) 128px 30px; gap: 7px; align-items: center; }
   .joueur .num { color: var(--discret); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
   .joueur select { padding: 9px 6px; font-size: 13px; }
-  .joueur select.impose { border-color: var(--club); color: var(--texte); font-weight: 700; }
+  .joueur select.impose { border-color: var(--or); color: var(--texte); font-weight: 700; }
   .retirer {
     width: 30px; height: 36px; padding: 0; border-radius: 8px; cursor: pointer;
     border: 1px solid transparent; background: transparent; color: var(--discret); font-size: 17px;
@@ -89,12 +93,12 @@
 
   button.btn {
     padding: 10px 14px; border-radius: 9px; cursor: pointer;
-    border: 1px solid var(--ligne); background: #182236; color: var(--texte);
+    border: 1px solid var(--ligne); background: #16223d; color: var(--texte);
     font: inherit; font-size: 13.5px; font-weight: 600;
   }
-  button.btn:hover:not(:disabled) { border-color: var(--club); }
+  button.btn:hover:not(:disabled) { border-color: var(--or); }
   button.btn:disabled { opacity: .45; cursor: default; }
-  button.primaire { background: var(--club); border-color: var(--club); color: #fff; font-weight: 800; }
+  button.primaire { background: var(--or); border-color: var(--or); color: #2a1f05; font-weight: 800; }
   button.primaire:hover:not(:disabled) { filter: brightness(1.1); }
   .ajouter { width: 100%; border-style: dashed !important; background: transparent !important; color: var(--discret) !important; }
 
@@ -124,7 +128,8 @@
     position: relative; width: 100%; max-width: max(320px, var(--largeur)); aspect-ratio: 68 / 92;
     border-radius: 16px; overflow: hidden; perspective: 1100px;
     background:
-      repeating-linear-gradient(180deg, #1c6b3a 0 9.09%, #1a6336 9.09% 18.18%);
+      radial-gradient(ellipse at 50% 45%, rgba(255, 255, 255, .07), transparent 70%),
+      repeating-linear-gradient(180deg, #185632 0 9.09%, #164f2e 9.09% 18.18%);
     box-shadow: 0 18px 50px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .06);
   }
   .terrain svg.lignes { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -167,19 +172,19 @@
   }
   .carte .face > * { position: absolute; z-index: 1; }
 
+  /* Dos : bleu nuit, liseré et poste en or. */
   .dos {
-    --cadre: color-mix(in srgb, var(--club) 35%, #fff 65%);
+    --cadre: linear-gradient(160deg, var(--or-clair), #9c7a2e 55%, var(--or));
     --fond:
-      radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .25), transparent 55%),
-      repeating-linear-gradient(45deg, rgba(255, 255, 255, .08) 0 6px, transparent 6px 12px),
-      linear-gradient(160deg, color-mix(in srgb, var(--club) 85%, #fff 15%), color-mix(in srgb, var(--club) 50%, #000 50%));
+      radial-gradient(circle at 50% 38%, rgba(232, 200, 120, .16), transparent 60%),
+      repeating-linear-gradient(45deg, rgba(232, 200, 120, .05) 0 6px, transparent 6px 12px),
+      linear-gradient(165deg, #172848, var(--nuit) 60%, #0a1324);
   }
   .dos .marque {
-    left: 25%; top: 30%; width: 50%; aspect-ratio: 1; border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, .75);
+    left: 22%; top: 30%; width: 56%; aspect-ratio: 1; border-radius: 50%;
+    border: 1.5px solid rgba(232, 200, 120, .7);
     display: grid; place-items: center;
-    font-weight: 900; color: #fff; font-size: 15cqw;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+    font-weight: 900; color: var(--or-clair); font-size: 15cqw;
   }
 
   /* Recto d'un joueur : la carte or de FC. */
@@ -230,7 +235,7 @@
   /* La roulette : un halo qui court d'une carte cachee a l'autre. */
   .carte.halo {
     z-index: 3;
-    filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 12px color-mix(in srgb, var(--club) 50%, #fff 50%));
+    filter: drop-shadow(0 0 3px var(--or-clair)) drop-shadow(0 0 14px var(--or));
   }
   .carte.choisie { z-index: 4; animation: choisie .35s ease-out; }
   @keyframes choisie {
@@ -656,7 +661,6 @@ $('tirer').addEventListener('click', async () => {
 action('formation')
   .then((d) => {
     donnees = d;
-    document.documentElement.style.setProperty('--club', d.couleur);
     $('club').textContent = d.club ? '· ' + d.club : '';
     code = d.code;
     joueurs = d.joueurs.length ? d.joueurs : [{ nom: '', force: '' }];
