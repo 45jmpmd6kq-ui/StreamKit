@@ -11,7 +11,7 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
-## 0.30.9
+## 0.30.10
 
 ### Nouveautés
 
