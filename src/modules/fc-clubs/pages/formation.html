@@ -166,7 +166,8 @@
   .carte .holo {
     inset: 0; pointer-events: none; mix-blend-mode: color-dodge; z-index: 2;
     background: linear-gradient(115deg, transparent 25%, #f07cc8b3 38%, #8fd8f5cc 46%, #fff 50%, #9af0a0cc 54%, #f5d77ab3 62%, transparent 75%);
-    background-size: 250% 100%; background-position: 120% 0;
+    background-size: 250% 100%; background-position: 120% 0; background-repeat: no-repeat;
+    opacity: 0;
   }
   .carte .onde {
     position: absolute; left: 50%; top: 50%; width: 120%; height: 120%; border-radius: 50%;
@@ -186,9 +187,12 @@
     from { transform: translate(-50%, -50%) scale(.4); opacity: 1; }
     to   { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
   }
+  /* Le reflet ne se repete pas et s'efface a la fin : sinon un reste de
+     couleur restait sur le poste (retour du user le 09/10/2026). */
   @keyframes holo {
-    from { background-position: 120% 0; }
-    to   { background-position: -60% 0; }
+    from { background-position: 120% 0; opacity: 1; }
+    80%  { opacity: 1; }
+    to   { background-position: -60% 0; opacity: 0; }
   }
   /* Changer de formation fait glisser les cartes vers leurs nouvelles places. */
   .carte { transition: left .5s cubic-bezier(.3, 1.1, .4, 1), top .5s cubic-bezier(.3, 1.1, .4, 1); }
