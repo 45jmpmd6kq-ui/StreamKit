@@ -11,6 +11,23 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.32.0
+
+### Nouveautés
+
+- **Nouvelle page « Activité récente »**, juste sous la vue d'ensemble : le fil
+  de ton live, du plus récent au plus ancien — clips créés, musiques demandées,
+  sondages et prédictions, pubs, parties RL et LoL, moments forts, matchs de
+  ton club, voitures tirées, début et fin du live. Change de jour avec les
+  flèches, « Hier » ou le calendrier (60 jours gardés), filtre par jeu, cherche
+  un pseudo ou un titre. « + technique » y ajoute le journal du même jour.
+- **Pastille orange pour un module en attente** : jeu fermé, client fermé, pas
+  de partie en cours. Ce n'est pas une alerte, juste « rien à suivre pour
+  l'instant ».
+- **Overlays OBS** : chaque ligne porte l'univers (Twitch, RL, LoL, VLR, EA FC).
+- Une entrée « Métriques » apparaît dans le menu : les statistiques de tes
+  lives y arrivent dans une prochaine version.
+
 ## 0.31.1
 
 ### Corrections
