@@ -24,7 +24,10 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 - **Pastille orange pour un module en attente** : jeu fermé, client fermé, pas
   de partie en cours. Ce n'est pas une alerte, juste « rien à suivre pour
   l'instant ».
-- **Overlays OBS** : chaque ligne porte l'univers (Twitch, RL, LoL, VLR, EA FC).
+- **Overlays OBS** : chaque ligne porte l'univers (Twitch, RL, LoL, VLR, EA FC),
+  et la liste montre toutes les sources branchées dans OBS — y compris celles
+  d'un module désactivé, signalées en orange : elles sont dans tes scènes mais
+  n'affichent rien.
 - **Les jeux sont toujours dépliés** sur la vue d'ensemble : active un module
   directement avec son interrupteur.
 - **Le journal technique quitte le bas de la fenêtre.** Ce qui compte est dans

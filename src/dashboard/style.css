@@ -561,6 +561,17 @@ a.btn {
   color: var(--texte-doux);
 }
 .cockpit button.ck-obs:hover { color: var(--texte); }
+.ck-obs .nom small {
+  display: block;
+  font-size: 11px;
+  color: var(--avert);
+}
+.ck-obs .fois {
+  flex: none;
+  font-size: 11px;
+  color: var(--texte-faible);
+  font-variant-numeric: tabular-nums;
+}
 .ck-obs.faible { color: var(--texte-faible); }
 .ck-obs .nom {
   flex: 1;

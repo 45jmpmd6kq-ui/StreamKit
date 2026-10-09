@@ -702,7 +702,7 @@ function dessinerAccueil() {
         <div class="ck-univers">${enService(groupes).map(dessinerUniversCockpit).join('')}</div>
         <aside class="ck-cote">
           ${dessinerAlertes(alertes)}
-          ${dessinerOverlays(actifs, s)}
+          ${dessinerOverlays(tous, s)}
         </aside>
       </div>
     </div>`
@@ -848,24 +848,32 @@ function etiquetteUnivers(c) {
   return `<span class="ck-tag" style="--univers:${echapper(c.couleur || '#8b93a7')}">${echapper(c.court || c.label)}</span>`;
 }
 
-// Les overlays des modules actifs : ceux deja branches dans OBS, puis combien
-// attendent encore leur source.
-function dessinerOverlays(actifs, s) {
-  const liste = actifs.flatMap((x) => (s.overlays?.[x.m.id] ?? []).map((o) => ({ ...o, module: x.m })));
-  if (!liste.length) return '';
+// Les overlays branches dans OBS, puis combien attendent encore leur source.
+function dessinerOverlays(tous, s) {
+  const liste = tous.flatMap((x) => (s.overlays?.[x.m.id] ?? []).map((o) => ({ ...o, module: x.m })));
+  // Toutes les sources branchees, module actif ou non : une source qui pointe
+  // vers un module desactive est dans les scenes OBS mais n'affiche rien --
+  // c'est justement celle qu'il faut voir. Le total colle ainsi a la carte OBS.
   const branches = liste.filter((o) => o.sources);
-  const reste = liste.length - branches.length;
+  // « Pas encore dans OBS » ne parle que des modules actifs : ceux qu'on a
+  // coupes n'ont pas a y etre.
+  const reste = liste.filter((o) => !o.sources && o.module.actif).length;
+  if (!branches.length && !reste) return '';
+  const sources = branches.reduce((n, o) => n + o.sources, 0);
   return `
-    <div class="ck-box"><h3>Overlays OBS <span>${branches.length} / ${liste.length}</span></h3>
+    <div class="ck-box"><h3>Overlays OBS <span>${sources} source${sources > 1 ? 's' : ''}</span></h3>
       ${branches
-        .map(
-          (o) =>
-            `<button class="ck-obs" data-ck-module="${o.module.id}">${etiquetteUnivers(o.module.categorie)}<span class="nom">${echapper(o.module.icone)} ${echapper(o.module.nom)}${
+        .map((o) => {
+          const coupe = !o.module.actif;
+          return `<button class="ck-obs ${coupe ? 'coupe' : ''}" data-ck-module="${o.module.id}"
+            title="${coupe ? 'Cette source est dans OBS mais n’affiche rien : son module est désactivé.' : ''}">${etiquetteUnivers(o.module.categorie)}<span class="nom">${echapper(o.module.icone)} ${echapper(o.module.nom)}${
               o.nom === o.module.nom ? '' : ' · ' + echapper(o.nom)
-            }</span><span class="d ok"></span></button>`
-        )
+            }${coupe ? '<small>module désactivé</small>' : ''}</span>${
+              o.sources > 1 ? `<span class="fois">×${o.sources}</span>` : ''
+            }<span class="d ${coupe ? 'av' : 'ok'}"></span></button>`;
+        })
         .join('')}
-      ${reste ? `<div class="ck-obs faible">${reste} pas encore dans OBS</div>` : ''}
+      ${reste ? `<div class="ck-obs faible">${reste} overlay${reste > 1 ? 's' : ''} de tes modules actifs pas encore dans OBS</div>` : ''}
     </div>`;
 }
 
