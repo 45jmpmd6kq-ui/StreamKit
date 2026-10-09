@@ -702,7 +702,7 @@ function dessinerAccueil() {
       <div class="ck-conns">${socle.map(dessinerConnexion).join('')}</div>
       <div class="ck-titre">Modules par univers</div>
       <div class="ck-corps">
-        <div class="ck-univers">${groupes.map(dessinerUniversCockpit).join('')}</div>
+        <div class="ck-univers">${enService(groupes).map(dessinerUniversCockpit).join('')}</div>
         <aside class="ck-cote">
           ${dessinerAlertes(alertes)}
           ${dessinerOverlays(actifs, s)}
@@ -711,6 +711,13 @@ function dessinerAccueil() {
       </div>
     </div>`
   );
+}
+
+// Les univers en service d'abord, ceux en veille a la fin : avant un live, on
+// regarde ce qui tourne. Dans chaque paquet, l'ordre du catalogue est garde.
+function enService(groupes) {
+  const actif = (g) => g.modules.some((x) => x.m.actif) || universOuverts.has(g.categorie.id);
+  return [...groupes.filter(actif), ...groupes.filter((g) => !actif(g))];
 }
 
 function dessinerHero(h) {

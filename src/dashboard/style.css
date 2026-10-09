@@ -378,13 +378,20 @@ a.btn {
   .ck-hero { grid-template-columns: auto minmax(0, 1fr); }
   .ck-stats { grid-column: 1 / -1; flex-wrap: wrap; }
 }
+/* En colonnes plutot qu'en grille : une grille aligne ses rangees sur la carte
+   la plus haute (Twitch et ses cinq modules) et laissait un grand trou sous les
+   petites. Ici chaque panneau se pose sous le precedent, sans vide. */
 .ck-univers {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-  gap: 0.9rem;
-  align-items: start;
+  columns: 330px;
+  column-gap: 0.9rem;
 }
 .ck-u {
+  /* inline-block + width : Chromium ne coupe alors jamais un panneau entre
+     deux colonnes. */
+  display: inline-block;
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: 0.9rem;
   background: var(--panneau);
   border: 1px solid var(--bordure);
   border-radius: 14px;
