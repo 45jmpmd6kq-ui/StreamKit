@@ -26,6 +26,13 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   se remplissent au fil de tes prochains lives. Les totaux « depuis toujours »
   sont, eux, déjà là.
 
+### Corrections
+
+- **Les alertes suivent ce que tu fais.** L'erreur d'un module disparaît dès
+  que tu le désactives ou qu'il redémarre correctement, au lieu de rester une
+  heure. Elle porte le nom du module, et la jauge ne montre plus 100 % quand
+  une erreur est en cours.
+
 ## 0.32.0
 
 ### Nouveautés

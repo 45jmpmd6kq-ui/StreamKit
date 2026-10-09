@@ -462,3 +462,21 @@ test('les erreurs de la derniere heure remontent, une par source, la plus recent
   );
   assert.match(miennes[0].h, /^\d{2}:\d{2}:\d{2}$/);
 });
+
+test('l erreur d un module disparait des qu il est coupe', async () => {
+  journal.pour('mod-coupe').err('« Bot » n a pas demarre : points de chaine indisponibles');
+  const actif = module_('mod-coupe', { etat: 'erreur', actif: true });
+  assert.ok((await monter({ modules: [actif] }).sante()).erreurs.some((e) => e.source === 'mod-coupe'));
+
+  const coupe = module_('mod-coupe', { etat: 'arrete', actif: false });
+  assert.ok(!(await monter({ modules: [coupe] }).sante()).erreurs.some((e) => e.source === 'mod-coupe'));
+});
+
+test('l erreur d un module disparait quand il redemarre sans erreur', async () => {
+  journal.pour('mod-repart').err('panne passagere');
+  await new Promise((r) => {
+    setTimeout(r, 5);
+  });
+  const reparti = module_('mod-repart', { etat: 'demarre', actif: true, demarreA: Date.now() });
+  assert.ok(!(await monter({ modules: [reparti] }).sante()).erreurs.some((e) => e.source === 'mod-repart'));
+});

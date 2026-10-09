@@ -667,7 +667,9 @@ function dessinerAccueil() {
   // modules actifs) qui va bien. Un « a surveiller » compte pour moitie.
   const connVues = socle.filter((l) => l.etat !== 'inactif');
   const connOk = connVues.filter((l) => l.etat === 'ok').length;
-  const elements = connVues.length + actifs.length;
+  // Une erreur recente compte comme un element en panne : pas de 100 % avec
+  // « Pas pret pour le live » au-dessus.
+  const elements = connVues.length + actifs.length + (s.erreurs?.length ?? 0);
   const points =
     connOk +
     actifs.filter((x) => x.etat === 'ok' || x.etat === 'attente').length +

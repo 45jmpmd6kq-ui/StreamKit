@@ -199,7 +199,9 @@ export async function demarrer(id, contexteFactory) {
     m.instance = null;
     m.etat = 'erreur';
     m.erreur = e?.message || String(e);
-    log.err('« ' + m.manifeste.nom + " » n'a pas demarre : " + m.erreur);
+    // Sous le nom du MODULE, pas du noyau : la vue d'ensemble range ses erreurs
+    // par source, et retire celle-ci des que le module est coupe ou repart.
+    journal.pour(m.id).err('« ' + m.manifeste.nom + " » n'a pas demarre : " + m.erreur);
   }
   return m;
 }

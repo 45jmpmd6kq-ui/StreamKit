@@ -393,14 +393,21 @@ export function creerSante({
     };
   }
 
+  // Une erreur de module ne compte plus des que le streamer l'a coupe, ou qu'il
+  // a redemarre sans erreur depuis (signale le 10/10/2026 : l'alerte restait une
+  // heure apres avoir decoche le module).
   function erreursRecentes() {
     const limite = Date.now() - FENETRE_ERREURS_MS;
     const parSource = new Map();
     for (const e of journal.historique({ niveau: 'erreur', limite: 200 })) {
-      if (Date.parse(e.t) >= limite)
-        parSource.set(e.source, { source: e.source, h: e.h, message: e.message });
+      const t = Date.parse(e.t);
+      if (t < limite) continue;
+      parSource.set(e.source, { source: e.source, h: e.h, t: e.t, message: e.message });
     }
-    return [...parSource.values()];
+    return [...parSource.values()].filter((e) => {
+      const m = registre.liste().find((x) => x.id === e.source);
+      return !m || (m.actif && !(m.demarreA && m.demarreA > Date.parse(e.t)));
+    });
   }
 
   return {
