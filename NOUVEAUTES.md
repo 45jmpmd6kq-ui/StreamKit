@@ -11,7 +11,7 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
-## 0.30.10
+## 0.30.11
 
 ### Nouveautés
 
@@ -20,6 +20,10 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   dorée part et un reflet holographique balaie le recto au moment où le
   joueur apparaît. « Tout retourner » enchaîne les cartes une demi-seconde
   l'une après l'autre.
+- **Formation du club : les buteurs d'abord.** Sans poste imposé, le tirage
+  remplit maintenant les places de BU en premier, puis celle de MOC, avant les
+  autres milieux et les ailiers. À trois joueurs en 4-1-2-1-2, ce sont donc
+  deux BU et un MOC ; un poste que tu imposes reste prioritaire.
 
 ## 0.30.8
 
