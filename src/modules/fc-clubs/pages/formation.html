@@ -180,6 +180,19 @@
     transition: opacity .5s;
     background: radial-gradient(circle, #f0d38a99 0%, #f0d38a26 30%, transparent 60%);
   }
+  /* L'atterrissage : la carte retombe, s'ecrase un peu a l'impact et tremble
+     en s'amortissant (demande du user le 09/10/2026). */
+  .carte.pose .leve { animation: pose .7s ease-out; }
+  @keyframes pose {
+    0%   { transform: translateY(-9%) scale(1.18); }
+    28%  { transform: translateY(1%) scale(.96, .98); }
+    40%  { transform: translateX(-3%) rotate(-3deg) scale(1.01); }
+    52%  { transform: translateX(3%) rotate(2.5deg); }
+    64%  { transform: translateX(-2%) rotate(-1.5deg); }
+    76%  { transform: translateX(1%) rotate(1deg); }
+    88%  { transform: rotate(-.4deg); }
+    100% { transform: none; }
+  }
   .carte.eclat .onde { animation: onde .75s ease-out forwards; }
   .carte.eclat .holo { animation: holo 1.4s cubic-bezier(.4, 0, .2, 1) forwards; }
   .carte.eclat.envol .lueur { opacity: 1; }
@@ -291,7 +304,7 @@
     .carte .tourne { transition-duration: .3s; }
     .carte.envol .tourne, .carte.retournee .tourne { transform: rotateY(180deg); }
     .carte.envol .leve { transform: none; }
-    .carte.arrive, .carte.eclat .onde, .carte.eclat .holo { animation: none; }
+    .carte.arrive, .carte.eclat .onde, .carte.eclat .holo, .carte.pose .leve { animation: none; }
   }
 </style>
 </head>
@@ -642,8 +655,10 @@ async function retourner(carte) {
   } else {
     await pause(300);
   }
-  carte.classList.add('retournee');
+  carte.classList.add('retournee', 'pose');
   carte.classList.remove('envol');
+  if (!lent()) await pause(700);
+  carte.classList.remove('pose');
   majBoutons();
 }
 
