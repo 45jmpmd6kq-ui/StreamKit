@@ -11,6 +11,14 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.31.1
+
+### Corrections
+
+- **Vue d'ensemble : les panneaux de jeux se rangent mieux.** Ils se placent
+  de gauche à droite puis comblent la colonne la plus courte : plus de colonne
+  vide ni de grand trou sous un petit panneau.
+
 ## 0.31.0
 
 ### Nouveautés
