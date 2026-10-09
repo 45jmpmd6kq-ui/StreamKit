@@ -1607,7 +1607,7 @@ function dessinerModerateur() {
           ${modules
             .map((m) => {
               const u = usage(s, m);
-              if (!s.actifs[m.id] && !u) return '<span class="md-c vide"></span>';
+              if (!s.actifs[m.id] && !u) return '<span class="md-c coupe"></span>';
               const a = Math.round(25 + (75 * u) / max[m.id]);
               const coul = m.categorie?.couleur || '#8b93a7';
               return `<span class="md-c" style="background:color-mix(in srgb, ${coul} ${u ? a : 12}%, var(--panneau-clair))" title="${echapper(m.nom)} : ${u}">${u}</span>`;

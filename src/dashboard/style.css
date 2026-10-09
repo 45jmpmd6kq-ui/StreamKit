@@ -941,6 +941,9 @@ a.btn {
 .md-carte {
   display: grid;
   gap: 4px;
+  /* Toutes les cases a la meme hauteur, centrees sur le nom du streamer (plus
+     haut, avec sa version). */
+  align-items: center;
   padding: 0.4rem 1rem 1rem;
   overflow-x: auto;
 }
@@ -1005,7 +1008,7 @@ a.btn {
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
-.md-c.vide {
+.md-c.coupe {
   background: var(--panneau-clair);
   opacity: 0.45;
 }
