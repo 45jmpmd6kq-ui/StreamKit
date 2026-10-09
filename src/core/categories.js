@@ -21,20 +21,22 @@
 // of Legends en a deux modules, Twitch cinq, et onze cartes cote a cote ne
 // disaient plus a quel module chaque ligne appartenait.
 //
+// `court` : le nom en abrege, la ou la place manque (etiquettes des overlays).
+//
 // `couleur` : l'identite de l'univers a l'ecran (en-tete de sa carte, icone du
 // rail). Elle ne dit jamais un ETAT -- le vert, l'orange et le rouge sont
 // reserves a ca, et resteraient illisibles si une categorie pouvait les
 // reprendre a son compte.
 export const CATEGORIES = [
-  { id: 'twitch', label: 'Twitch', icone: '🟣', couleur: '#9146ff', ordre: 10 },
-  { id: 'rocket-league', label: 'Rocket League', icone: '🚀', couleur: '#3d8bff', ordre: 20 },
-  { id: 'lol', label: 'League of Legends', icone: '⚔️', couleur: '#c8aa6e', ordre: 30 },
-  { id: 'valorant', label: 'Valorant', icone: '🔫', couleur: '#ff4655', ordre: 40 },
+  { id: 'twitch', label: 'Twitch', court: 'Twitch', icone: '🟣', couleur: '#9146ff', ordre: 10 },
+  { id: 'rocket-league', label: 'Rocket League', court: 'RL', icone: '🚀', couleur: '#3d8bff', ordre: 20 },
+  { id: 'lol', label: 'League of Legends', court: 'LoL', icone: '⚔️', couleur: '#c8aa6e', ordre: 30 },
+  { id: 'valorant', label: 'Valorant', court: 'VLR', icone: '🔫', couleur: '#ff4655', ordre: 40 },
   // Cyan plutot que le vert d'un terrain : le vert dit « tout va bien ».
-  { id: 'ea-fc', label: 'EA FC', icone: '⚽', couleur: '#22b8cf', ordre: 50 },
+  { id: 'ea-fc', label: 'EA FC', court: 'EA FC', icone: '⚽', couleur: '#22b8cf', ordre: 50 },
   // Fourre-tout volontaire, toujours en dernier : ce qui ne depend d'aucun jeu
   // ni de Twitch (module de demonstration, futurs utilitaires).
-  { id: 'outils', label: 'Outils', icone: '🧰', couleur: '#8b93a7', ordre: 90 },
+  { id: 'outils', label: 'Outils', court: 'Outils', icone: '🧰', couleur: '#8b93a7', ordre: 90 },
 ];
 
 const PAR_DEFAUT = CATEGORIES.find((c) => c.id === 'outils');

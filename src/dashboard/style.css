@@ -573,21 +573,30 @@ a.btn {
 }
 .cockpit button.ck-obs:hover { color: var(--texte); }
 .ck-obs.faible { color: var(--texte-faible); }
-.ck-ev {
-  display: flex;
-  gap: 0.6rem;
-  font-size: 12.5px;
-  padding: 0.3rem 0;
-  color: var(--texte-doux);
+.ck-obs .nom {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
 }
-.ck-ev time {
-  color: var(--texte-faible);
-  font-variant-numeric: tabular-nums;
+.cockpit .ck-obs {
+  gap: 0.5rem;
+}
+/* L'univers en abrege, a sa couleur : un reperage, jamais un etat. */
+.ck-tag {
   flex: none;
+  min-width: 44px;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 5px;
+  color: color-mix(in srgb, var(--univers) 75%, white);
+  background: color-mix(in srgb, var(--univers) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--univers) 35%, transparent);
 }
-.ck-ev b { color: var(--texte); font-weight: 600; }
-.ck-ev.erreur b { color: var(--erreur); }
-.ck-ev.avert b { color: var(--avert); }
 
 .carte {
   background: var(--panneau);

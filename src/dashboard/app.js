@@ -564,7 +564,7 @@ function brancherRail() {
 // pas configuree) s'affiche comme off : ce n'est pas une panne.
 const GRAVITE_CK = { ko: 3, attention: 2, ok: 1, off: 0, inactif: 0 };
 const pire = (etats) => etats.reduce((a, e) => (GRAVITE_CK[e] > GRAVITE_CK[a] ? e : a), 'off');
-const PASTILLE = { ok: 'ok', attention: 'av', ko: 'ko', off: 'of', inactif: 'of' };
+const PASTILLE = { ok: 'ok', attente: 'av', attention: 'av', ko: 'ko', off: 'of', inactif: 'of' };
 
 // Univers en veille qu'on a quand meme deplies. En memoire seulement : au
 // prochain lancement, un univers sans module actif se replie de nouveau.
@@ -590,10 +590,14 @@ function etatModule(m, s) {
   if (m.etat !== 'demarre') return { etat: 'attention', detail: 'Démarrage…', aide: '', sous };
 
   const e = lignes.length ? pire(lignes.map((l) => l.etat)) : 'ok';
+  // Demarre mais sans rien a suivre (jeu ou client ferme, pas de partie) : le
+  // module attend. Pastille orange (choix du user le 09/10/2026), mais ce n'est
+  // pas une alerte -- un jeu ferme avant le live est la norme.
+  const enAttente = GRAVITE_CK[e] <= GRAVITE_CK.ok && lignes.length && !lignes.some((x) => x.etat === 'ok');
   // La phrase de la ligne la plus grave : c'est elle qui explique la couleur.
   const l = lignes.find((x) => x.etat === e) ?? lignes[0];
   return {
-    etat: GRAVITE_CK[e] > GRAVITE_CK.ok ? e : 'ok',
+    etat: GRAVITE_CK[e] > GRAVITE_CK.ok ? e : enAttente ? 'attente' : 'ok',
     detail: l?.detail || 'En marche',
     aide: l?.aide || '',
     // La ligne qui donne la couleur : si c'est une connexion (Spotify pour le
@@ -647,7 +651,7 @@ function dessinerAccueil() {
   const elements = connVues.length + actifs.length;
   const points =
     connOk +
-    actifs.filter((x) => x.etat === 'ok').length +
+    actifs.filter((x) => x.etat === 'ok' || x.etat === 'attente').length +
     0.5 * alertes.filter((a) => a.etat === 'attention').length;
   const pourcent = elements ? Math.round((points / elements) * 100) : 0;
   const sources = Object.values(s.overlays ?? {})
@@ -699,7 +703,6 @@ function dessinerAccueil() {
         <aside class="ck-cote">
           ${dessinerAlertes(alertes)}
           ${dessinerOverlays(actifs, s)}
-          ${dessinerActivite()}
         </aside>
       </div>
     </div>`
@@ -837,6 +840,13 @@ function dessinerAlertes(alertes) {
   return `<div class="ck-box"><h3>Alertes <span class="${alertes.length ? 'rouge' : ''}">${alertes.length}</span></h3>${corps}</div>`;
 }
 
+// L'univers en abrege (RL, LoL, VLR…) a sa couleur : deux overlays « Moments
+// forts » ne se confondent plus.
+function etiquetteUnivers(c) {
+  if (!c) return '';
+  return `<span class="ck-tag" style="--univers:${echapper(c.couleur || '#8b93a7')}">${echapper(c.court || c.label)}</span>`;
+}
+
 // Les overlays des modules actifs : ceux deja branches dans OBS, puis combien
 // attendent encore leur source.
 function dessinerOverlays(actifs, s) {
@@ -849,33 +859,12 @@ function dessinerOverlays(actifs, s) {
       ${branches
         .map(
           (o) =>
-            `<button class="ck-obs" data-ck-module="${o.module.id}"><span>${echapper(o.module.icone)} ${echapper(o.module.nom)}${
+            `<button class="ck-obs" data-ck-module="${o.module.id}">${etiquetteUnivers(o.module.categorie)}<span class="nom">${echapper(o.module.icone)} ${echapper(o.module.nom)}${
               o.nom === o.module.nom ? '' : ' · ' + echapper(o.nom)
             }</span><span class="d ok"></span></button>`
         )
         .join('')}
       ${reste ? `<div class="ck-obs faible">${reste} pas encore dans OBS</div>` : ''}
-    </div>`;
-}
-
-// Les derniers evenements notables du journal (pas le bavardage de debug).
-function dessinerActivite() {
-  const nom = new Map(etat.modules.map((m) => [m.id, m.nom]));
-  const lignes = (etat.lignes ?? [])
-    .filter((l) => l.niveau !== 'debug')
-    .slice(-5)
-    .reverse();
-  if (!lignes.length) return '';
-  return `
-    <div class="ck-box"><h3>Activité récente</h3>
-      ${lignes
-        .map(
-          (l) =>
-            `<div class="ck-ev ${l.niveau}"><time>${echapper(String(l.h).slice(0, 5))}</time><span><b>${echapper(
-              nom.get(l.source) || l.source
-            )}</b> ${echapper(l.message)}</span></div>`
-        )
-        .join('')}
     </div>`;
 }
 
