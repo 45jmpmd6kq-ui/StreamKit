@@ -762,18 +762,153 @@ a.btn {
   border-radius: 14px;
 }
 
-/* Entrée de menu à venir (Métriques). */
-.entree.bientot {
-  opacity: 0.55;
-  cursor: default;
+/* ---------- Métriques ---------- */
+/* Tuiles d'indicateurs (valeur + tendance), puis le graphique par live (Twitch)
+   et les tops de viewers. Mêmes filtres que la page Activité (.act-chip). */
+.metriques .act-filtres {
+  margin-bottom: 1rem;
 }
-.badge-bientot {
-  margin-left: auto;
-  font-size: 10.5px;
-  color: var(--texte-faible);
+.mt-tuiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.8rem;
+}
+.mt-tuile {
+  background: var(--panneau);
   border: 1px solid var(--bordure);
-  border-radius: 99px;
-  padding: 0 0.45rem;
+  border-radius: 14px;
+  padding: 0.9rem 1.05rem;
+}
+.mt-titre {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 12.5px;
+  color: var(--texte-doux);
+  min-height: 20px;
+}
+.mt-titre span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-valeur {
+  font-size: 1.9rem;
+  font-weight: 650;
+  line-height: 1.2;
+  margin-top: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+.mt-delta {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--succes);
+  margin-left: 0.45rem;
+  vertical-align: middle;
+}
+.mt-delta.baisse {
+  color: var(--erreur);
+}
+.mt-sous {
+  font-size: 12px;
+  color: var(--texte-faible);
+  margin-top: 0.15rem;
+}
+.mt-note {
+  font-size: 12px;
+  color: var(--texte-faible);
+  margin: 0.7rem 0 0;
+}
+.mt-bas {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+  align-items: start;
+}
+@media (max-width: 1250px) {
+  .mt-bas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.mt-boite {
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.mt-boite-titre {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1rem 0.6rem;
+}
+.mt-boite-titre b {
+  font-weight: 600;
+}
+.mt-legende {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--texte-doux);
+}
+.mt-legende i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 0.3rem;
+}
+.mt-svg {
+  display: block;
+  width: 100%;
+  padding: 0 0.6rem 0.6rem;
+}
+.mt-axe {
+  stroke: var(--bordure);
+}
+.mt-val {
+  fill: var(--texte-doux);
+  font-size: 11px;
+  text-anchor: middle;
+}
+.mt-x {
+  fill: var(--texte-faible);
+  font-size: 11px;
+  text-anchor: middle;
+}
+.mt-vide {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--texte-faible);
+  font-size: 13px;
+}
+.mt-tops {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.mt-top {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 0.6rem;
+  padding: 0.45rem 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  font-size: 13px;
+}
+.mt-top em {
+  color: var(--texte-faible);
+  font-style: normal;
+}
+.mt-top b {
+  font-weight: 600;
+}
+.mt-top span {
+  color: var(--texte-doux);
+  font-variant-numeric: tabular-nums;
 }
 
 .carte {
@@ -1037,6 +1172,7 @@ a.btn {
 .detail-inner {
   max-width: 720px;
 }
+.detail-inner[data-vue='__metriques__'],
 .detail-inner[data-vue='__activite__'] {
   max-width: 1240px;
 }

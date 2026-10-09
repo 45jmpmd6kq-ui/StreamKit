@@ -194,7 +194,7 @@ export default {
         try {
           const clip = await clipper.creer({ nom: c.nommage ? argument : '' });
           dernierClip = Date.now();
-          ctx.compteur.incr('crees');
+          ctx.compteur.incr('crees', 1, { par: user });
 
           if (c.overlayActif) {
             ctx.overlay.diffuser('annonce', 'clip', {

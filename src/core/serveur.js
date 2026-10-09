@@ -533,6 +533,11 @@ export function creerServeur(app) {
           return json(res, r.ok ? 200 : 400, r);
         }
 
+        // --- Metriques (page « Metriques ») ---
+        if (chemin === '/api/metriques' && methode === 'GET') {
+          return json(res, 200, app.metriques());
+        }
+
         // --- Activite (page « Activite recente ») ---
         // Un jour a la fois : ?jour=AAAA-MM-JJ (defaut : aujourd'hui), et
         // ?technique=1 pour y meler le journal du meme jour. `jours` liste ceux

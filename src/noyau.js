@@ -28,6 +28,7 @@ import * as notes from './core/notes.js';
 import * as diffusion from './core/diffusion.js';
 import * as compteurs from './core/compteurs.js';
 import * as activite from './core/activite.js';
+import * as categories from './core/categories.js';
 import * as connecteurs from './core/connecteurs.js';
 import * as coffre from './core/coffre.js';
 import { creerSante, resumeModules } from './core/sante.js';
@@ -165,7 +166,8 @@ export async function demarrerNoyau({
       // Compteurs d'usage : le module incremente, le socle persiste et agrege.
       // Rien a declarer ailleurs qu'un libelle dans le manifeste.
       compteur: {
-        incr: (cle, combien = 1) => compteurs.incr(id, cle, combien),
+        // `options.par` : le viewer concerné, pour les tops de la page Métriques.
+        incr: (cle, combien = 1, options) => compteurs.incr(id, cle, combien, options),
         lire: () => compteurs.pour(id),
       },
 
@@ -301,11 +303,13 @@ export async function demarrerNoyau({
         etatDirect.enCours = true;
         etatDirect.depuis = Date.now();
         compteurs.nouvelleSession('live');
+        compteurs.debutLive(etatDirect.depuis);
         log.ok('Live démarré — compteurs de session remis à zéro.');
         activite.noter('live', 'Live démarré');
       },
       fin: () => {
         etatDirect.enCours = false;
+        compteurs.finLive();
         log.info('Live terminé. Les compteurs de la session restent affichés.');
         activite.noter('live', 'Live terminé', 'info');
       },
@@ -316,10 +320,13 @@ export async function demarrerNoyau({
     twitch
       .enDirect()
       .then((s) => {
-        if (!s) return;
+        // Pas en live : un live resté ouvert (StreamKit fermé en plein stream)
+        // se termine à la dernière minute où on l'a vu.
+        if (!s) return compteurs.fermerOuverts();
         etatDirect.enCours = true;
         etatDirect.depuis = s.depuis;
         compteurs.nouvelleSession('live');
+        compteurs.debutLive(new Date(s.depuis).getTime());
         log.info('Live déjà en cours : les compteurs comptent depuis son début.');
       })
       .catch(() => {});
@@ -639,7 +646,29 @@ export async function demarrerNoyau({
         ? { ok: false, dossier: JOURNAUX_DIR, erreur: echec }
         : { ok: true, dossier: JOURNAUX_DIR };
     },
+
+    // Page « Métriques » : l'historique brut des compteurs, et ce qu'il faut
+    // pour l'afficher (libellés, univers). Le dashboard agrège lui-même.
+    metriques: () => ({
+      ...compteurs.historique(),
+      modules: registre
+        .liste()
+        .filter((m) => m.manifeste.compteurs && (!m.manifeste.developpement || m.actif))
+        .map((m) => ({
+          id: m.id,
+          nom: m.manifeste.nom,
+          icone: m.manifeste.icone ?? '🧩',
+          categorie: categories.resoudre(m.manifeste.categorie),
+          actif: m.actif,
+          compteurs: m.manifeste.compteurs,
+        })),
+    }),
   };
+
+  // La duree d'un live dont on rate la fin (StreamKit ferme en plein stream)
+  // reste juste a la minute pres.
+  const ticLive = setInterval(() => compteurs.tic(), 60 * 1000);
+  ticLive.unref?.();
 
   // --- Demarrage ------------------------------------------------------------
 
@@ -684,6 +713,7 @@ export async function demarrerNoyau({
     reconnexion.arreter();
     log.info('Arret de StreamKit...');
     for (const id of [...contextes.keys()]) await arreterModule(id);
+    clearInterval(ticLive);
     compteurs.vider();
     await twitch.arreter();
     serveur.close();

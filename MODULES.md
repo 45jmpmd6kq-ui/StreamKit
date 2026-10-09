@@ -486,9 +486,12 @@ Le socle range tout dans `%APPDATA%\StreamKit\activite\AAAA-MM-JJ.jsonl`
 
 ## Les compteurs d'usage
 
-Déclare des libellés dans le manifeste, incrémente dans le code. Ils ne sont
-plus affichés sur la vue d'ensemble depuis 0.31.0 ; ils alimenteront la future
-page « Métriques » :
+Déclare des libellés dans le manifeste, incrémente dans le code : les chiffres
+apparaissent dans la page « Métriques » (par période, avec leur tendance). Le
+**premier** libellé déclaré est le compteur principal du module : c'est lui qui
+a sa tuile et, pour un module Twitch, sa barre dans le graphique par live. Un
+module qui déclare `victoires` et `defaites` (et `nuls`) a une tuile « taux de
+victoire » à la place :
 
 ```js
 compteurs: {
@@ -499,8 +502,12 @@ compteurs: {
 // puis, dans demarrer() :
 ctx.compteur.incr('crees');
 ctx.compteur.incr('crees', 3);   // par lot
+ctx.compteur.incr('crees', 1, { par: user });   // qui : alimente les tops de viewers
 ctx.compteur.lire();             // { total: {...}, session: {...} }
 ```
+
+Le socle garde aussi un historique (par jour, 400 jours ; par live, 300 lives),
+dans le même `compteurs.json` : c'est lui que la page Métriques agrège.
 
 Deux échelles, parce qu'elles ne répondent pas à la même question :
 

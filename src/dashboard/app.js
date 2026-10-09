@@ -12,6 +12,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 const ACCUEIL = '__accueil__';
 const CONNECTEURS = '__connecteurs__';
 const ACTIVITE = '__activite__';
+const METRIQUES = '__metriques__';
 
 const etat = {
   modules: [],
@@ -109,7 +110,7 @@ function redessinerDetail(html, apres) {
   const memeVue = cible.dataset.vue === etat.selection;
   // Seulement pour les tableaux de bord : un formulaire de module, lui, compte
   // sur le redessin pour revenir a ce que StreamKit a retenu.
-  const tableau = etat.selection === ACCUEIL || etat.selection === ACTIVITE;
+  const tableau = etat.selection === ACCUEIL || etat.selection === ACTIVITE || etat.selection === METRIQUES;
   if (tableau && memeVue && dernierDessin.vue === etat.selection && dernierDessin.html === html)
     return memeVue;
   const defilant = cible.closest('.detail');
@@ -486,6 +487,7 @@ function dessinerRail() {
   $('#entree-accueil').classList.toggle('actif', etat.selection === ACCUEIL);
   $('#entree-connecteurs').classList.toggle('actif', etat.selection === CONNECTEURS);
   $('#entree-activite').classList.toggle('actif', etat.selection === ACTIVITE);
+  $('#entree-metriques').classList.toggle('actif', etat.selection === METRIQUES);
   const groupes = grouperParCategorie();
 
   $('#liste-modules').innerHTML = groupes
@@ -1100,6 +1102,337 @@ function brancherActivite() {
   });
 }
 
+// --- Métriques -----------------------------------------------------------------
+
+// Évolution par période (maquette B choisie par le user le 10/10/2026) : des
+// indicateurs avec leur tendance, un graphique par live, les tops de viewers.
+// Le graphique ne montre QUE Twitch (demande du user) : clips, musiques ou
+// sondages s'y comparent d'un live à l'autre, les scores de jeux non.
+//
+// Le serveur donne l'historique brut (core/compteurs.js) ; tout s'agrège ici.
+const vueMetriques = { periode: '7', univers: 'tout', donnees: null };
+
+const PERIODES = [
+  ['live', 'Ce live'],
+  ['7', '7 jours'],
+  ['30', '30 jours'],
+  ['tout', 'Depuis toujours'],
+];
+
+// Une couleur par série du graphique : jamais le vert/orange/rouge des états.
+const COULEURS_SERIES = ['#9146ff', '#3d8bff', '#22b8cf', '#c8aa6e', '#e879f9', '#8b93a7'];
+
+async function chargerMetriques() {
+  try {
+    vueMetriques.donnees = await api('/api/metriques');
+  } catch {
+    vueMetriques.donnees = null;
+  }
+  if (etat.selection === METRIQUES) dessinerMetriques();
+}
+
+const plus = (cible, src) => {
+  for (const [mod, cles] of Object.entries(src ?? {})) {
+    cible[mod] ??= {};
+    for (const [cle, n] of Object.entries(cles)) cible[mod][cle] = (cible[mod][cle] || 0) + n;
+  }
+  return cible;
+};
+
+// Les jours (clés AAAA-MM-JJ) des `n` derniers jours, aujourd'hui compris, en
+// sautant les `decalage` jours les plus récents (pour la période précédente).
+function joursPrecedents(aujourdhui, n, decalage = 0) {
+  return Array.from({ length: n }, (_, i) => decalerJour(aujourdhui, -(i + decalage)));
+}
+
+function sommeJours(d, liste, champ = 'm') {
+  const res = {};
+  for (const j of liste) {
+    const b = d.jours[j]?.[champ];
+    if (!b) continue;
+    if (champ === 'm') plus(res, b);
+    else
+      for (const [mod, cles] of Object.entries(b))
+        for (const [cle, gens] of Object.entries(cles)) {
+          res[mod] ??= {};
+          res[mod][cle] ??= {};
+          for (const [nom, n] of Object.entries(gens)) res[mod][cle][nom] = (res[mod][cle][nom] || 0) + n;
+        }
+  }
+  return res;
+}
+
+// Ce qu'une période donne : les valeurs, la période d'avant (pour la
+// tendance), les lives et les tops.
+function agreger(d, periode) {
+  const maintenant = Date.now();
+  if (periode === 'live') {
+    const live = d.liveEnCours ? d.lives.at(-1) : null;
+    return {
+      valeurs: d.session,
+      avant: null,
+      lives: live ? [live] : [],
+      par: live?.par ?? {},
+      libelle: live ? 'ce live' : 'depuis le lancement de StreamKit',
+    };
+  }
+  if (periode === 'tout') {
+    const par = sommeJours(d, Object.keys(d.jours), 'par');
+    return { valeurs: d.totaux, avant: null, lives: d.lives, par, libelle: 'depuis toujours' };
+  }
+  const n = Number(periode);
+  const jours = joursPrecedents(d.aujourdhui, n);
+  const limite = maintenant - n * 86400000;
+  const avantJours = joursPrecedents(d.aujourdhui, n, n);
+  const avant = sommeJours(d, avantJours);
+  // Pas de tendance tant que la période précédente est vide : « +100 % »
+  // n'aurait aucun sens la première semaine.
+  const avantVide = !Object.values(avant).some((c) => Object.values(c).some((x) => x));
+  return {
+    valeurs: sommeJours(d, jours),
+    avant: avantVide ? null : avant,
+    lives: d.lives.filter((l) => l.debut >= limite),
+    par: sommeJours(d, jours, 'par'),
+    libelle: n + ' derniers jours',
+  };
+}
+
+function duree(ms) {
+  const min = Math.round(ms / 60000);
+  const h = Math.floor(min / 60);
+  return h ? h + ' h ' + String(min % 60).padStart(2, '0') : min + ' min';
+}
+
+const nombre = (n) => Math.round(n).toLocaleString('fr-FR');
+
+function tendance(actuel, precedent) {
+  if (precedent == null || !precedent) return '';
+  const pct = Math.round(((actuel - precedent) / precedent) * 100);
+  if (!pct) return '<span class="mt-delta">=</span>';
+  return `<span class="mt-delta ${pct < 0 ? 'baisse' : ''}">${pct > 0 ? '+' : ''}${pct} %</span>`;
+}
+
+// Les tuiles d'un module : un taux de victoire s'il compte victoires et
+// défaites, sinon son premier compteur (le principal), les autres en dessous.
+function tuilesModule(mod, a) {
+  const v = a.valeurs[mod.id] ?? {};
+  const p = a.avant?.[mod.id];
+  const cles = Object.keys(mod.compteurs);
+  const court = mod.categorie?.court || mod.categorie?.label || '';
+  if (cles.includes('victoires') && cles.includes('defaites')) {
+    const vi = v.victoires || 0;
+    const de = v.defaites || 0;
+    const nu = v.nuls || 0;
+    const tot = vi + de + nu;
+    if (!tot && !mod.actif) return [];
+    const taux = tot ? Math.round((vi / tot) * 100) : null;
+    let delta = '';
+    if (p && taux != null) {
+      const tp = (p.victoires || 0) + (p.defaites || 0) + (p.nuls || 0);
+      if (tp) {
+        const ecart = taux - Math.round(((p.victoires || 0) / tp) * 100);
+        delta = ecart
+          ? `<span class="mt-delta ${ecart < 0 ? 'baisse' : ''}">${ecart > 0 ? '+' : ''}${ecart} pts</span>`
+          : '';
+      }
+    }
+    return [
+      {
+        univers: mod.categorie,
+        titre: 'Victoires ' + court + (mod.nom.match(/session|clubs/i) ? '' : ' · ' + mod.nom),
+        valeur: taux == null ? '—' : taux + ' %',
+        delta,
+        sous: tot ? `${vi} V${nu ? ' – ' + nu + ' N' : ''} – ${de} D` : 'aucune partie',
+      },
+    ];
+  }
+  const [principal, ...autres] = cles;
+  const val = v[principal] || 0;
+  if (!val && !mod.actif) return [];
+  return [
+    {
+      univers: mod.categorie,
+      titre: mod.compteurs[principal],
+      valeur: nombre(val),
+      delta: tendance(val, p ? p[principal] || 0 : null),
+      sous:
+        autres
+          .filter((c) => v[c])
+          .map((c) => nombre(v[c]) + ' ' + mod.compteurs[c].toLowerCase())
+          .join(' · ') || mod.nom,
+    },
+  ];
+}
+
+function dessinerMetriques() {
+  $('#pied-detail').hidden = true;
+  const d = vueMetriques.donnees;
+  if (!d) {
+    redessinerDetail('<div class="vide">Lecture des métriques…</div>');
+    return;
+  }
+
+  const a = agreger(d, vueMetriques.periode);
+  const filtre = vueMetriques.univers;
+  const modules = d.modules.filter((m) => filtre === 'tout' || m.categorie?.id === filtre);
+
+  // Les univers proposés : ceux des modules qui ont des compteurs.
+  const univers = [...new Map(d.modules.map((m) => [m.categorie.id, m.categorie])).values()].sort(
+    (x, y) => x.ordre - y.ordre
+  );
+
+  const dureeLives = a.lives.reduce(
+    (t, l) => t + ((l.fin ?? (d.liveEnCours ? Date.now() : l.vu)) - l.debut),
+    0
+  );
+  const tuiles = [
+    vueMetriques.periode === 'live'
+      ? {
+          titre: 'Live',
+          valeur: d.liveEnCours ? duree(dureeLives) : 'Hors live',
+          delta: '',
+          sous: d.liveEnCours ? 'en direct' : 'chiffres depuis le lancement de StreamKit',
+        }
+      : {
+          titre: 'Lives',
+          valeur: nombre(a.lives.length),
+          delta: '',
+          sous: a.lives.length ? duree(dureeLives) + ' en direct' : 'aucun live enregistré',
+        },
+    ...modules.flatMap((m) => tuilesModule(m, a)),
+  ];
+
+  const chip = (attr, valeur, texte, actif) =>
+    `<button class="act-chip ${actif ? 'on' : ''}" ${attr}="${echapper(valeur)}">${texte}</button>`;
+
+  const graphique = filtre === 'tout' || filtre === 'twitch' ? dessinerGraphiqueLives(d, a) : '';
+  const tops = dessinerTops(d, a, filtre);
+
+  redessinerDetail(`
+    <div class="metriques">
+      <div class="titre-module"><span style="font-size:1.6rem">📊</span><h1>Métriques</h1></div>
+      <p class="act-sous">L’évolution de tes lives sur la période choisie.</p>
+      <div class="act-filtres">
+        ${PERIODES.map(([v, t]) => chip('data-mt-periode', v, t, vueMetriques.periode === v)).join('')}
+        <span class="act-sep"></span>
+        ${chip('data-mt-univers', 'tout', 'Tout', filtre === 'tout')}
+        ${univers.map((c) => chip('data-mt-univers', c.id, echapper(c.court || c.label), filtre === c.id)).join('')}
+      </div>
+      <div class="mt-tuiles">
+        ${tuiles
+          .map(
+            (t) => `
+          <div class="mt-tuile">
+            <div class="mt-titre">${t.univers ? etiquetteUnivers(t.univers) : ''}<span>${echapper(t.titre)}</span></div>
+            <div class="mt-valeur">${echapper(t.valeur)}${t.delta}</div>
+            <div class="mt-sous">${echapper(t.sous)}</div>
+          </div>`
+          )
+          .join('')}
+      </div>
+      ${
+        a.avant || vueMetriques.periode === 'live' || vueMetriques.periode === 'tout'
+          ? ''
+          : '<p class="mt-note">Les tendances apparaîtront quand la période précédente aura des données : l’historique commence avec cette version.</p>'
+      }
+      ${graphique || tops ? `<div class="mt-bas">${graphique}${tops}</div>` : ''}
+    </div>`);
+}
+
+// Graphique « Par live », Twitch seulement : une barre par compteur principal
+// des modules Twitch, groupées par live (les 12 derniers de la période).
+function dessinerGraphiqueLives(d, a) {
+  const twitch = d.modules.filter((m) => m.categorie?.id === 'twitch');
+  const lives = a.lives.slice(-12);
+  const series = twitch
+    .map((m) => {
+      const cle = Object.keys(m.compteurs)[0];
+      return { m, cle, label: m.compteurs[cle] };
+    })
+    .filter((s) => lives.some((l) => l.m?.[s.m.id]?.[s.cle]));
+  const cadre = (corps) =>
+    `<div class="mt-boite mt-graph"><div class="mt-boite-titre"><b>Par live · Twitch</b>${
+      series.length
+        ? `<span class="mt-legende">${series
+            .map(
+              (s, i) =>
+                `<span><i style="background:${COULEURS_SERIES[i % COULEURS_SERIES.length]}"></i>${echapper(s.label)}</span>`
+            )
+            .join('')}</span>`
+        : ''
+    }</div>${corps}</div>`;
+
+  if (!lives.length || !series.length) {
+    return cadre(
+      `<div class="mt-vide">${
+        lives.length
+          ? 'Pas encore d’activité Twitch sur ces lives.'
+          : 'Tes lives apparaîtront ici à partir du prochain : l’historique commence avec cette version.'
+      }</div>`
+    );
+  }
+
+  const L = 760;
+  const H = 230;
+  const bas = H - 28;
+  const haut = 18;
+  const max = Math.max(1, ...lives.flatMap((l) => series.map((s) => l.m?.[s.m.id]?.[s.cle] || 0)));
+  const groupe = (L - 20) / lives.length;
+  const barre = Math.min(26, (groupe - 14) / series.length);
+  const p = (x) => String(x).padStart(2, '0');
+  let svg = `<line x1="10" y1="${bas}" x2="${L - 10}" y2="${bas}" class="mt-axe"/>`;
+  lives.forEach((l, i) => {
+    const x0 = 10 + i * groupe + (groupe - barre * series.length) / 2;
+    series.forEach((s, k) => {
+      const v = l.m?.[s.m.id]?.[s.cle] || 0;
+      const h = Math.round(((bas - haut) * v) / max);
+      const x = x0 + k * barre;
+      svg += `<rect x="${x + 1}" y="${bas - h}" width="${barre - 2}" height="${h}" rx="3" fill="${COULEURS_SERIES[k % COULEURS_SERIES.length]}"><title>${echapper(s.label)} : ${v}</title></rect>`;
+      if (v) svg += `<text x="${x + barre / 2}" y="${bas - h - 4}" class="mt-val">${v}</text>`;
+    });
+    const dt = new Date(l.debut);
+    const lib = dt.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+    svg += `<text x="${10 + i * groupe + groupe / 2}" y="${H - 8}" class="mt-x">${echapper(lib)} ${p(dt.getHours())}h</text>`;
+  });
+  return cadre(
+    `<svg viewBox="0 0 ${L} ${H}" class="mt-svg" role="img" aria-label="Compteurs Twitch par live">${svg}</svg>`
+  );
+}
+
+// Les tops de viewers : demandes de musique, clips créés.
+function dessinerTops(d, a, filtre) {
+  if (filtre !== 'tout' && filtre !== 'twitch') return '';
+  const blocs = [
+    ['musique', 'demandes', 'Top demandeurs de musique'],
+    ['clips', 'crees', 'Top clippeurs'],
+  ]
+    .map(([mod, cle, titre]) => {
+      const gens = Object.entries(a.par?.[mod]?.[cle] ?? {})
+        .sort((x, y) => y[1] - x[1])
+        .slice(0, 5);
+      if (!gens.length) return '';
+      return `<div class="mt-boite"><div class="mt-boite-titre"><b>${titre}</b></div>${gens
+        .map(
+          ([nom, n], i) =>
+            `<div class="mt-top"><em>${i + 1}</em><b>@${echapper(nom)}</b><span>${nombre(n)}</span></div>`
+        )
+        .join('')}</div>`;
+    })
+    .filter(Boolean);
+  return blocs.length ? `<div class="mt-tops">${blocs.join('')}</div>` : '';
+}
+
+function brancherMetriques() {
+  $('#detail').addEventListener('click', (e) => {
+    if (etat.selection !== METRIQUES) return;
+    const b = e.target.closest('[data-mt-periode], [data-mt-univers]');
+    if (!b) return;
+    if (b.dataset.mtPeriode) vueMetriques.periode = b.dataset.mtPeriode;
+    if (b.dataset.mtUnivers) vueMetriques.univers = b.dataset.mtUnivers;
+    dessinerMetriques();
+  });
+}
+
 async function chargerSante() {
   try {
     etat.sante = await api('/api/sante');
@@ -1324,6 +1657,7 @@ function dessinerDetail() {
   if (etat.selection === ACCUEIL) return dessinerAccueil();
   if (etat.selection === CONNECTEURS) return dessinerConnecteurs();
   if (etat.selection === ACTIVITE) return dessinerActivitePage();
+  if (etat.selection === METRIQUES) return dessinerMetriques();
 
   const m = moduleAffiche();
 
@@ -2103,6 +2437,13 @@ $('#entree-accueil').addEventListener('click', () => {
   dessinerAccueil();
 });
 
+$('#entree-metriques').addEventListener('click', () => {
+  etat.selection = METRIQUES;
+  dessinerRail();
+  dessinerMetriques();
+  chargerMetriques();
+});
+
 $('#entree-activite').addEventListener('click', () => {
   etat.selection = ACTIVITE;
   dessinerRail();
@@ -2113,6 +2454,7 @@ $('#entree-activite').addEventListener('click', () => {
 brancherRail();
 brancherDetail();
 brancherActivite();
+brancherMetriques();
 brancherModales();
 brancherSignalement();
 
@@ -2144,6 +2486,7 @@ async function cycleRafraichissement() {
     await chargerConnecteurs();
     // Le jour en cours se remplit pendant le live ; un jour passe ne bouge plus.
     if (etat.selection === ACTIVITE && !vueActivite.jour) await chargerActivite();
+    if (etat.selection === METRIQUES) await chargerMetriques();
   } catch {
     /* StreamKit ne répond pas : rafraichirEtat l'affiche déjà, on réessaiera */
   } finally {

@@ -11,6 +11,21 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.33.0
+
+### Nouveautés
+
+- **Nouvelle page « Métriques »** : les chiffres de tes lives sur la période de
+  ton choix — ce live, 7 jours, 30 jours ou depuis toujours — avec leur
+  tendance par rapport à la période d'avant. Clips, musiques, sondages,
+  prédictions, taux de victoire en RL, LoL et EA FC… Filtre par jeu.
+- **Un graphique « par live »** pour Twitch (clips, musiques, sondages,
+  prédictions), et le **top de tes viewers** : ceux qui demandent le plus de
+  musique, ceux qui clippent le plus.
+- L'historique commence avec cette version : les graphiques et les tendances
+  se remplissent au fil de tes prochains lives. Les totaux « depuis toujours »
+  sont, eux, déjà là.
+
 ## 0.32.0
 
 ### Nouveautés

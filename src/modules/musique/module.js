@@ -423,7 +423,7 @@ export default {
         diffuser('added', { requester: item.requester, name: item.name, artists: item.artists });
         pousserEtat();
 
-        ctx.compteur.incr('demandes');
+        ctx.compteur.incr('demandes', 1, { par: e.userDisplayName });
         ctx.log.ok('Ajouté à la file : ' + morceau.name + ' — ' + morceau.artists);
         ctx.activite('« ' + morceau.name + ' — ' + morceau.artists + ' » demandé par @' + e.userDisplayName);
         annoncer(
