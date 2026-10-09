@@ -1,7 +1,8 @@
 // Statistiques d'usage, pour la vue « Modérateur » du développeur (demandée le
 // 10/10/2026 : savoir quels modules ses streamers utilisent le plus).
 //
-// Ce qui part, une fois par heure, pour la journée en cours : la version, le
+// Ce qui part, à la fin de chaque live (noyau.js) et une fois par heure, pour
+// la journée en cours : la version, le
 // nom de la chaîne, les modules actifs et leurs compteurs du jour, le nombre de
 // lives et leur durée. JAMAIS un pseudo de viewer, un titre, un jeton.
 //
