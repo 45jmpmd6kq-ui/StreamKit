@@ -498,17 +498,6 @@ a.btn {
 .cockpit .ck-sw.on { background: var(--succes); }
 .cockpit .ck-sw.on::after { left: 18px; background: #fff; }
 
-.ck-veille {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.8rem 1rem;
-  color: var(--texte-faible);
-  font-size: 13px;
-}
-.cockpit .ck-veille button { color: var(--texte-doux); font-size: 13px; }
-.cockpit .ck-veille button:hover { color: var(--texte); }
-
 /* Colonne laterale */
 .ck-cote {
   display: flex;

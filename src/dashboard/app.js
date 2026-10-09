@@ -568,10 +568,6 @@ const GRAVITE_CK = { ko: 3, attention: 2, ok: 1, off: 0, inactif: 0 };
 const pire = (etats) => etats.reduce((a, e) => (GRAVITE_CK[e] > GRAVITE_CK[a] ? e : a), 'off');
 const PASTILLE = { ok: 'ok', attente: 'av', attention: 'av', ko: 'ko', off: 'of', inactif: 'of' };
 
-// Univers en veille qu'on a quand meme deplies. En memoire seulement : au
-// prochain lancement, un univers sans module actif se replie de nouveau.
-const universOuverts = new Set();
-
 // Ce qu'on affiche d'un module : son etat, une phrase, ses sous-modules.
 // Les sous-modules sont ses lignes de sante, quand il en declare plusieurs.
 function etatModule(m, s) {
@@ -726,10 +722,11 @@ window.addEventListener('resize', () => {
   if (etat.selection === ACCUEIL) caserUnivers();
 });
 
-// Les univers en service d'abord, ceux en veille a la fin : avant un live, on
-// regarde ce qui tourne. Dans chaque paquet, l'ordre du catalogue est garde.
+// Les univers en service d'abord, ceux sans module actif a la fin : avant un
+// live, on regarde ce qui tourne. Dans chaque paquet, l'ordre du catalogue est
+// garde.
 function enService(groupes) {
-  const actif = (g) => g.modules.some((x) => x.m.actif) || universOuverts.has(g.categorie.id);
+  const actif = (g) => g.modules.some((x) => x.m.actif);
   return [...groupes.filter(actif), ...groupes.filter((g) => !actif(g))];
 }
 
@@ -779,13 +776,11 @@ function dessinerConnexion(l) {
 
 function dessinerUniversCockpit({ categorie, modules }) {
   const actifs = modules.filter((x) => x.m.actif);
-  const ouvert = actifs.length || universOuverts.has(categorie.id);
   const segments = modules.map((x) => `<i class="${PASTILLE[x.etat]}"></i>`).join('');
   const n = modules.length;
-  const corps = ouvert
-    ? modules.map(dessinerLigneModule).join('')
-    : `<div class="ck-veille"><span>En veille — ${n} module${n > 1 ? 's' : ''} désactivé${n > 1 ? 's' : ''}</span>` +
-      `<button data-ck-deplier="${echapper(categorie.id)}">Déplier</button></div>`;
+  // Toujours deplie, meme sans module actif (choix du user le 10/10/2026) : on
+  // active un module d'un clic sur son interrupteur, sans deplier d'abord.
+  const corps = modules.map(dessinerLigneModule).join('');
   return `
     <div class="ck-u" style="--univers:${echapper(categorie.couleur || '#8b93a7')}">
       <div class="ck-uh">
@@ -1457,19 +1452,13 @@ function brancherDetail() {
     // Les lignes de module sont cliquables en entier : on les aiguille avant
     // le filtre sur les boutons. L'interrupteur passe en premier, sinon un clic
     // dessus ouvrirait aussi le module.
-    const ck = e.target.closest(
-      '[data-ck-basculer], [data-ck-deplier], [data-ck-connexion], [data-ck-module]'
-    );
+    const ck = e.target.closest('[data-ck-basculer], [data-ck-connexion], [data-ck-module]');
     if (ck && zone.contains(ck)) {
       const d = ck.dataset;
       if (d.ckBasculer) {
         const m = etat.modules.find((x) => x.id === d.ckBasculer);
         if (m) basculerModule(m).then(chargerSante);
         return;
-      }
-      if (d.ckDeplier) {
-        universOuverts.add(d.ckDeplier);
-        return dessinerAccueil();
       }
       if (d.ckConnexion) {
         // OBS n'a pas d'ecran a lui : ses sources se reglent dans chaque module.
