@@ -206,76 +206,379 @@ a.btn {
   margin-bottom: 2rem;
 }
 
-/* ---------- Cartes d'univers (vue d'ensemble) ---------- */
-/* Une carte par univers, une ligne par module. Elles ont autant de lignes que
-   de modules allumes : leur hauteur suit leur contenu, on ne les etire pas. */
-.cartes-univers {
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-  grid-auto-rows: auto;
-  align-items: start;
+/* ---------- Vue d'ensemble : cockpit ---------- */
+/* Tableau de bord de supervision : bandeau d'etat, connexions, un panneau par
+   univers, et a droite ce qui demande une action. La couleur d'un univers ne
+   sert qu'a le reperer ; l'etat reste au vert, a l'orange et au rouge. */
+
+.cockpit .d {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
 }
-.carte.univers {
+.cockpit .d.ok { background: var(--succes); box-shadow: 0 0 0 3px color-mix(in srgb, var(--succes) 15%, transparent); }
+.cockpit .d.av { background: var(--avert); box-shadow: 0 0 0 3px color-mix(in srgb, var(--avert) 15%, transparent); }
+.cockpit .d.ko { background: var(--erreur); box-shadow: 0 0 0 3px color-mix(in srgb, var(--erreur) 18%, transparent); }
+.cockpit .d.of { border: 2px solid var(--bordure-vive); box-sizing: border-box; }
+
+.cockpit button {
+  background: none;
+  border: 0;
   padding: 0;
-  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
 }
-.carte.univers .u-entete {
+
+/* Bandeau d'etat */
+.ck-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  border: 1px solid var(--bordure);
+  background: var(--panneau);
+}
+.ck-hero.attention { background: linear-gradient(110deg, color-mix(in srgb, var(--avert) 9%, transparent), transparent 55%), var(--panneau); }
+.ck-hero.ko { background: linear-gradient(110deg, color-mix(in srgb, var(--erreur) 10%, transparent), transparent 55%), var(--panneau); }
+.ck-hero.ok { background: linear-gradient(110deg, color-mix(in srgb, var(--succes) 9%, transparent), transparent 55%), var(--panneau); }
+.ck-pourcent {
+  fill: var(--texte);
+  font-size: 19px;
+  font-weight: 650;
+}
+.ck-hero h1 {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 650;
+}
+.ck-hero p {
+  margin: 0.2rem 0 0;
+  color: var(--texte-doux);
+}
+.ck-live {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--texte-doux);
+  background: var(--panneau-clair);
+  border: 1px solid var(--bordure);
+  padding: 0.15rem 0.6rem;
+  border-radius: 99px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+.ck-live.direct { color: var(--erreur); border-color: color-mix(in srgb, var(--erreur) 40%, transparent); }
+.ck-stats {
+  display: flex;
+  gap: 0.6rem;
+}
+.ck-stat {
+  background: var(--panneau-clair);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  padding: 0.55rem 0.9rem;
+  min-width: 112px;
+}
+.ck-stat b {
+  display: block;
+  font-size: 1.45rem;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.ck-stat small {
+  font-size: 0.6em;
+  color: var(--texte-faible);
+}
+.ck-stat span {
+  font-size: 12px;
+  color: var(--texte-doux);
+}
+.ck-stat.alerte {
+  border-color: color-mix(in srgb, var(--erreur) 45%, transparent);
+  background: color-mix(in srgb, var(--erreur) 8%, var(--panneau-clair));
+}
+.ck-stat.alerte b { color: var(--erreur); }
+
+/* Titres de section */
+.ck-titre {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.65rem 0.9rem;
-  border-bottom: 1px solid var(--bordure);
-  /* La couleur de l'univers, assez diluee pour rester un reperage et jamais un
-     etat -- ceux-la gardent le vert, l'orange et le rouge. */
-  background: color-mix(in srgb, var(--univers) 12%, transparent);
-}
-.carte.univers .u-icone {
-  font-size: 1rem;
-  line-height: 1;
-}
-.carte.univers .u-nom {
-  font-weight: 600;
-  flex: 1;
-}
-.carte.univers .u-compte {
+  gap: 0.6rem;
+  margin: 1.5rem 0 0.6rem;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--texte-faible);
-  font-size: 0.78rem;
 }
-.carte.univers .u-ligne {
+.ck-titre::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--bordure);
+}
+
+/* Connexions */
+.ck-conns {
   display: grid;
-  grid-template-columns: 10px 1fr;
-  gap: 0.1rem 0.5rem;
-  padding: 0.5rem 0.9rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--bordure) 55%, transparent);
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.6rem;
 }
-.carte.univers .u-ligne:last-child {
-  border-bottom: 0;
+.cockpit .ck-cx {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.1rem 0.7rem;
+  align-items: center;
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  transition: border-color 0.12s;
 }
-/* La pastille s'aligne sur la premiere ligne du texte, pas sur son milieu. */
-.carte.univers .u-ligne .point {
-  margin-top: 0.4rem;
+.cockpit .ck-cx:hover { border-color: var(--bordure-vive); }
+.ck-cx .ic {
+  grid-row: span 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  background: var(--panneau-clair);
 }
-.carte.univers .u-l-nom {
-  font-size: 0.9rem;
-}
-.carte.univers .u-l-icone {
-  margin-right: 0.3rem;
-}
-.carte.univers .u-l-detail {
-  grid-column: 2;
+.ck-cx .n { font-weight: 600; }
+.ck-cx .s {
+  grid-column: 2 / 4;
+  font-size: 12px;
   color: var(--texte-doux);
-  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cockpit .ck-cx.ko { border-color: color-mix(in srgb, var(--erreur) 45%, transparent); }
+.ck-cx.ko .s { color: var(--erreur); }
+.ck-cx.attention .s { color: var(--avert); }
+.ck-cx.off { opacity: 0.55; }
+
+/* Corps : univers + colonne laterale */
+.ck-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 1250px) {
+  .ck-corps { grid-template-columns: minmax(0, 1fr); }
+  .ck-hero { grid-template-columns: auto minmax(0, 1fr); }
+  .ck-stats { grid-column: 1 / -1; flex-wrap: wrap; }
+}
+.ck-univers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 0.9rem;
+  align-items: start;
+}
+.ck-u {
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.ck-uh {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--bordure);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--univers) 22%, transparent), transparent);
+}
+.ck-uh .ic { font-size: 18px; line-height: 1; }
+.ck-uh .n { font-weight: 650; font-size: 15px; }
+.ck-ratio {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--texte-faible);
+  font-variant-numeric: tabular-nums;
+}
+.ck-seg {
+  display: flex;
+  gap: 3px;
+}
+.ck-seg i {
+  width: 14px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bordure-vive);
+}
+.ck-seg i.ok { background: var(--succes); }
+.ck-seg i.av { background: var(--avert); }
+.ck-seg i.ko { background: var(--erreur); }
+
+/* Une ligne par module */
+.ck-m {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.1rem 0.7rem;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.ck-m:last-child { border-bottom: 0; }
+.ck-m:hover { background: var(--panneau-clair); }
+.ck-m .n { font-weight: 600; }
+.ck-m .e {
+  grid-column: 2;
+  font-size: 12px;
+  color: var(--texte-doux);
+}
+.ck-m.ko .e { color: var(--erreur); }
+.ck-m.attention .e { color: var(--avert); }
+.ck-m.off .n { color: var(--texte-faible); font-weight: 500; }
+.ck-m.off .e { color: var(--texte-faible); }
+.ck-sous {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.ck-sb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 11.5px;
+  padding: 0.1rem 0.5rem;
+  border-radius: 6px;
+  background: var(--panneau-clair);
+  border: 1px solid var(--bordure);
+  color: var(--texte-doux);
+}
+.cockpit .ck-sb .d { width: 6px; height: 6px; box-shadow: none; }
+.cockpit .ck-sb .d.of { border-width: 1.5px; }
+
+/* Interrupteur */
+.cockpit .ck-sw {
+  grid-row: 1 / 3;
+  grid-column: 3;
+  width: 34px;
+  height: 19px;
+  border-radius: 99px;
+  position: relative;
+  background: var(--bordure-vive);
+  transition: background 0.15s;
+}
+.cockpit .ck-sw::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #c9c9d6;
+  transition: left 0.15s;
+}
+.cockpit .ck-sw.on { background: var(--succes); }
+.cockpit .ck-sw.on::after { left: 18px; background: #fff; }
+
+.ck-veille {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  color: var(--texte-faible);
+  font-size: 13px;
+}
+.cockpit .ck-veille button { color: var(--texte-doux); font-size: 13px; }
+.cockpit .ck-veille button:hover { color: var(--texte); }
+
+/* Colonne laterale */
+.ck-cote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.ck-box {
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+}
+.ck-box h3 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 0.6rem;
+  font-size: 14px;
+}
+.ck-box h3 span { color: var(--texte-doux); font-weight: 600; }
+.ck-box h3 span.rouge { color: var(--erreur); }
+.ck-al {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.2rem 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+}
+.ck-al:first-of-type { border-top: 0; padding-top: 0; }
+.ck-al .d { margin-top: 6px; }
+.ck-al .t { font-weight: 600; font-size: 13px; }
+.ck-al .x {
+  grid-column: 2;
+  font-size: 12px;
+  color: var(--texte-doux);
   word-break: break-word;
 }
-.carte.univers .u-l-aide {
+.ck-al .aide {
   display: block;
   color: var(--texte-faible);
-  font-size: 0.8rem;
-  line-height: 1.45;
   margin-top: 0.15rem;
 }
-.carte.univers .u-ligne.inactif .u-l-nom {
+.cockpit .ck-btn {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: 0.3rem;
+  font-size: 12px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--bordure-vive);
+  color: var(--texte);
+}
+.cockpit .ck-btn:hover { background: var(--panneau-clair); }
+.ck-rien { color: var(--texte-faible); font-size: 13px; }
+.cockpit .ck-obs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  font-size: 12.5px;
+  padding: 0.25rem 0;
   color: var(--texte-doux);
 }
+.cockpit button.ck-obs:hover { color: var(--texte); }
+.ck-obs.faible { color: var(--texte-faible); }
+.ck-ev {
+  display: flex;
+  gap: 0.6rem;
+  font-size: 12.5px;
+  padding: 0.3rem 0;
+  color: var(--texte-doux);
+}
+.ck-ev time {
+  color: var(--texte-faible);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.ck-ev b { color: var(--texte); font-weight: 600; }
+.ck-ev.erreur b { color: var(--erreur); }
+.ck-ev.avert b { color: var(--avert); }
 
 .carte {
   background: var(--panneau);
@@ -417,60 +720,6 @@ a.btn {
   margin-top: 1rem;
 }
 
-/* ---------- Compteurs d'usage ---------- */
-
-.kpi-module {
-  margin-bottom: 1.25rem;
-}
-.kpi-titre {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.6rem;
-  font-weight: 600;
-}
-.kpi-repos {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--texte-faible);
-  border: 1px solid var(--bordure);
-  border-radius: 999px;
-  padding: 0.1rem 0.5rem;
-}
-
-.kpi-valeurs {
-  display: grid;
-  gap: 0.7rem;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-}
-.kpi {
-  background: var(--panneau);
-  border: 1px solid var(--bordure);
-  border-radius: var(--rayon);
-  padding: 0.75rem 0.9rem;
-}
-.kpi-chiffre {
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-.kpi-label {
-  color: var(--texte-doux);
-  font-size: 0.86rem;
-  margin-top: 0.15rem;
-}
-.kpi-total {
-  color: var(--texte-faible);
-  font-size: 0.76rem;
-  margin-top: 0.3rem;
-}
-
-.resume-accueil {
-  color: var(--texte-doux);
-  margin: 0 0 1.5rem;
-}
-
 /* ---------- Groupes de modules (catégories) ---------- */
 
 .groupe {
@@ -593,7 +842,7 @@ a.btn {
   max-width: 720px;
 }
 .detail-inner[data-vue='__accueil__'] {
-  max-width: 1240px;
+  max-width: 1500px;
 }
 
 .pied-detail {

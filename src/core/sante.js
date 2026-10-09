@@ -161,6 +161,7 @@ export function creerSante({
       socle.push({
         id: 'twitch',
         nom: 'Twitch',
+        icone: '🟣',
         etat: store.lireTokens().twitchApp?.clientId ? 'ko' : 'inactif',
         detail: t.raison || 'non connecté',
         // Twitch sait parfois quoi faire : reseau a verifier (il retente seul),
@@ -171,6 +172,7 @@ export function creerSante({
       socle.push({
         id: 'twitch',
         nom: 'Twitch',
+        icone: '🟣',
         etat: 'attention',
         detail: t.channel + ' — ' + manquants.length + ' droit(s) manquant(s)',
         aide: 'Reconnecte ta chaîne : ' + manquants.join(', '),
@@ -179,6 +181,7 @@ export function creerSante({
       socle.push({
         id: 'twitch',
         nom: 'Twitch',
+        icone: '🟣',
         etat: t.chatConnecte ? 'ok' : 'attention',
         detail: t.channel + ' — ' + canauxTwitch(t),
       });
@@ -187,18 +190,25 @@ export function creerSante({
     // --- OBS : combien de sources ecoutent nos overlays ---
     // On ne parle pas a OBS, mais un overlay branche PROUVE qu'il tourne. C'est
     // la vraie question du streamer : « ma source est-elle en place ? »
+    // Le detail par overlay sert aussi a la vue d'ensemble : chaque overlay d'un
+    // module y est un sous-module, allume quand une source OBS l'ecoute. Un
+    // overlay masque n'y figure que s'il est encore branche quelque part.
     const vues = [];
+    const overlays = {};
     let total = 0;
     for (const m of registre.liste()) {
+      overlays[m.id] = [];
       for (const o of m.manifeste.overlays ?? []) {
         const n = diffusion.nbClients('overlay:' + m.id + ':' + o.chemin);
         total += n;
         if (n) vues.push(m.manifeste.nom + ' › ' + o.nom + ' (' + n + ')');
+        if (!o.masque || n) overlays[m.id].push({ nom: o.nom, sources: n });
       }
     }
     socle.push({
       id: 'obs',
       nom: 'OBS',
+      icone: '🎥',
       etat: total ? 'ok' : 'inactif',
       detail: total ? total + ' source(s) connectée(s)' : 'aucune source connectée',
       aide: total ? vues.join(' · ') : 'Ajoute les overlays de tes modules en source Navigateur.',
@@ -218,6 +228,7 @@ export function creerSante({
       socle.push({
         id: c.id,
         nom: c.nom,
+        icone: c.icone,
         // Pas connecte n'est pas une panne : un streamer qui n'utilise pas le
         // bot musique n'a aucune raison d'avoir Spotify branche.
         etat: e.connecte ? 'ok' : 'inactif',
@@ -313,6 +324,9 @@ export function creerSante({
           nom: cartes.length > 1 ? c.nom : m.manifeste.nom,
           icone: m.manifeste.icone ?? '',
           module: m.manifeste.nom,
+          // La vue d'ensemble range la ligne sous SON module, pas seulement
+          // sous son univers.
+          moduleId: m.id,
           etat: c.etat,
           detail: c.detail || '',
           aide: c.aide || '',
@@ -361,6 +375,7 @@ export function creerSante({
     const { total: modulesVus, demarres, enErreur } = resumeModules(registre);
     return {
       connexions,
+      overlays,
       kpis,
       depuis: compteurs.debutSession(),
       causeSession: compteurs.causeSession(),

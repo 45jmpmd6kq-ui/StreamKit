@@ -119,6 +119,30 @@ test('OBS compte les sources branchees sur les overlays, et dit lesquelles', asy
   assert.match(obs.aide, /Roue › Machine \(2\)/);
 });
 
+test('la vue d ensemble recoit chaque overlay et ses sources OBS, masques compris s ils sont branches', async () => {
+  const roue = module_('roue-rl', {
+    manifeste: {
+      nom: 'Roue',
+      overlays: [
+        { chemin: 'roue', nom: 'Machine' },
+        { chemin: 'liste', nom: 'Liste' },
+        { chemin: 'vieux', nom: 'Ancien', masque: true },
+        { chemin: 'oublie', nom: 'Oublié', masque: true },
+      ],
+    },
+  });
+  const vue = await monter({
+    modules: [roue],
+    sources: { 'overlay:roue-rl:roue': 2, 'overlay:roue-rl:vieux': 1 },
+  }).sante();
+
+  assert.deepEqual(vue.overlays['roue-rl'], [
+    { nom: 'Machine', sources: 2 },
+    { nom: 'Liste', sources: 0 },
+    { nom: 'Ancien', sources: 1 },
+  ]);
+});
+
 test('aucune source OBS : « inactif », avec la marche a suivre', async () => {
   const vue = await monter().sante();
   assert.equal(carte(vue, 'obs').etat, 'inactif');
@@ -358,6 +382,7 @@ test('un seul module allume : la carte de l univers garde sa ligne', async () =>
       nom: 'Suivi de session',
       icone: '📈',
       module: 'Suivi de session',
+      moduleId: 'lol-session',
       etat: 'ok',
       detail: 'Or IV',
       aide: '',

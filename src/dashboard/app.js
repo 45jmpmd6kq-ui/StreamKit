@@ -548,32 +548,66 @@ function brancherRail() {
   });
 }
 
-// --- Vue d'ensemble ---------------------------------------------------------
+// --- Vue d'ensemble : cockpit -----------------------------------------------
 
-// Une carte par univers (Connexions, Twitch, Rocket League…), une ligne par
-// module. L'en-tete porte la couleur de l'univers, la bordure gauche et les
-// pastilles portent l'etat : deux informations qui ne se marchent pas dessus.
-function dessinerUnivers(g) {
-  return `
-    <div class="carte univers ${g.etat}" style="--univers:${echapper(g.couleur || 'var(--texte-faible)')}">
-      <div class="u-entete">
-        <span class="u-icone">${echapper(g.icone || '')}</span>
-        <span class="u-nom">${echapper(g.nom)}</span>
-        <span class="u-compte">${g.lignes.length}</span>
-      </div>
-      ${g.lignes
-        .map(
-          (l) => `
-        <div class="u-ligne ${l.etat}">
-          <span class="point ${classePastille(l.etat)}"></span>
-          <span class="u-l-nom">${l.icone ? `<span class="u-l-icone">${echapper(l.icone)}</span>` : ''}${echapper(l.nom)}</span>
-          <span class="u-l-detail">${echapper(l.detail || '')}${
-            l.aide ? `<span class="u-l-aide">${echapper(l.aide)}</span>` : ''
-          }</span>
-        </div>`
-        )
-        .join('')}
-    </div>`;
+// Tableau de bord de supervision (maquette « cockpit » choisie par le user le
+// 09/10/2026, face a celle de Claude Design) : ce qui est branche, ce qui
+// tourne, ce qui demande une action -- avant de lancer son live.
+//
+// Les compteurs d'usage (clips crees, victoires…) n'y sont plus, a sa demande :
+// cet ecran dit l'ETAT, pas l'activite.
+//
+// Tout est derive : un nouveau module apparait dans son univers, un nouvel
+// univers prend un panneau, sans toucher a cette page.
+//
+// Un etat parmi : ok, attention, ko, off (desactive). « inactif » (connexion
+// pas configuree) s'affiche comme off : ce n'est pas une panne.
+const GRAVITE_CK = { ko: 3, attention: 2, ok: 1, off: 0, inactif: 0 };
+const pire = (etats) => etats.reduce((a, e) => (GRAVITE_CK[e] > GRAVITE_CK[a] ? e : a), 'off');
+const PASTILLE = { ok: 'ok', attention: 'av', ko: 'ko', off: 'of', inactif: 'of' };
+
+// Univers en veille qu'on a quand meme deplies. En memoire seulement : au
+// prochain lancement, un univers sans module actif se replie de nouveau.
+const universOuverts = new Set();
+
+// Ce qu'on affiche d'un module : son etat, une phrase, ses sous-modules.
+// Les sous-modules sont ses lignes de sante (quand il en declare plusieurs) et
+// ses overlays -- allumes quand une source OBS les ecoute.
+function etatModule(m, s) {
+  const lignes = s.connexions.flatMap((g) => g.lignes).filter((l) => l.moduleId === m.id);
+  const overlays = (s.overlays?.[m.id] ?? []).map((o) => ({
+    nom: o.nom,
+    etat: o.sources ? 'ok' : 'off',
+    titre: o.sources ? o.sources + ' source(s) OBS' : 'pas encore dans OBS',
+  }));
+  const sous = [
+    ...(lignes.length > 1 ? lignes.map((l) => ({ nom: l.nom, etat: l.etat, titre: l.detail })) : []),
+    ...overlays,
+  ];
+
+  if (!m.actif) return { etat: 'off', detail: 'Désactivé', aide: '', sous };
+  if (m.etat === 'erreur') return { etat: 'ko', detail: m.erreur || 'En erreur', aide: '', sous };
+  if (m.etat === 'incomplet')
+    return {
+      etat: 'attention',
+      detail: m.manque?.length ? 'À compléter : ' + m.manque.join(', ') : m.erreur || 'Réglages à compléter',
+      aide: '',
+      sous,
+    };
+  if (m.etat !== 'demarre') return { etat: 'attention', detail: 'Démarrage…', aide: '', sous };
+
+  const e = lignes.length ? pire(lignes.map((l) => l.etat)) : 'ok';
+  // La phrase de la ligne la plus grave : c'est elle qui explique la couleur.
+  const l = lignes.find((x) => x.etat === e) ?? lignes[0];
+  return {
+    etat: GRAVITE_CK[e] > GRAVITE_CK.ok ? e : 'ok',
+    detail: l?.detail || 'En marche',
+    aide: l?.aide || '',
+    // La ligne qui donne la couleur : si c'est une connexion (Spotify pour le
+    // bot musique), l'alerte est deja portee par la connexion.
+    source: l?.id,
+    sous,
+  };
 }
 
 function dessinerAccueil() {
@@ -585,97 +619,247 @@ function dessinerAccueil() {
     return;
   }
 
-  // « Tout est en ordre » ne doit pas s'afficher alors qu'une connexion n'est
-  // même pas configurée. Une connexion inactive n'est pas une panne pour autant :
-  // un streamer qui n'utilise que Valorant n'a aucun besoin de Twitch.
-  // Sur les LIGNES, pas sur les cartes : « 2 points à regarder » doit compter
-  // les modules concernés, pas les univers qui en contiennent un.
-  const lignes = s.connexions.flatMap((g) => g.lignes);
-  const soucis = lignes.filter((l) => l.etat === 'ko' || l.etat === 'attention').length;
-  const inactifs = lignes.filter((l) => l.etat === 'inactif').length;
-  const resume = soucis
-    ? soucis + ' point' + (soucis > 1 ? 's' : '') + ' à regarder avant de lancer ton live.'
-    : inactifs
-      ? 'Rien de cassé — ' +
-        inactifs +
-        ' connexion' +
-        (inactifs > 1 ? 's' : '') +
-        ' pas encore configurée' +
-        (inactifs > 1 ? 's' : '') +
-        '.'
-      : 'Tout est en ordre. Bon stream.';
+  const socle = s.connexions.find((g) => g.id === 'groupe:connexions')?.lignes ?? [];
+  const groupes = grouperParCategorie().map(({ categorie, modules }) => ({
+    categorie,
+    modules: modules.map((m) => ({ m, ...etatModule(m, s) })),
+  }));
+  const tous = groupes.flatMap((g) => g.modules);
+  const actifs = tous.filter((x) => x.m.actif);
+
+  // Les alertes : une connexion ou un module ACTIF qui ne va pas. Une connexion
+  // pas configuree n'en est pas une (un streamer Valorant n'a que faire de
+  // Spotify), un module eteint non plus.
+  // Un module dont le souci vient d'une connexion n'est pas repete : une panne,
+  // une alerte.
+  const soucisSocle = socle.filter((l) => l.etat === 'ko' || l.etat === 'attention');
+  const dejaDit = new Set(soucisSocle.map((l) => l.id));
+  const alertes = [
+    ...soucisSocle.map((l) => ({
+      etat: l.etat,
+      titre: l.nom,
+      texte: l.detail,
+      aide: l.aide,
+      connexion: l.id,
+    })),
+    ...actifs
+      .filter((x) => (x.etat === 'ko' || x.etat === 'attention') && !dejaDit.has(x.source))
+      .map((x) => ({ etat: x.etat, titre: x.m.nom, texte: x.detail, aide: x.aide, module: x.m.id })),
+  ].sort((a, b) => GRAVITE_CK[b.etat] - GRAVITE_CK[a.etat]);
+
+  // La jauge : la part de ce qui est en service (connexions configurees +
+  // modules actifs) qui va bien. Un « a surveiller » compte pour moitie.
+  const connVues = socle.filter((l) => l.etat !== 'inactif');
+  const connOk = connVues.filter((l) => l.etat === 'ok').length;
+  const elements = connVues.length + actifs.length;
+  const points =
+    connOk +
+    actifs.filter((x) => x.etat === 'ok').length +
+    0.5 * alertes.filter((a) => a.etat === 'attention').length;
+  const pourcent = elements ? Math.round((points / elements) * 100) : 0;
+  const sources = Object.values(s.overlays ?? {})
+    .flat()
+    .reduce((n, o) => n + o.sources, 0);
+
+  const ko = alertes.some((a) => a.etat === 'ko');
+  const ton = !actifs.length ? 'off' : ko ? 'ko' : alertes.length ? 'attention' : 'ok';
+  const titre = !actifs.length
+    ? 'Aucun module actif'
+    : ko
+      ? 'Pas prêt pour le live'
+      : alertes.length
+        ? 'Presque prêt pour le live'
+        : 'Prêt pour le live';
+  const phrase = !actifs.length
+    ? 'Active un module avec son interrupteur pour commencer.'
+    : alertes.length
+      ? alertes.length +
+        ' point' +
+        (alertes.length > 1 ? 's' : '') +
+        ' à régler — ' +
+        alertes
+          .slice(0, 2)
+          .map((a) => a.titre + ' : ' + a.texte)
+          .join(' · ')
+      : 'Tout est branché. Bon stream.';
 
   redessinerDetail(
-    '<div class="titre-module"><span style="font-size:1.6rem">📡</span>' +
-      '<h1>Vue d’ensemble</h1></div>' +
-      '<p class="resume-accueil">' +
-      echapper(resume) +
-      '</p>' +
-      '<div class="cartes cartes-univers">' +
-      s.connexions.map(dessinerUnivers).join('') +
-      '</div>' +
-      dessinerKpis(s) +
-      '<div class="section"><h3>Modules</h3>' +
-      '<p style="color:var(--texte-doux);margin:0">' +
-      s.modules.demarres +
-      ' démarré(s) sur ' +
-      s.modules.total +
-      (s.modules.enErreur ? ' — ' + s.modules.enErreur + ' à compléter ou en erreur' : '') +
-      '</p></div>'
+    `<div class="cockpit">
+      ${dessinerHero({
+        ton,
+        titre,
+        phrase,
+        pourcent,
+        actifs: actifs.length,
+        total: tous.length,
+        connOk,
+        connTotal: connVues.length,
+        sources,
+        alertes: alertes.length,
+        enDirect: s.enDirect,
+      })}
+      <div class="ck-titre">Connexions</div>
+      <div class="ck-conns">${socle.map(dessinerConnexion).join('')}</div>
+      <div class="ck-titre">Modules par univers</div>
+      <div class="ck-corps">
+        <div class="ck-univers">${groupes.map(dessinerUniversCockpit).join('')}</div>
+        <aside class="ck-cote">
+          ${dessinerAlertes(alertes)}
+          ${dessinerOverlays(actifs, s)}
+          ${dessinerActivite()}
+        </aside>
+      </div>
+    </div>`
   );
 }
 
-// Le gros chiffre est celui de la SESSION — ce qui s'est passé depuis que
-// StreamKit tourne, donc en pratique ce live. Le total en dessous lui donne son
-// échelle : « 12 » ne veut rien dire sans savoir si on en est à 15 ou à 900.
-function dessinerKpis(s) {
-  const blocs = (s.kpis || []).filter((k) => k.valeurs.length);
-  if (!blocs.length) return '';
+function dessinerHero(h) {
+  const couleur = {
+    ok: 'var(--succes)',
+    attention: 'var(--avert)',
+    ko: 'var(--erreur)',
+    off: 'var(--bordure-vive)',
+  }[h.ton];
+  // Cercle de rayon 36 : circonference 226.
+  const plein = Math.round((226 * h.pourcent) / 100);
+  const live = h.enDirect
+    ? '<span class="ck-live direct"><span class="d ko"></span>En direct</span>'
+    : '<span class="ck-live"><span class="d of"></span>Hors ligne</span>';
+  return `
+    <section class="ck-hero ${h.ton}">
+      <svg width="86" height="86" viewBox="0 0 86 86" aria-hidden="true">
+        <circle cx="43" cy="43" r="36" fill="none" stroke="var(--bordure)" stroke-width="9"/>
+        <circle cx="43" cy="43" r="36" fill="none" stroke="${couleur}" stroke-width="9" stroke-linecap="round"
+          stroke-dasharray="${plein} 226" transform="rotate(-90 43 43)"/>
+        <text x="43" y="49" text-anchor="middle" class="ck-pourcent">${h.ton === 'off' ? '—' : h.pourcent + '%'}</text>
+      </svg>
+      <div class="ck-hero-texte">
+        <h1>${echapper(h.titre)} ${live}</h1>
+        <p>${echapper(h.phrase)}</p>
+      </div>
+      <div class="ck-stats">
+        <div class="ck-stat"><b>${h.actifs}<small> / ${h.total}</small></b><span>modules actifs</span></div>
+        <div class="ck-stat"><b>${h.connOk}<small> / ${h.connTotal}</small></b><span>connexions OK</span></div>
+        <div class="ck-stat"><b>${h.sources}</b><span>sources OBS</span></div>
+        <div class="ck-stat ${h.alertes ? 'alerte' : ''}"><b>${h.alertes}</b><span>alerte${h.alertes > 1 ? 's' : ''}</span></div>
+      </div>
+    </section>`;
+}
 
-  // Dire d'où partent les compteurs, sinon un « 12 » ne veut rien dire. Deux
-  // origines possibles : le début du live si Twitch en signale un, sinon le
-  // lancement de StreamKit.
-  const depuis = s.depuis ? new Date(s.depuis) : null;
-  const p = (n) => String(n).padStart(2, '0');
-  const heure = depuis ? p(depuis.getHours()) + ':' + p(depuis.getMinutes()) : '—';
+function dessinerConnexion(l) {
+  const e = l.etat === 'inactif' ? 'off' : l.etat;
+  return `
+    <button class="ck-cx ${e}" data-ck-connexion="${echapper(l.id)}" title="${echapper(l.aide || '')}">
+      <span class="ic">${echapper(l.icone || '🔌')}</span>
+      <span class="n">${echapper(l.nom)}</span>
+      <span class="d ${PASTILLE[e]}"></span>
+      <span class="s">${echapper(l.detail || '')}</span>
+    </button>`;
+}
 
-  let titre;
-  if (s.causeSession === 'live') {
-    titre = s.enDirect ? 'Ce live — en direct depuis ' + heure : 'Dernier live — commencé à ' + heure;
-  } else {
-    titre = 'Depuis le lancement de StreamKit, ' + heure;
-  }
+function dessinerUniversCockpit({ categorie, modules }) {
+  const actifs = modules.filter((x) => x.m.actif);
+  const ouvert = actifs.length || universOuverts.has(categorie.id);
+  const segments = modules.map((x) => `<i class="${PASTILLE[x.etat]}"></i>`).join('');
+  const n = modules.length;
+  const corps = ouvert
+    ? modules.map(dessinerLigneModule).join('')
+    : `<div class="ck-veille"><span>En veille — ${n} module${n > 1 ? 's' : ''} désactivé${n > 1 ? 's' : ''}</span>` +
+      `<button data-ck-deplier="${echapper(categorie.id)}">Déplier</button></div>`;
+  return `
+    <div class="ck-u" style="--univers:${echapper(categorie.couleur || '#8b93a7')}">
+      <div class="ck-uh">
+        <span class="ic">${echapper(categorie.icone)}</span>
+        <span class="n">${echapper(categorie.label)}</span>
+        <span class="ck-ratio">${actifs.length}/${n}</span>
+        <div class="ck-seg">${segments}</div>
+      </div>
+      ${corps}
+    </div>`;
+}
 
-  return (
-    '<div class="section"><h3>Utilisation · ' +
-    echapper(titre) +
-    '</h3>' +
-    blocs
-      .map(
-        (k) => `
-        <div class="kpi-module">
-          <div class="kpi-titre">
-            <span>${k.icone}</span>
-            <span>${echapper(k.module)}</span>
-            ${k.actif ? '' : '<span class="kpi-repos">au repos</span>'}
-          </div>
-          <div class="kpi-valeurs">
-            ${k.valeurs
-              .map(
-                (v) => `
-              <div class="kpi">
-                <div class="kpi-chiffre">${v.session}</div>
-                <div class="kpi-label">${echapper(v.label)}</div>
-                <div class="kpi-total">${v.total} au total</div>
-              </div>`
-              )
-              .join('')}
-          </div>
-        </div>`
-      )
-      .join('') +
-    '</div>'
-  );
+function dessinerLigneModule(x) {
+  const { m } = x;
+  const sous = x.sous.length
+    ? `<div class="ck-sous">${x.sous
+        .map(
+          (o) =>
+            `<span class="ck-sb" title="${echapper(o.titre || '')}"><span class="d ${PASTILLE[o.etat]}"></span>${echapper(o.nom)}</span>`
+        )
+        .join('')}</div>`
+    : '';
+  return `
+    <div class="ck-m ${x.etat}" data-ck-module="${m.id}" title="${echapper(x.aide || '')}">
+      <span class="d ${PASTILLE[x.etat]}"></span>
+      <span class="n">${echapper(m.icone)} ${echapper(m.nom)}</span>
+      <button class="ck-sw ${m.actif ? 'on' : ''}" data-ck-basculer="${m.id}" role="switch"
+        aria-checked="${m.actif}" aria-label="${m.actif ? 'Désactiver' : 'Activer'} ${echapper(m.nom)}"></button>
+      <span class="e">${echapper(x.detail)}</span>
+      ${sous}
+    </div>`;
+}
+
+function dessinerAlertes(alertes) {
+  const corps = alertes.length
+    ? alertes
+        .map(
+          (a) => `
+      <div class="ck-al">
+        <span class="d ${PASTILLE[a.etat]}"></span>
+        <span class="t">${echapper(a.titre)}</span>
+        <span class="x">${echapper(a.texte)}${a.aide ? `<span class="aide">${echapper(a.aide)}</span>` : ''}</span>
+        ${
+          a.module
+            ? `<button class="ck-btn" data-ck-module="${a.module}">Ouvrir le module</button>`
+            : a.connexion !== 'obs'
+              ? `<button class="ck-btn" data-ck-connexion="${echapper(a.connexion)}">Voir la connexion</button>`
+              : ''
+        }
+      </div>`
+        )
+        .join('')
+    : '<div class="ck-rien">Rien à signaler.</div>';
+  return `<div class="ck-box"><h3>Alertes <span class="${alertes.length ? 'rouge' : ''}">${alertes.length}</span></h3>${corps}</div>`;
+}
+
+// Les overlays des modules actifs : ceux deja branches dans OBS, puis combien
+// attendent encore leur source.
+function dessinerOverlays(actifs, s) {
+  const liste = actifs.flatMap((x) => (s.overlays?.[x.m.id] ?? []).map((o) => ({ ...o, module: x.m })));
+  if (!liste.length) return '';
+  const branches = liste.filter((o) => o.sources);
+  const reste = liste.length - branches.length;
+  return `
+    <div class="ck-box"><h3>Overlays OBS <span>${branches.length} / ${liste.length}</span></h3>
+      ${branches
+        .map(
+          (o) =>
+            `<button class="ck-obs" data-ck-module="${o.module.id}"><span>${echapper(o.module.nom)} · ${echapper(o.nom)}</span><span class="d ok"></span></button>`
+        )
+        .join('')}
+      ${reste ? `<div class="ck-obs faible">${reste} pas encore dans OBS</div>` : ''}
+    </div>`;
+}
+
+// Les derniers evenements notables du journal (pas le bavardage de debug).
+function dessinerActivite() {
+  const nom = new Map(etat.modules.map((m) => [m.id, m.nom]));
+  const lignes = (etat.lignes ?? [])
+    .filter((l) => l.niveau !== 'debug')
+    .slice(-5)
+    .reverse();
+  if (!lignes.length) return '';
+  return `
+    <div class="ck-box"><h3>Activité récente</h3>
+      ${lignes
+        .map(
+          (l) =>
+            `<div class="ck-ev ${l.niveau}"><time>${echapper(String(l.h).slice(0, 5))}</time><span><b>${echapper(
+              nom.get(l.source) || l.source
+            )}</b> ${echapper(l.message)}</span></div>`
+        )
+        .join('')}
+    </div>`;
 }
 
 async function chargerSante() {
@@ -1056,6 +1240,36 @@ function brancherDetail() {
   const zone = $('#detail');
 
   zone.addEventListener('click', (e) => {
+    // --- Vue d'ensemble (cockpit) ---
+    // Les lignes de module sont cliquables en entier : on les aiguille avant
+    // le filtre sur les boutons. L'interrupteur passe en premier, sinon un clic
+    // dessus ouvrirait aussi le module.
+    const ck = e.target.closest(
+      '[data-ck-basculer], [data-ck-deplier], [data-ck-connexion], [data-ck-module]'
+    );
+    if (ck && zone.contains(ck)) {
+      const d = ck.dataset;
+      if (d.ckBasculer) {
+        const m = etat.modules.find((x) => x.id === d.ckBasculer);
+        if (m) basculerModule(m).then(chargerSante);
+        return;
+      }
+      if (d.ckDeplier) {
+        universOuverts.add(d.ckDeplier);
+        return dessinerAccueil();
+      }
+      if (d.ckConnexion) {
+        // OBS n'a pas d'ecran a lui : ses sources se reglent dans chaque module.
+        if (d.ckConnexion === 'obs') return;
+        etat.selection = CONNECTEURS;
+        dessinerRail();
+        return dessinerConnecteurs();
+      }
+      etat.selection = d.ckModule;
+      dessinerRail();
+      return dessinerDetail();
+    }
+
     const el = e.target.closest('button');
     if (!el || !zone.contains(el)) return;
     const d = el.dataset;
