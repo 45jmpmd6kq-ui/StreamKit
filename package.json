@@ -1,6 +1,6 @@
 {
   "name": "streamkit",
-  "version": "0.30.12",
+  "version": "0.31.0",
   "private": true,
   "type": "module",
   "main": "src/main.js",

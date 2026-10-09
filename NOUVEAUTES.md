@@ -11,6 +11,22 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.31.0
+
+### Nouveautés
+
+- **Une nouvelle vue d'ensemble, façon tableau de bord.** En haut, une jauge
+  te dit d'un coup d'œil si tu es prêt pour le live, et pourquoi pas encore.
+  En dessous : tes connexions, puis un panneau par jeu avec chacun de tes
+  modules, son état en clair et ses overlays allumés quand OBS les affiche.
+- **Active ou coupe un module sans quitter l'accueil**, avec son interrupteur.
+  Un clic sur un module ouvre ses réglages.
+- **Les alertes rassemblées à droite**, avec un bouton pour aller droit au
+  module ou à la connexion à régler, la liste des overlays branchés dans OBS
+  et les derniers événements.
+- Les compteurs d'utilisation (clips créés, victoires…) ne s'affichent plus
+  sur l'accueil.
+
 ## 0.30.12
 
 ### Nouveautés
