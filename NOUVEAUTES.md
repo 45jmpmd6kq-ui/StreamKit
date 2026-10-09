@@ -25,6 +25,12 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   de partie en cours. Ce n'est pas une alerte, juste « rien à suivre pour
   l'instant ».
 - **Overlays OBS** : chaque ligne porte l'univers (Twitch, RL, LoL, VLR, EA FC).
+- **Les jeux sont toujours dépliés** sur la vue d'ensemble : active un module
+  directement avec son interrupteur.
+- **Le journal technique quitte le bas de la fenêtre.** Ce qui compte est dans
+  « Activité récente » ; une erreur y apparaît en rouge et reste une heure dans
+  les alertes de la vue d'ensemble. Le journal part tout seul avec « Signaler
+  un bug », et les réglages (⚙️) gardent un bouton pour ouvrir son dossier.
 - Une entrée « Métriques » apparaît dans le menu : les statistiques de tes
   lives y arrivent dans une prochaine version.
 

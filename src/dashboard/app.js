@@ -19,13 +19,7 @@ const etat = {
   connecteurs: null,
   selection: ACCUEIL,
   general: null,
-  pause: false,
-  lignes: [],
-  filtres: { source: '', niveau: 'info', recherche: '' },
-  erreurs: 0,
 };
-
-const RANG = { debug: 0, info: 1, succes: 2, avert: 3, erreur: 4 };
 
 // ---------------------------------------------------------------- utilitaires
 
@@ -404,7 +398,6 @@ async function chargerModules() {
   // On reste sur la vue d ensemble : c est l ecran d accueil.
   dessinerRail();
   dessinerDetail();
-  remplirFiltreSources();
 }
 
 // Taille à donner à la source Navigateur dans OBS. Sans taille déclarée,
@@ -640,6 +633,15 @@ function dessinerAccueil() {
     ...actifs
       .filter((x) => (x.etat === 'ko' || x.etat === 'attention') && !dejaDit.has(x.source))
       .map((x) => ({ etat: x.etat, titre: x.m.nom, texte: x.detail, aide: x.aide, module: x.m.id })),
+    // Les erreurs du journal de la derniere heure : le journal n'est plus a
+    // l'ecran, c'est ici qu'elles se voient (un module qui n'a pas pu demarrer,
+    // par exemple, n'a pas d'etat en erreur une fois desactive).
+    ...(s.erreurs ?? []).map((e) => ({
+      etat: 'ko',
+      titre: (etat.modules.find((m) => m.id === e.source)?.nom ?? e.source) + ' · ' + e.h.slice(0, 5),
+      texte: e.message,
+      activite: true,
+    })),
   ].sort((a, b) => GRAVITE_CK[b.etat] - GRAVITE_CK[a.etat]);
 
   // La jauge : la part de ce qui est en service (connexions configurees +
@@ -824,11 +826,13 @@ function dessinerAlertes(alertes) {
         <span class="t">${echapper(a.titre)}</span>
         <span class="x">${echapper(a.texte)}${a.aide ? `<span class="aide">${echapper(a.aide)}</span>` : ''}</span>
         ${
-          a.module
-            ? `<button class="ck-btn" data-ck-module="${a.module}">Ouvrir le module</button>`
-            : a.connexion !== 'obs'
-              ? `<button class="ck-btn" data-ck-connexion="${echapper(a.connexion)}">Voir la connexion</button>`
-              : ''
+          a.activite
+            ? '<button class="ck-btn" data-ck-activite="1">Voir l’activité</button>'
+            : a.module
+              ? `<button class="ck-btn" data-ck-module="${a.module}">Ouvrir le module</button>`
+              : a.connexion !== 'obs'
+                ? `<button class="ck-btn" data-ck-connexion="${echapper(a.connexion)}">Voir la connexion</button>`
+                : ''
         }
       </div>`
         )
@@ -1452,13 +1456,21 @@ function brancherDetail() {
     // Les lignes de module sont cliquables en entier : on les aiguille avant
     // le filtre sur les boutons. L'interrupteur passe en premier, sinon un clic
     // dessus ouvrirait aussi le module.
-    const ck = e.target.closest('[data-ck-basculer], [data-ck-connexion], [data-ck-module]');
+    const ck = e.target.closest(
+      '[data-ck-basculer], [data-ck-connexion], [data-ck-module], [data-ck-activite]'
+    );
     if (ck && zone.contains(ck)) {
       const d = ck.dataset;
       if (d.ckBasculer) {
         const m = etat.modules.find((x) => x.id === d.ckBasculer);
         if (m) basculerModule(m).then(chargerSante);
         return;
+      }
+      if (d.ckActivite) {
+        etat.selection = ACTIVITE;
+        dessinerRail();
+        dessinerActivitePage();
+        return chargerActivite();
       }
       if (d.ckConnexion) {
         // OBS n'a pas d'ecran a lui : ses sources se reglent dans chaque module.
@@ -1626,178 +1638,6 @@ async function sauverReglages(m) {
   }
 }
 
-// ------------------------------------------------------------------- le journal
-
-function ligneVisible(l) {
-  const f = etat.filtres;
-  if (f.source && l.source !== f.source) return false;
-  if (RANG[l.niveau] < RANG[f.niveau]) return false;
-  if (f.recherche) {
-    const q = f.recherche.toLowerCase();
-    if (!l.message.toLowerCase().includes(q) && !l.source.toLowerCase().includes(q)) return false;
-  }
-  return true;
-}
-
-const ICONE = { debug: '·', info: 'i', succes: '✅', avert: '⚠️', erreur: '❌' };
-
-function htmlLigne(l) {
-  return `<div class="ligne ${l.niveau}">
-      <span class="h">${l.h}</span>
-      <span>${ICONE[l.niveau]}</span>
-      <span class="src">${echapper(l.source)}</span>
-      <span class="msg">${echapper(l.message)}</span>
-    </div>`;
-}
-
-function redessinerJournal() {
-  const vues = etat.lignes.filter(ligneVisible);
-  const zone = $('#journal');
-  zone.innerHTML = vues.length
-    ? vues.map(htmlLigne).join('')
-    : '<div class="vide">Rien à afficher avec ces filtres.</div>';
-  if (!etat.pause) zone.scrollTop = zone.scrollHeight;
-}
-
-function ajouterLigne(l) {
-  etat.lignes.push(l);
-  if (etat.lignes.length > 3000) etat.lignes.shift();
-
-  if (l.niveau === 'erreur') {
-    etat.erreurs++;
-    $('#compteur-erreurs').textContent = etat.erreurs + ' erreur' + (etat.erreurs > 1 ? 's' : '');
-  }
-
-  if (!ligneVisible(l)) return;
-
-  const zone = $('#journal');
-  // On ne repeint pas toute la liste à chaque ligne : pendant un live actif, le
-  // journal reçoit plusieurs lignes par seconde.
-  if (zone.querySelector('.vide')) zone.innerHTML = '';
-  zone.insertAdjacentHTML('beforeend', htmlLigne(l));
-  while (zone.children.length > 3000) zone.firstElementChild.remove();
-  if (!etat.pause) zone.scrollTop = zone.scrollHeight;
-}
-
-async function chargerJournal() {
-  const j = await api('/api/journal?limite=800&niveau=debug');
-  etat.lignes = j.lignes;
-  etat.erreurs = j.lignes.filter((l) => l.niveau === 'erreur').length;
-  if (etat.erreurs)
-    $('#compteur-erreurs').textContent = etat.erreurs + ' erreur' + (etat.erreurs > 1 ? 's' : '');
-  remplirFiltreSources(j.sources);
-  redessinerJournal();
-}
-
-function remplirFiltreSources(sources) {
-  const liste = sources ?? [...new Set(etat.lignes.map((l) => l.source))].sort();
-  const noms = [...new Set([...liste, ...etat.modules.map((m) => m.id)])].sort();
-  const select = $('#filtre-source');
-  const courant = select.value;
-  select.innerHTML =
-    '<option value="">Tous les modules</option>' +
-    noms.map((s) => `<option value="${echapper(s)}">${echapper(s)}</option>`).join('');
-  select.value = courant;
-}
-
-function brancherFluxJournal() {
-  const flux = new EventSource('/api/journal/flux');
-  flux.addEventListener('ligne', (e) => ajouterLigne(JSON.parse(e.data)));
-  // EventSource se reconnecte tout seul ; on recharge l'historique pour combler
-  // le trou éventuel (typiquement après une mise à jour de StreamKit).
-  flux.addEventListener('open', () => {
-    if (etat.lignes.length) chargerJournal().catch(() => {});
-  });
-}
-
-// -------------------------------------------------------------- tiroir : réglages
-
-function brancherTiroir() {
-  const tiroir = $('#tiroir');
-
-  // Le journal est REPLIÉ par défaut : au quotidien le streamer vient régler un
-  // module, pas lire des lignes de log. Il reste à un clic, et son en-tête
-  // continue d'afficher le compteur d'erreurs même replié — un souci ne passe
-  // donc jamais inaperçu.
-  function appliquerRepli(replie) {
-    tiroir.classList.toggle('replie', replie);
-    $('#fleche').textContent = replie ? '▲' : '▼';
-  }
-
-  let replieJournal = true;
-  try {
-    replieJournal = localStorage.getItem('streamkit.journalOuvert') !== '1';
-  } catch {
-    /* pas de stockage : replié, comme au premier lancement */
-  }
-  appliquerRepli(replieJournal);
-
-  $('#bascule-tiroir').addEventListener('click', () => {
-    replieJournal = !replieJournal;
-    appliquerRepli(replieJournal);
-    try {
-      localStorage.setItem('streamkit.journalOuvert', replieJournal ? '0' : '1');
-    } catch {
-      /* le choix ne sera pas retenu, sans plus */
-    }
-  });
-
-  // Redimensionnement à la souris.
-  let depart = null;
-  $('#poignee').addEventListener('mousedown', (e) => {
-    depart = { y: e.clientY, h: tiroir.offsetHeight };
-    document.body.style.userSelect = 'none';
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!depart) return;
-    const h = Math.min(window.innerHeight - 160, Math.max(90, depart.h + (depart.y - e.clientY)));
-    tiroir.style.height = h + 'px';
-  });
-  window.addEventListener('mouseup', () => {
-    depart = null;
-    document.body.style.userSelect = '';
-  });
-
-  $('#filtre-source').addEventListener('change', (e) => {
-    etat.filtres.source = e.target.value;
-    redessinerJournal();
-  });
-  $('#filtre-niveau').addEventListener('change', (e) => {
-    etat.filtres.niveau = e.target.value;
-    redessinerJournal();
-  });
-
-  let minuteurRecherche;
-  $('#recherche').addEventListener('input', (e) => {
-    clearTimeout(minuteurRecherche);
-    minuteurRecherche = setTimeout(() => {
-      etat.filtres.recherche = e.target.value.trim();
-      redessinerJournal();
-    }, 180);
-  });
-
-  $('#btn-pause').addEventListener('click', () => {
-    etat.pause = !etat.pause;
-    $('#btn-pause').textContent = etat.pause ? '▶' : '⏸';
-    $('#btn-pause').title = etat.pause ? 'Reprendre le défilement' : 'Suspendre le défilement';
-    if (!etat.pause) $('#journal').scrollTop = $('#journal').scrollHeight;
-  });
-
-  $('#btn-vider').addEventListener('click', () => {
-    // On ne vide que l'affichage : le fichier du jour, lui, garde tout.
-    etat.lignes = [];
-    etat.erreurs = 0;
-    $('#compteur-erreurs').textContent = '';
-    redessinerJournal();
-  });
-
-  $('#btn-telecharger').addEventListener('click', async () => {
-    const fichiers = await api('/api/journal/fichiers');
-    if (!fichiers.length) return toast('Aucun fichier de journal', true);
-    window.open('/api/journal/fichier/' + fichiers[0], '_blank');
-  });
-}
-
 // ------------------------------------------------------------------- modales
 
 function brancherModales() {
@@ -1820,6 +1660,17 @@ function brancherModales() {
     mR.showModal();
   });
   $('#btn-fermer-reglages').addEventListener('click', () => mR.close());
+
+  // Le journal n'est plus a l'ecran : ses fichiers restent a portee pour le
+  // support, quand l'envoi d'un rapport de bug a echoue.
+  $('#btn-dossier-journaux').addEventListener('click', async () => {
+    try {
+      const r = await api('/api/journal/dossier', { method: 'POST' });
+      if (!r.ok) toast((r.erreur || 'Ouverture impossible') + ' — ' + r.dossier, true);
+    } catch (e) {
+      toast(e.message, true);
+    }
+  });
 
   $$('[data-copier]').forEach((b) =>
     b.addEventListener('click', () => copier($('#' + b.dataset.copier).textContent))
@@ -2235,16 +2086,13 @@ $('#entree-activite').addEventListener('click', () => {
 brancherRail();
 brancherDetail();
 brancherActivite();
-brancherTiroir();
 brancherModales();
 brancherSignalement();
 
 await rafraichirEtat();
 await chargerModules();
-await chargerJournal();
 await chargerSante();
 await chargerConnecteurs();
-brancherFluxJournal();
 // D'abord ce qu'on vient d'installer, ensuite ce qui est disponible : les deux
 // partagent la même fenêtre, et « Quoi de neuf » suit tout juste un redémarrage.
 await montrerNouveautes();

@@ -16,6 +16,10 @@ import * as categories from './categories.js';
 import * as store from './store.js';
 import * as auth from './auth.js';
 import * as maj from './maj.js';
+import * as journal from './journal.js';
+
+// Une erreur du journal reste une alerte de la vue d'ensemble pendant ce temps.
+export const FENETRE_ERREURS_MS = 60 * 60 * 1000;
 
 // Duree pendant laquelle on reutilise la sante declaree par un module (voir
 // plus bas pourquoi).
@@ -376,6 +380,9 @@ export function creerSante({
     return {
       connexions,
       overlays,
+      // Les erreurs de la derniere heure, une par source (la plus recente) : le
+      // journal n'est plus a l'ecran, elles passent par les alertes.
+      erreurs: erreursRecentes(),
       kpis,
       depuis: compteurs.debutSession(),
       causeSession: compteurs.causeSession(),
@@ -384,6 +391,16 @@ export function creerSante({
       version: maj.versionActuelle(),
       modules: { total: modulesVus, demarres, enErreur },
     };
+  }
+
+  function erreursRecentes() {
+    const limite = Date.now() - FENETRE_ERREURS_MS;
+    const parSource = new Map();
+    for (const e of journal.historique({ niveau: 'erreur', limite: 200 })) {
+      if (Date.parse(e.t) >= limite)
+        parSource.set(e.source, { source: e.source, h: e.h, message: e.message });
+    }
+    return [...parSource.values()];
   }
 
   return {

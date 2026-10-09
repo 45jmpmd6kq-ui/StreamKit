@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 
 const { creerSante, canauxTwitch, resumeModules, FRAICHEUR_SANTE_MS } = await import('../src/core/sante.js');
 const store = await import('../src/core/store.js');
+const journal = await import('../src/core/journal.js');
 const { preparerDossiers } = await import('../src/core/paths.js');
 
 preparerDossiers();
@@ -443,4 +444,21 @@ test('l assistant Twitch ne propose pas un nom d application que Twitch refusera
   assert.ok(etapeNom, 'l etape du nom doit exister');
   assert.doesNotMatch(etapeNom, /^Nom : StreamKit —/, 'un nom fixe ne passe qu une fois');
   assert.match(etapeNom, /pseudo/);
+});
+
+// --- Erreurs du journal ------------------------------------------------------
+
+test('les erreurs de la derniere heure remontent, une par source, la plus recente', async () => {
+  const log = journal.pour('test-erreurs');
+  log.err('premiere panne');
+  log.err('seconde panne');
+  journal.pour('test-autre').warn('un avertissement ne compte pas');
+
+  const vue = await monter().sante();
+  const miennes = vue.erreurs.filter((e) => e.source.startsWith('test-'));
+  assert.deepEqual(
+    miennes.map((e) => [e.source, e.message]),
+    [['test-erreurs', 'seconde panne']]
+  );
+  assert.match(miennes[0].h, /^\d{2}:\d{2}:\d{2}$/);
 });

@@ -17,7 +17,7 @@
 // s'ouvrir. Un streamer qui a un souci doit TOUJOURS pouvoir y arriver et lire
 // le journal pour comprendre -- c'est la que se joue le support.
 
-import { preparerDossiers, DONNEES } from './core/paths.js';
+import { preparerDossiers, DONNEES, JOURNAUX_DIR } from './core/paths.js';
 import * as journal from './core/journal.js';
 import * as store from './core/store.js';
 import * as registre from './core/registre.js';
@@ -72,6 +72,11 @@ export async function demarrerNoyau({
   preparerDossiers();
   journal.purger();
   activite.purger();
+  // Le journal n'est plus affiche dans le dashboard (10/10/2026) : une erreur
+  // doit donc se voir ailleurs. Elle rejoint l'activite du jour, en rouge.
+  journal.abonner((e) => {
+    if (e.niveau === 'erreur') activite.noter(e.source, e.message, 'erreur');
+  });
   compteurs.charger();
 
   // AVANT la premiere lecture de tokens.json : sans coffre branche, les
@@ -624,6 +629,16 @@ export async function demarrerNoyau({
     apercuSignalement: (corps) => signalement.apercu(corps),
     envoyerSignalement: (corps) => signalement.envoyer(corps),
     ouvrirSignalement: (reference) => signalement.ouvrirDossier(reference),
+
+    // Le dossier des journaux, depuis les reglages : pour le support quand
+    // l'envoi d'un rapport a echoue. Sans Electron, on donne le chemin.
+    ouvrirJournaux: async () => {
+      if (!ouvrirDossier) return { ok: false, dossier: JOURNAUX_DIR, erreur: 'ouverture impossible ici' };
+      const echec = await ouvrirDossier(JOURNAUX_DIR);
+      return echec
+        ? { ok: false, dossier: JOURNAUX_DIR, erreur: echec }
+        : { ok: true, dossier: JOURNAUX_DIR };
+    },
   };
 
   // --- Demarrage ------------------------------------------------------------

@@ -43,7 +43,7 @@ body {
   color: var(--texte);
   font: 14px/1.55 "Segoe UI", system-ui, -apple-system, sans-serif;
   display: grid;
-  grid-template-rows: var(--hauteur-barre) 1fr auto;
+  grid-template-rows: var(--hauteur-barre) 1fr;
   overflow: hidden;
 }
 
@@ -1263,112 +1263,6 @@ input[type="color"] {
   font-weight: 600;
   color: var(--texte);
   font-variant-numeric: tabular-nums;
-}
-
-/* ---------- Tiroir du journal ---------- */
-
-.tiroir {
-  background: var(--panneau);
-  border-top: 1px solid var(--bordure);
-  display: grid;
-  grid-template-rows: auto 1fr;
-  min-height: 0;
-  height: 280px;
-}
-.tiroir.replie {
-  height: auto;
-  grid-template-rows: auto;
-}
-.tiroir.replie .journal {
-  display: none;
-}
-
-.poignee {
-  height: 5px;
-  margin-top: -5px;
-  cursor: ns-resize;
-  background: transparent;
-}
-.poignee:hover {
-  background: var(--accent);
-}
-
-.entete-tiroir {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.85rem;
-  border-bottom: 1px solid var(--bordure);
-  flex-wrap: wrap;
-}
-.entete-tiroir .titre {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--texte-faible);
-  font-weight: 600;
-  user-select: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.entete-tiroir select,
-.entete-tiroir input {
-  width: auto;
-  padding: 0.28rem 0.55rem;
-  font-size: 0.85rem;
-}
-.entete-tiroir input[type="text"] {
-  width: 190px;
-}
-.compteur-erreurs {
-  color: var(--erreur);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.journal {
-  overflow-y: auto;
-  padding: 0.4rem 0;
-  font-family: ui-monospace, Consolas, "Cascadia Mono", monospace;
-  font-size: 0.82rem;
-  line-height: 1.65;
-}
-.ligne {
-  display: grid;
-  grid-template-columns: 62px 22px 118px 1fr;
-  gap: 0.5rem;
-  padding: 0.05rem 0.85rem;
-  align-items: baseline;
-}
-.ligne:hover {
-  background: #ffffff08;
-}
-.ligne .h {
-  color: var(--texte-faible);
-}
-.ligne .src {
-  color: var(--accent);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ligne .msg {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.ligne.debug .msg {
-  color: var(--texte-faible);
-}
-.ligne.avert .msg {
-  color: var(--avert);
-}
-.ligne.erreur .msg {
-  color: var(--erreur);
-}
-.ligne.succes .msg {
-  color: var(--succes);
 }
 
 .vide {

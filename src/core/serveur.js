@@ -612,6 +612,10 @@ export function creerServeur(app) {
           return json(res, 200, fichiers);
         }
 
+        if (chemin === '/api/journal/dossier' && methode === 'POST') {
+          return json(res, 200, await app.ouvrirJournaux());
+        }
+
         const mFichierJournal = chemin.match(/^\/api\/journal\/fichier\/([\w-]+\.log)$/);
         if (mFichierJournal && methode === 'GET') {
           return servirFichier(res, JOURNAUX_DIR, mFichierJournal[1]);

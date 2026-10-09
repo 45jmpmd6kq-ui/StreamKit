@@ -80,38 +80,6 @@
       </section>
     </main>
 
-    <!-- Tiroir du journal -->
-    <section class="tiroir" id="tiroir">
-      <div class="poignee" id="poignee" title="Glisser pour redimensionner"></div>
-
-      <div class="entete-tiroir">
-        <span class="titre" id="bascule-tiroir"><span id="fleche">▼</span> Journal</span>
-
-        <select id="filtre-source" title="Filtrer par module">
-          <option value="">Tous les modules</option>
-        </select>
-
-        <select id="filtre-niveau" title="Niveau minimum">
-          <option value="debug">Tout (avec détails)</option>
-          <option value="info" selected>Normal</option>
-          <option value="avert">Avertissements et erreurs</option>
-          <option value="erreur">Erreurs seulement</option>
-        </select>
-
-        <input type="text" id="recherche" placeholder="Rechercher…" />
-
-        <span class="compteur-erreurs" id="compteur-erreurs"></span>
-
-        <div class="pousse" style="margin-left: auto"></div>
-
-        <button class="btn petit discret" id="btn-pause" title="Suspendre le défilement">⏸</button>
-        <button class="btn petit discret" id="btn-vider" title="Vider l'affichage">🧹</button>
-        <button class="btn petit discret" id="btn-telecharger" title="Télécharger le journal du jour">⤓</button>
-      </div>
-
-      <div class="journal" id="journal"></div>
-    </section>
-
     <!-- Réglages de StreamKit -->
     <dialog id="modale-reglages">
       <div class="modale-entete"><h2>Réglages de StreamKit</h2></div>
@@ -144,6 +112,13 @@
             Tes réglages et tes jetons sont dans <code id="chemin-donnees">%APPDATA%\StreamKit</code>.
             Ils ne sont <b>jamais</b> touchés par une mise à jour.
           </p>
+          <p style="color: var(--texte-doux); font-size: 0.9rem; margin: 0.75rem 0 0">
+            Le journal technique (14 jours) part tout seul avec un rapport de bug. Si l'envoi a
+            échoué, ou si on te le demande :
+          </p>
+          <button class="btn petit" id="btn-dossier-journaux" style="margin-top: 0.5rem">
+            📂 Ouvrir le dossier des journaux
+          </button>
         </div>
       </div>
       <div class="modale-pied">
