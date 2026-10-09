@@ -641,6 +641,14 @@ function dessinerAccueil() {
   // une alerte.
   const soucisSocle = socle.filter((l) => l.etat === 'ko' || l.etat === 'attention');
   const dejaDit = new Set(soucisSocle.map((l) => l.id));
+  const modulesEnAlerte = actifs.filter(
+    (x) => (x.etat === 'ko' || x.etat === 'attention') && !dejaDit.has(x.source)
+  );
+  // Les erreurs du journal de la derniere heure : le journal n'est plus a
+  // l'ecran, c'est ici qu'elles se voient. Sauf celles d'un module qui a deja
+  // son alerte (en erreur, il le dit lui-meme) : une panne, une alerte.
+  const dejaAlertes = new Set(modulesEnAlerte.map((x) => x.m.id));
+  const erreurs = (s.erreurs ?? []).filter((e) => !dejaAlertes.has(e.source));
   const alertes = [
     ...soucisSocle.map((l) => ({
       etat: l.etat,
@@ -649,13 +657,14 @@ function dessinerAccueil() {
       aide: l.aide,
       connexion: l.id,
     })),
-    ...actifs
-      .filter((x) => (x.etat === 'ko' || x.etat === 'attention') && !dejaDit.has(x.source))
-      .map((x) => ({ etat: x.etat, titre: x.m.nom, texte: x.detail, aide: x.aide, module: x.m.id })),
-    // Les erreurs du journal de la derniere heure : le journal n'est plus a
-    // l'ecran, c'est ici qu'elles se voient (un module qui n'a pas pu demarrer,
-    // par exemple, n'a pas d'etat en erreur une fois desactive).
-    ...(s.erreurs ?? []).map((e) => ({
+    ...modulesEnAlerte.map((x) => ({
+      etat: x.etat,
+      titre: x.m.nom,
+      texte: x.detail,
+      aide: x.aide,
+      module: x.m.id,
+    })),
+    ...erreurs.map((e) => ({
       etat: 'ko',
       titre: (etat.modules.find((m) => m.id === e.source)?.nom ?? e.source) + ' · ' + e.h.slice(0, 5),
       texte: e.message,
@@ -669,7 +678,7 @@ function dessinerAccueil() {
   const connOk = connVues.filter((l) => l.etat === 'ok').length;
   // Une erreur recente compte comme un element en panne : pas de 100 % avec
   // « Pas pret pour le live » au-dessus.
-  const elements = connVues.length + actifs.length + (s.erreurs?.length ?? 0);
+  const elements = connVues.length + actifs.length + erreurs.length;
   const points =
     connOk +
     actifs.filter((x) => x.etat === 'ok' || x.etat === 'attente').length +
