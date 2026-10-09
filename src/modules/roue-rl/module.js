@@ -312,6 +312,7 @@ export default {
 
       const gagnante = roue.spin(dispo);
       ctx.log.ok(par + ' → ' + gagnante.name);
+      ctx.activite('Random Car pour @' + par + ' : ' + gagnante.name);
       ctx.compteur.incr('tirages');
 
       ctx.overlay.diffuser('roue', 'spin', { by: par, winner: gagnante, pool: dispo, spinMs, holdMs });

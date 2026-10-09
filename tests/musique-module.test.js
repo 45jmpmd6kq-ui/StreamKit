@@ -101,6 +101,7 @@ function contexte(reglages = {}) {
       diffuser: () => {},
     },
     compteur: { incr() {} },
+    activite() {},
     minuteur: {
       intervalle: (fn, ms) => tours.push({ fn, ms }),
       delai: (fn, ms) => delais.push({ fn, ms }),

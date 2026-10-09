@@ -465,10 +465,30 @@ ctx.connecteur('spotify').majJeton(nouveauJeton);
 Ajouter un connecteur = une entrée dans `CATALOGUE` (`core/connecteurs.js`), avec
 les étapes que le streamer verra affichées telles quelles.
 
+## L'activité
+
+La page « Activité récente » du dashboard montre, jour par jour, ce qui s'est
+passé sur le live. C'est le module qui décide de ce qui y figure :
+
+```js
+ctx.activite('Clip créé par @ziggy « Lucarne de Ziggy »');   // succès (pastille verte)
+ctx.activite('Pub automatique de 1 min 30', 'info');          // info, avert ou erreur
+```
+
+Une phrase lisible par le streamer, sans le nom du module (la page l'affiche
+déjà, avec son univers). Note **les moments qu'il voudra relire** — un clip, un
+match terminé, un sondage gagné, une demande de musique — et pas le diagnostic,
+qui reste dans `ctx.log`. Rien n'est écrit au journal : si la ligne y a aussi sa
+place, appelle les deux.
+
+Le socle range tout dans `%APPDATA%\StreamKit\activite\AAAA-MM-JJ.jsonl`
+(jour local), garde 60 jours, et note lui-même le début et la fin du live.
+
 ## Les compteurs d'usage
 
-Déclare des libellés dans le manifeste, incrémente dans le code, et les chiffres
-apparaissent sur la vue d'ensemble :
+Déclare des libellés dans le manifeste, incrémente dans le code. Ils ne sont
+plus affichés sur la vue d'ensemble depuis 0.31.0 ; ils alimenteront la future
+page « Métriques » :
 
 ```js
 compteurs: {

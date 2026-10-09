@@ -326,6 +326,7 @@ function contexte({ droits = ['channel:read:polls'], lecture, parId } = {}) {
     log: { debug() {}, info() {}, ok() {}, warn() {}, err() {} },
     overlay: { etat: (vue, d) => etats.push(d), url: () => 'http://127.0.0.1/overlay/sondages/carte' },
     compteur: { incr: (k, n = 1) => (compteurs[k] = (compteurs[k] ?? 0) + n) },
+    activite() {},
     minuteur: {
       delai(fn, ms) {
         const t = setTimeout(() => {}, 0);

@@ -105,6 +105,7 @@ function contexte({ dossierJeu, memoire = null, reglages = {} }) {
       url: (vue) => 'http://127.0.0.1:47455/overlay/lol-session/' + vue,
     },
     compteur: { incr: (cle, n = 1) => (compteurs[cle] = (compteurs[cle] ?? 0) + n) },
+    activite() {},
     etat: {
       lire: (defaut) => stocke ?? defaut,
       sauver: (v) => (stocke = JSON.parse(JSON.stringify(v))),

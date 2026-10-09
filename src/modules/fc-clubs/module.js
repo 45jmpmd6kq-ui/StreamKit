@@ -756,6 +756,7 @@ export default {
 
       for (const m of comptes) {
         ctx.compteur.incr(COMPTEURS[m.resultat]);
+        ctx.activite('Match terminé : ' + libelleMatch(m), m.resultat === 'V' ? 'succes' : 'info');
         ctx.log.ok(
           libelleMatch(m) +
             (m.provisoire

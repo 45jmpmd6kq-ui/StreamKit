@@ -151,6 +151,7 @@ function contexte({ api, reglages = {}, twitch = fauxTwitch() }) {
       url: (vue) => 'http://127.0.0.1:47455/overlay/lol-moments/' + vue,
     },
     compteur: { incr: (cle, n = 1) => (compteurs[cle] = (compteurs[cle] ?? 0) + n) },
+    activite() {},
     etat: {
       lire: (defaut) => stocke ?? defaut,
       sauver: (v) => (stocke = v),

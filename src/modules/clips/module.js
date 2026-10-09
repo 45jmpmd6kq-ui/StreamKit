@@ -206,6 +206,7 @@ export default {
           }
 
           const nom = clip.renamed ? ' « ' + clip.title + ' »' : '';
+          ctx.activite('Clip créé par @' + user + nom);
           let souci = '';
           if (argument && c.nommage && !clip.renamed) souci = ' (nom non appliqué cette fois)';
 

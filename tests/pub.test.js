@@ -197,6 +197,7 @@ function contexte({
     log: { debug() {}, info() {}, ok() {}, warn() {}, err() {} },
     overlay: { etat: (vue, d) => etats.push(d), url: () => 'http://127.0.0.1/overlay/pub/bandeau' },
     compteur: { incr: (k, n = 1) => (compteurs[k] = (compteurs[k] ?? 0) + n) },
+    activite() {},
     minuteur: {
       intervalle: (fn, ms) => minuteurs.push({ fn, ms }),
       delai: (fn, ms) => minuteurs.push({ fn, ms, unique: true }),

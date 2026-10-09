@@ -373,6 +373,7 @@ function faireContexte({ droits = ['channel:read:predictions'], lecture } = {}) 
       url: (vue) => 'http://127.0.0.1:47455/overlay/predictions/' + vue,
     },
     compteur: { incr: (cle, n = 1) => (compteurs[cle] = (compteurs[cle] ?? 0) + n) },
+    activite() {},
     minuteur: {
       delai(fn, ms) {
         const t = setTimeout(() => {}, 0); // un vrai Timeout, pour clearTimeout

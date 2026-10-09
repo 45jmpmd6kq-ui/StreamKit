@@ -150,11 +150,23 @@ export default {
         if (s.simulation) return;
         ctx.compteur.incr('sondages');
         ctx.log.info('Sondage lancé : « ' + s.titre + ' »');
+        ctx.activite('Sondage lancé : « ' + s.titre + ' »', 'info');
       },
       surTermine: (s) => {
         if (s.simulation) return;
         ctx.compteur.incr('votes', s.totalVotes);
         const gagnants = s.choix.filter((x) => s.gagnants.includes(x.id)).map((x) => '« ' + x.titre + ' »');
+        ctx.activite(
+          'Sondage « ' +
+            s.titre +
+            ' » — ' +
+            (gagnants.length
+              ? gagnants.join(' et ') + (gagnants.length > 1 ? ' à égalité' : ' l’emporte')
+              : 'aucun vote') +
+            ' (' +
+            s.totalVotes +
+            ' votes)'
+        );
         ctx.log.ok(
           'Sondage terminé : « ' +
             s.titre +

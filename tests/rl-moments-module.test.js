@@ -49,6 +49,7 @@ function contexte({ config, portJeu, minuteurManuel = false }) {
       url: (vue) => 'http://127.0.0.1:47455/overlay/x/' + vue,
     },
     compteur: { incr: (cle, n = 1) => (compteurs[cle] = (compteurs[cle] ?? 0) + n) },
+    activite() {},
     etat: {
       lire: (defaut) => memoire ?? defaut,
       sauver: (v) => (memoire = JSON.parse(JSON.stringify(v))),

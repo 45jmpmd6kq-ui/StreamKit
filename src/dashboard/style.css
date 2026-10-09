@@ -598,6 +598,184 @@ a.btn {
   border: 1px solid color-mix(in srgb, var(--univers) 35%, transparent);
 }
 
+/* ---------- Activité récente ---------- */
+/* Fil chronologique d'une journée : une ligne par événement, l'heure, une
+   pastille de niveau, l'univers à sa couleur (.ck-tag) et la phrase. */
+.activite button {
+  font: inherit;
+  cursor: pointer;
+}
+.act-sous {
+  color: var(--texte-doux);
+  margin: -0.4rem 0 1.1rem;
+}
+.act-barre {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+.act-dates {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.act-fleche {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--bordure);
+  background: var(--panneau);
+  color: var(--texte);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.act-fleche:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.act-date {
+  min-width: 150px;
+  text-align: center;
+  font-weight: 650;
+  font-size: 15px;
+  text-transform: capitalize;
+}
+.act-date small {
+  display: block;
+  font-weight: 400;
+  font-size: 11.5px;
+  color: var(--texte-faible);
+  text-transform: none;
+}
+.act-calendrier,
+.act-recherche {
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--bordure);
+  background: var(--panneau);
+  color: var(--texte);
+  font-size: 12.5px;
+  color-scheme: dark;
+}
+.act-recherche {
+  margin-left: auto;
+  width: 240px;
+}
+.act-filtres {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+.act-chip {
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--bordure);
+  background: var(--panneau);
+  color: var(--texte-doux);
+  font-size: 12.5px;
+}
+.act-chip:hover {
+  color: var(--texte);
+}
+.act-chip.on {
+  background: var(--panneau-clair);
+  color: var(--texte);
+  border-color: var(--bordure-vive);
+}
+.act-sep {
+  width: 12px;
+}
+.act-jour {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.1rem 0 0.5rem;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texte-faible);
+}
+.act-jour::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--bordure);
+}
+.act-liste {
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.act-ev {
+  display: grid;
+  grid-template-columns: 46px 10px auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+}
+.act-ev:last-child {
+  border-bottom: 0;
+}
+.act-ev.avert {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--avert) 8%, transparent), transparent 60%);
+}
+.act-ev.erreur {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--erreur) 8%, transparent), transparent 60%);
+}
+.act-ev time {
+  color: var(--texte-faible);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.act-d {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.act-d.ok { background: var(--succes); }
+.act-d.in { background: var(--info); }
+.act-d.av { background: var(--avert); }
+.act-d.ko { background: var(--erreur); }
+.act-txt b {
+  font-weight: 600;
+}
+.act-txt span {
+  color: var(--texte-doux);
+}
+.act-ev.technique .act-txt,
+.act-ev.technique time {
+  opacity: 0.7;
+}
+.act-vide {
+  margin-top: 1.2rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--texte-faible);
+  border: 1px dashed var(--bordure-vive);
+  border-radius: 14px;
+}
+
+/* Entrée de menu à venir (Métriques). */
+.entree.bientot {
+  opacity: 0.55;
+  cursor: default;
+}
+.badge-bientot {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--texte-faible);
+  border: 1px solid var(--bordure);
+  border-radius: 99px;
+  padding: 0 0.45rem;
+}
+
 .carte {
   background: var(--panneau);
   border: 1px solid var(--bordure);
@@ -858,6 +1036,9 @@ a.btn {
    ligne. Elle seule prend toute la place disponible. */
 .detail-inner {
   max-width: 720px;
+}
+.detail-inner[data-vue='__activite__'] {
+  max-width: 1240px;
 }
 .detail-inner[data-vue='__accueil__'] {
   max-width: 1500px;

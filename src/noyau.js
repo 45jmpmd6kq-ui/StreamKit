@@ -27,6 +27,7 @@ import * as maj from './core/maj.js';
 import * as notes from './core/notes.js';
 import * as diffusion from './core/diffusion.js';
 import * as compteurs from './core/compteurs.js';
+import * as activite from './core/activite.js';
 import * as connecteurs from './core/connecteurs.js';
 import * as coffre from './core/coffre.js';
 import { creerSante, resumeModules } from './core/sante.js';
@@ -70,6 +71,7 @@ export async function demarrerNoyau({
 } = {}) {
   preparerDossiers();
   journal.purger();
+  activite.purger();
   compteurs.charger();
 
   // AVANT la premiere lecture de tokens.json : sans coffre branche, les
@@ -107,6 +109,11 @@ export async function demarrerNoyau({
       config: registre.reglagesDe(id),
 
       log: logModule,
+
+      // Ce que le streamer voudra relire apres son live (page « Activite
+      // recente ») : un clip cree, un match termine -- pas le diagnostic, qui
+      // reste dans log. Niveaux du journal : succes (defaut), info, avert, erreur.
+      activite: (message, niveau) => activite.noter(id, message, niveau),
 
       twitch: twitch.contextePour(id, logModule),
 
@@ -290,10 +297,12 @@ export async function demarrerNoyau({
         etatDirect.depuis = Date.now();
         compteurs.nouvelleSession('live');
         log.ok('Live démarré — compteurs de session remis à zéro.');
+        activite.noter('live', 'Live démarré');
       },
       fin: () => {
         etatDirect.enCours = false;
         log.info('Live terminé. Les compteurs de la session restent affichés.');
+        activite.noter('live', 'Live terminé', 'info');
       },
     });
 

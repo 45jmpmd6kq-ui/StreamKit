@@ -425,6 +425,7 @@ export default {
 
         ctx.compteur.incr('demandes');
         ctx.log.ok('Ajouté à la file : ' + morceau.name + ' — ' + morceau.artists);
+        ctx.activite('« ' + morceau.name + ' — ' + morceau.artists + ' » demandé par @' + e.userDisplayName);
         annoncer(
           '@' +
             e.userDisplayName +

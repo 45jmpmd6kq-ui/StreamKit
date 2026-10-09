@@ -232,6 +232,10 @@ export default {
       suivi.pub({ debutA, duree });
       ctx.compteur.incr('pubs');
       ctx.compteur.incr('minutes', Math.round(duree / 60));
+      ctx.activite(
+        'Pub ' + (e.isAutomatic ? 'automatique' : 'lancée à la main') + ' de ' + formaterDuree(duree * 1000),
+        'info'
+      );
       ctx.log.info(
         'Pub ' +
           (e.isAutomatic ? 'automatique' : 'lancée à la main') +

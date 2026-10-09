@@ -39,6 +39,7 @@ function contexte({ reglages = {}, possedees = [], sources = 1 } = {}) {
       url: (vue) => 'http://127.0.0.1:47455/overlay/roue-rl/' + vue,
     },
     compteur: { incr() {} },
+    activite() {},
     minuteur: { delai() {}, intervalle() {} },
   };
   return {

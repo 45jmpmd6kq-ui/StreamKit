@@ -392,6 +392,10 @@ export default {
         ctx.compteur.incr(r.victoire ? 'victoires' : 'defaites');
         const b = calculer();
         ctx.log.ok(quoi + ' — session ' + b.victoires + ' V / ' + b.defaites + ' D.');
+        ctx.activite(
+          quoi + ' — session ' + b.victoires + ' V / ' + b.defaites + ' D',
+          r.victoire ? 'succes' : 'info'
+        );
         pousser();
       },
     });

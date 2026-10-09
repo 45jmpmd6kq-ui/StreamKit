@@ -238,6 +238,7 @@ export default {
         const clip = await clipper.creer({ nom: titre });
         ctx.compteur.incr('clips');
         ctx.log.ok('Clip « ' + clip.title + ' » : ' + clip.url);
+        ctx.activite('Clip créé : « ' + clip.title + ' »');
         ctx.twitch.dire('✂️ Le clip « ' + titre + ' » : ' + clip.url);
       } catch (err) {
         if (err.reason === 'OFFLINE') ctx.log.info('Pas de clip : la chaîne n’est pas en live.');
@@ -281,6 +282,7 @@ export default {
       ctx.compteur.incr('moments');
       ctx.overlay.diffuser('moments', 'moment', vue);
       ctx.log.ok(vue.titre + ' — ' + vue.detail + '.');
+      ctx.activite(vue.titre + ' — ' + vue.detail);
       if (avecChat(n)) ctx.twitch.dire(messageChat(moment, vue));
       if (n === 'clip') programmerClip(moment, cle, vue);
     }

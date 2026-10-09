@@ -283,6 +283,7 @@ export default {
       surPartie: (p) => {
         ctx.compteur.incr(p.victoire ? 'victoires' : 'defaites');
         sauver();
+        if (!p.rattrapee) ctx.activite(libelle(p), p.victoire ? 'succes' : 'info');
         ctx.log.ok(
           libelle(p) + (p.rattrapee ? ' — retrouvée dans l’historique, sans ses LP.' : ' — comptée.')
         );

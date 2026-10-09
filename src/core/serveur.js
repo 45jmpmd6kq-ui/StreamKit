@@ -19,6 +19,7 @@ import { join, normalize, extname, sep } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { DASHBOARD_DIR, MODULES_DIR, JOURNAUX_DIR, COMMUN_DIR } from './paths.js';
 import * as journal from './journal.js';
+import * as activite from './activite.js';
 import * as diffusion from './diffusion.js';
 
 const log = journal.pour('serveur');
@@ -530,6 +531,31 @@ export function creerServeur(app) {
           const body = await corpsJson(req);
           const r = await app.executerAction(id, nom, body);
           return json(res, r.ok ? 200 : 400, r);
+        }
+
+        // --- Activite (page « Activite recente ») ---
+        // Un jour a la fois : ?jour=AAAA-MM-JJ (defaut : aujourd'hui), et
+        // ?technique=1 pour y meler le journal du meme jour. `jours` liste ceux
+        // qui ont de l'activite, pour les fleches de la page.
+        if (chemin === '/api/activite' && methode === 'GET') {
+          const jour = url.searchParams.get('jour') || activite.jourDe(new Date());
+          const evenements = activite.lire(jour);
+          if (url.searchParams.get('technique') === '1') {
+            // Un evenement est aussi au journal quand le module le logue : on
+            // garde sa version « activite », plus lisible, et on ecarte le
+            // doublon technique de la meme seconde.
+            const vus = new Set(evenements.map((e) => e.source + '|' + e.h));
+            for (const l of activite.technique(jour)) {
+              if (!vus.has(l.source + '|' + l.h)) evenements.push(l);
+            }
+            evenements.sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0));
+          }
+          return json(res, 200, {
+            jour,
+            aujourdhui: activite.jourDe(new Date()),
+            jours: activite.jours(),
+            evenements,
+          });
         }
 
         // --- Journal ---

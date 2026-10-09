@@ -11,6 +11,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 // un identifiant reserve plutot qu'un faux module dans le registre.
 const ACCUEIL = '__accueil__';
 const CONNECTEURS = '__connecteurs__';
+const ACTIVITE = '__activite__';
 
 const etat = {
   modules: [],
@@ -474,6 +475,7 @@ function grouperParCategorie() {
 function dessinerRail() {
   $('#entree-accueil').classList.toggle('actif', etat.selection === ACCUEIL);
   $('#entree-connecteurs').classList.toggle('actif', etat.selection === CONNECTEURS);
+  $('#entree-activite').classList.toggle('actif', etat.selection === ACTIVITE);
   const groupes = grouperParCategorie();
 
   $('#liste-modules').innerHTML = groupes
@@ -868,6 +870,210 @@ function dessinerOverlays(actifs, s) {
     </div>`;
 }
 
+// --- Activité récente ---------------------------------------------------------
+
+// Fil chronologique d'une journée (maquette A choisie par le user le 10/10/2026),
+// du plus récent au plus ancien. On change de jour avec les flèches, les
+// raccourcis « Aujourd'hui / Hier » ou le calendrier ; on filtre par univers ; et
+// « + technique » y mêle le journal du même jour.
+const vueActivite = {
+  jour: null, // null = aujourd'hui, suivi d'un jour à l'autre si la page reste ouverte
+  univers: 'tout',
+  technique: false,
+  recherche: '',
+  donnees: null,
+};
+
+// Les sources qui ne sont pas des modules : le live lui-même, et le socle
+// (seulement avec « + technique »).
+const SOURCE_LIVE = { id: 'twitch', court: 'Twitch', label: 'Twitch', couleur: '#9146ff' };
+const SOURCE_SOCLE = { id: 'streamkit', court: 'StreamKit', label: 'StreamKit', couleur: '#8b93a7' };
+
+function origineEvenement(e) {
+  const m = etat.modules.find((x) => x.id === e.source);
+  if (m) return { categorie: m.categorie, icone: m.icone, nom: m.nom };
+  if (e.source === 'live') return { categorie: SOURCE_LIVE, icone: '🔴', nom: 'Live' };
+  return { categorie: SOURCE_SOCLE, icone: '⚙️', nom: e.source };
+}
+
+async function chargerActivite() {
+  const p = new URLSearchParams();
+  if (vueActivite.jour) p.set('jour', vueActivite.jour);
+  if (vueActivite.technique) p.set('technique', '1');
+  try {
+    vueActivite.donnees = await api('/api/activite?' + p);
+  } catch {
+    vueActivite.donnees = null;
+  }
+  if (etat.selection === ACTIVITE) dessinerActivitePage();
+}
+
+// « jeudi 9 octobre » : la date telle qu'on la dit.
+function dateLisible(jour) {
+  const [a, m, j] = jour.split('-').map(Number);
+  return new Date(a, m - 1, j).toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+}
+
+function decalerJour(jour, n) {
+  const [a, m, j] = jour.split('-').map(Number);
+  const d = new Date(a, m - 1, j + n);
+  const p = (x) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function dessinerActivitePage() {
+  $('#pied-detail').hidden = true;
+  const d = vueActivite.donnees;
+  if (!d) {
+    redessinerDetail('<div class="vide">Lecture de l’activité…</div>');
+    return;
+  }
+
+  const jour = d.jour;
+  const hier = decalerJour(d.aujourdhui, -1);
+  const libelleJour = jour === d.aujourdhui ? 'Aujourd’hui' : jour === hier ? 'Hier' : dateLisible(jour);
+
+  // Les univers proposés : ceux des modules installés, dans l'ordre du rail.
+  const univers = grouperParCategorie().map((g) => g.categorie);
+  const q = vueActivite.recherche.trim().toLowerCase();
+  const evenements = d.evenements
+    .map((e) => ({ ...e, ...origineEvenement(e) }))
+    .filter((e) => vueActivite.univers === 'tout' || e.categorie?.id === vueActivite.univers)
+    .filter((e) => !q || e.message.toLowerCase().includes(q) || e.nom.toLowerCase().includes(q))
+    .reverse();
+
+  // Aujourd'hui, pendant un live : le live d'abord, le reste de la journée
+  // ensuite. Les autres jours, un seul bloc.
+  const s = etat.sante;
+  const debutLive = jour === d.aujourdhui && s?.enDirect && s.directDepuis ? new Date(s.directDepuis) : null;
+  const blocs = [];
+  if (debutLive) {
+    const p = (x) => String(x).padStart(2, '0');
+    const hh = p(debutLive.getHours()) + ':' + p(debutLive.getMinutes());
+    blocs.push({
+      titre: 'Ce live · depuis ' + hh,
+      lignes: evenements.filter((e) => new Date(e.t) >= debutLive),
+    });
+    blocs.push({
+      titre: 'Plus tôt aujourd’hui',
+      lignes: evenements.filter((e) => new Date(e.t) < debutLive),
+    });
+  } else {
+    blocs.push({
+      titre: libelleJour === 'Aujourd’hui' || libelleJour === 'Hier' ? libelleJour : 'Ce jour-là',
+      lignes: evenements,
+    });
+  }
+
+  const chip = (attr, valeur, texte, actif) =>
+    `<button class="act-chip ${actif ? 'on' : ''}" ${attr}="${echapper(valeur)}">${texte}</button>`;
+
+  const corps = evenements.length
+    ? blocs
+        .filter((b) => b.lignes.length)
+        .map(
+          (b) => `
+        <div class="act-jour">${echapper(b.titre)}</div>
+        <div class="act-liste">${b.lignes.map(dessinerEvenement).join('')}</div>`
+        )
+        .join('')
+    : `<div class="act-vide">${
+        d.evenements.length
+          ? 'Rien ne correspond à ces filtres.'
+          : 'Rien de noté ce jour-là. Les clips, matchs, sondages et demandes de musique apparaîtront ici.'
+      }</div>`;
+
+  redessinerDetail(`
+    <div class="activite">
+      <div class="titre-module"><span style="font-size:1.6rem">🕒</span><h1>Activité récente</h1></div>
+      <p class="act-sous">Ce qui s’est passé sur ton live, du plus récent au plus ancien.</p>
+
+      <div class="act-barre">
+        <div class="act-dates">
+          <button class="act-fleche" data-act-decaler="-1" title="Jour précédent">‹</button>
+          <span class="act-date">${echapper(libelleJour)}${
+            libelleJour === 'Aujourd’hui' || libelleJour === 'Hier'
+              ? ` <small>${echapper(dateLisible(jour))}</small>`
+              : ''
+          }</span>
+          <button class="act-fleche" data-act-decaler="1" title="Jour suivant" ${jour >= d.aujourdhui ? 'disabled' : ''}>›</button>
+          ${chip('data-act-jour', d.aujourdhui, 'Aujourd’hui', jour === d.aujourdhui)}
+          ${chip('data-act-jour', hier, 'Hier', jour === hier)}
+          <input type="date" id="act-calendrier" class="act-calendrier" value="${jour}" max="${d.aujourdhui}"
+            title="Choisir une date">
+        </div>
+        <input type="search" id="act-recherche" class="act-recherche" placeholder="Rechercher…"
+          value="${echapper(vueActivite.recherche)}">
+      </div>
+
+      <div class="act-filtres">
+        ${chip('data-act-univers', 'tout', 'Tout', vueActivite.univers === 'tout')}
+        ${univers.map((c) => chip('data-act-univers', c.id, echapper(c.court || c.label), vueActivite.univers === c.id)).join('')}
+        <span class="act-sep"></span>
+        ${chip('data-act-technique', '0', 'Événements', !vueActivite.technique)}
+        ${chip('data-act-technique', '1', '+ technique', vueActivite.technique)}
+      </div>
+
+      ${corps}
+    </div>`);
+}
+
+const PASTILLE_NIVEAU = { succes: 'ok', info: 'in', avert: 'av', erreur: 'ko' };
+
+function dessinerEvenement(e) {
+  return `
+    <div class="act-ev ${e.technique ? 'technique' : ''} ${e.niveau}">
+      <time>${echapper(String(e.h).slice(0, 5))}</time>
+      <span class="act-d ${PASTILLE_NIVEAU[e.niveau] || 'in'}"></span>
+      ${etiquetteUnivers(e.categorie)}
+      <span class="act-txt"><b>${echapper(e.icone || '')} ${echapper(e.nom)}</b> <span>${echapper(e.message)}</span></span>
+    </div>`;
+}
+
+function brancherActivite() {
+  const zone = $('#detail');
+  zone.addEventListener('click', (e) => {
+    if (etat.selection !== ACTIVITE) return;
+    const b = e.target.closest(
+      '[data-act-decaler], [data-act-jour], [data-act-univers], [data-act-technique]'
+    );
+    if (!b) return;
+    const d = b.dataset;
+    const courant = vueActivite.donnees?.jour;
+    if (d.actDecaler && courant) {
+      const cible = decalerJour(courant, Number(d.actDecaler));
+      vueActivite.jour = cible >= vueActivite.donnees.aujourdhui ? null : cible;
+      return chargerActivite();
+    }
+    if (d.actJour) {
+      vueActivite.jour = d.actJour === vueActivite.donnees?.aujourdhui ? null : d.actJour;
+      return chargerActivite();
+    }
+    if (d.actUnivers) {
+      vueActivite.univers = d.actUnivers;
+      return dessinerActivitePage();
+    }
+    if (d.actTechnique) {
+      vueActivite.technique = d.actTechnique === '1';
+      return chargerActivite();
+    }
+  });
+  zone.addEventListener('change', (e) => {
+    if (etat.selection !== ACTIVITE || e.target.id !== 'act-calendrier' || !e.target.value) return;
+    vueActivite.jour = e.target.value >= vueActivite.donnees?.aujourdhui ? null : e.target.value;
+    chargerActivite();
+  });
+  zone.addEventListener('input', (e) => {
+    if (etat.selection !== ACTIVITE || e.target.id !== 'act-recherche') return;
+    vueActivite.recherche = e.target.value;
+    dessinerActivitePage();
+  });
+}
+
 async function chargerSante() {
   try {
     etat.sante = await api('/api/sante');
@@ -1091,6 +1297,7 @@ async function chargerConnecteurs() {
 function dessinerDetail() {
   if (etat.selection === ACCUEIL) return dessinerAccueil();
   if (etat.selection === CONNECTEURS) return dessinerConnecteurs();
+  if (etat.selection === ACTIVITE) return dessinerActivitePage();
 
   const m = moduleAffiche();
 
@@ -2029,8 +2236,16 @@ $('#entree-accueil').addEventListener('click', () => {
   dessinerAccueil();
 });
 
+$('#entree-activite').addEventListener('click', () => {
+  etat.selection = ACTIVITE;
+  dessinerRail();
+  dessinerActivitePage();
+  chargerActivite();
+});
+
 brancherRail();
 brancherDetail();
+brancherActivite();
 brancherTiroir();
 brancherModales();
 brancherSignalement();
@@ -2063,6 +2278,8 @@ async function cycleRafraichissement() {
     }
     await chargerSante();
     await chargerConnecteurs();
+    // Le jour en cours se remplit pendant le live ; un jour passe ne bouge plus.
+    if (etat.selection === ACTIVITE && !vueActivite.jour) await chargerActivite();
   } catch {
     /* StreamKit ne répond pas : rafraichirEtat l'affiche déjà, on réessaiera */
   } finally {

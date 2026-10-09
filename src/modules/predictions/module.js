@@ -181,15 +181,26 @@ export default {
         if (p.simulation) return;
         ctx.compteur.incr('lancees');
         ctx.log.info('Prédiction lancée : « ' + p.titre + ' »');
+        ctx.activite('Prédiction lancée : « ' + p.titre + ' »', 'info');
       },
       surTerminee: (p) => {
         if (p.simulation) return;
         if (p.statut === 'annulee') {
           ctx.log.info('Prédiction annulée : « ' + p.titre + ' » — points remboursés.');
+          ctx.activite('Prédiction annulée : « ' + p.titre + ' »', 'info');
           return;
         }
         ctx.compteur.incr('points', p.totalPoints);
         const gagnante = p.issues.find((o) => o.id === p.gagnant);
+        ctx.activite(
+          'Prédiction « ' +
+            p.titre +
+            ' » — ' +
+            (gagnante ? '« ' + gagnante.titre + ' » l’emporte' : 'terminée') +
+            ' (' +
+            p.totalVotants +
+            ' participants)'
+        );
         ctx.log.ok(
           'Prédiction terminée : « ' +
             p.titre +

@@ -204,10 +204,12 @@ export default {
         ctx.overlay.diffuser('moments', 'moment', { type, texte: c.texteChauffe });
         ctx.compteur.incr('chauffes');
         ctx.log.ok('Game de chauffe annoncée.');
+        ctx.activite('Game de chauffe annoncée');
       } else if (type === 'overtime' && c.overtime) {
         ctx.overlay.diffuser('moments', 'moment', { type });
         ctx.compteur.incr('overtimes');
         ctx.log.ok('Overtime !');
+        ctx.activite('Overtime affiché');
       }
     }
 
