@@ -11,6 +11,14 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.30.12
+
+### Nouveautés
+
+- **Formation du club : la carte atterrit.** Après son retournement, la carte
+  retombe sur le terrain avec un petit impact et tremble un instant avant de
+  se poser.
+
 ## 0.30.11
 
 ### Nouveautés
