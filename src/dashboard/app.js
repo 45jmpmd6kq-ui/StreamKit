@@ -97,9 +97,23 @@ function estModifie(champ) {
 // le champ actif, la position du curseur et les messages de retour (« Enregistré »).
 //
 // Renvoie vrai si c'est la même vue qui vient d'être redessinée.
-function redessinerDetail(html) {
+//
+// Le defilement aussi : redessiner la meme vue garde la position, sinon la page
+// remontait toute seule toutes les 5 s (signale le 10/10/2026). `apres` place ce
+// qui depend de la mise en page (les panneaux de la vue d'ensemble) AVANT qu'on
+// remette la position -- la page n'a sa vraie hauteur qu'une fois placee.
+// Et un tableau de bord identique n'est pas redessine du tout.
+let dernierDessin = { vue: null, html: null };
+function redessinerDetail(html, apres) {
   const cible = $('#detail');
   const memeVue = cible.dataset.vue === etat.selection;
+  // Seulement pour les tableaux de bord : un formulaire de module, lui, compte
+  // sur le redessin pour revenir a ce que StreamKit a retenu.
+  const tableau = etat.selection === ACCUEIL || etat.selection === ACTIVITE;
+  if (tableau && memeVue && dernierDessin.vue === etat.selection && dernierDessin.html === html)
+    return memeVue;
+  const defilant = cible.closest('.detail');
+  const position = memeVue && defilant ? defilant.scrollTop : 0;
 
   const saisies = new Map();
   const bascules = new Map();
@@ -124,6 +138,9 @@ function redessinerDetail(html) {
 
   cible.innerHTML = html;
   cible.dataset.vue = etat.selection;
+  dernierDessin = { vue: etat.selection, html };
+  apres?.();
+  if (defilant && memeVue) defilant.scrollTop = position;
 
   for (const [id, valeur] of saisies) {
     const champ = document.getElementById(id);
@@ -705,9 +722,9 @@ function dessinerAccueil() {
           ${dessinerOverlays(tous, s)}
         </aside>
       </div>
-    </div>`
+    </div>`,
+    caserUnivers
   );
-  caserUnivers();
 }
 
 // Chaque panneau reserve autant de rangees de 4 px que sa hauteur reelle (voir
@@ -715,7 +732,9 @@ function dessinerAccueil() {
 // largeur : les etiquettes passent a la ligne et les hauteurs changent.
 function caserUnivers() {
   for (const u of document.querySelectorAll('.ck-univers .ck-u')) {
-    u.style.gridRowEnd = '';
+    // Sans remettre la hauteur a zero d'abord : les panneaux sont alignes en
+    // haut de leur zone, leur hauteur ne depend pas de la place reservee. Une
+    // remise a zero ecrasait la page un instant et la faisait remonter.
     const marge = parseFloat(getComputedStyle(u).marginBottom) || 0;
     u.style.gridRowEnd = 'span ' + Math.ceil((u.offsetHeight + marge) / 4);
   }
