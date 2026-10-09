@@ -29,6 +29,8 @@ import * as diffusion from './core/diffusion.js';
 import * as compteurs from './core/compteurs.js';
 import * as activite from './core/activite.js';
 import * as categories from './core/categories.js';
+import * as telemetrie from './core/telemetrie.js';
+import * as moderateur from './core/moderateur.js';
 import * as connecteurs from './core/connecteurs.js';
 import * as coffre from './core/coffre.js';
 import { creerSante, resumeModules } from './core/sante.js';
@@ -398,6 +400,9 @@ export async function demarrerNoyau({
         modules: resumeModules(registre),
         droitsManquants: twitch.droitsManquants(registre.scopesRequis()),
         demarrageAuto: { disponible: !!demarrageAuto.disponible, actif: !!demarrageAuto.lire() },
+        telemetrie: telemetrie.active(),
+        // L'entree « Moderateur » n'apparait que sur le PC du developpeur.
+        moderateur: moderateur.disponible(),
       };
     },
 
@@ -603,10 +608,14 @@ export async function demarrerNoyau({
     // streamer, qui l'avait deja retire de ce qu'il envoie. config.maj.depot
     // survit pour maj.js en ligne de commande, mais ne passe plus ni par l'etat
     // general ni par cette API.
-    async definirReglagesGeneraux({ demarrageAuto: auto }) {
+    async definirReglagesGeneraux({ demarrageAuto: auto, telemetrie: partage }) {
       if (auto !== undefined && demarrageAuto.disponible) {
         demarrageAuto.ecrire(!!auto);
         log.info('Demarrage avec Windows : ' + (auto ? 'active' : 'desactive'));
+      }
+      if (partage !== undefined && !!partage !== telemetrie.active()) {
+        telemetrie.definir(!!partage);
+        log.info("Statistiques d'usage : " + (partage ? 'partagees' : 'plus partagees'));
       }
 
       return {
@@ -647,6 +656,13 @@ export async function demarrerNoyau({
         : { ok: true, dossier: JOURNAUX_DIR };
     },
 
+    // Vue « Moderateur » (PC du developpeur seulement) : les releves d'usage de
+    // tous les streamers, et de quoi les afficher.
+    async moderateur(depuis) {
+      const r = await moderateur.releves(depuis);
+      return { ...r, version: maj.versionActuelle(), modules: app.metriques().modules };
+    },
+
     // Page « Métriques » : l'historique brut des compteurs, et ce qu'il faut
     // pour l'afficher (libellés, univers). Le dashboard agrège lui-même.
     metriques: () => ({
@@ -669,6 +685,9 @@ export async function demarrerNoyau({
   // reste juste a la minute pres.
   const ticLive = setInterval(() => compteurs.tic(), 60 * 1000);
   ticLive.unref?.();
+
+  // Statistiques d'usage (opt-out, voir core/telemetrie.js).
+  const arreterTelemetrie = telemetrie.demarrer(registre, maj.versionActuelle());
 
   // --- Demarrage ------------------------------------------------------------
 
@@ -714,6 +733,7 @@ export async function demarrerNoyau({
     log.info('Arret de StreamKit...');
     for (const id of [...contextes.keys()]) await arreterModule(id);
     clearInterval(ticLive);
+    arreterTelemetrie();
     compteurs.vider();
     await twitch.arreter();
     serveur.close();

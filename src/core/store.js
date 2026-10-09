@@ -47,6 +47,10 @@ const CONFIG_DEFAUT = {
   // l'etat general ni modifiable par /api/reglages -- le dashboard avait deja
   // cesse de l'envoyer, il ne restait qu'un reglage qui faisait semblant.
   maj: { auto: true, depot: '45jmpmd6kq-ui/StreamKit' },
+  // Statistiques d'usage pour le développeur (core/telemetrie.js) : actives par
+  // défaut, coupées d'un clic dans les réglages. installId est tiré au hasard
+  // au premier envoi.
+  telemetrie: { actif: true, installId: '' },
   modules: {}, // { <id>: { actif, schemaVersion, reglages } }
 };
 

@@ -13,6 +13,7 @@ const ACCUEIL = '__accueil__';
 const CONNECTEURS = '__connecteurs__';
 const ACTIVITE = '__activite__';
 const METRIQUES = '__metriques__';
+const MODERATEUR = '__moderateur__';
 
 const etat = {
   modules: [],
@@ -110,7 +111,7 @@ function redessinerDetail(html, apres) {
   const memeVue = cible.dataset.vue === etat.selection;
   // Seulement pour les tableaux de bord : un formulaire de module, lui, compte
   // sur le redessin pour revenir a ce que StreamKit a retenu.
-  const tableau = etat.selection === ACCUEIL || etat.selection === ACTIVITE || etat.selection === METRIQUES;
+  const tableau = [ACCUEIL, ACTIVITE, METRIQUES, MODERATEUR].includes(etat.selection);
   if (tableau && memeVue && dernierDessin.vue === etat.selection && dernierDessin.html === html)
     return memeVue;
   const defilant = cible.closest('.detail');
@@ -198,6 +199,8 @@ async function rafraichirEtat() {
   majPastilleTwitch(g.twitch, g);
 
   if (g.dossierDonnees) $('#chemin-donnees').textContent = g.dossierDonnees;
+  // L'entree « Moderateur » n'existe que sur le PC du developpeur.
+  $('#entree-moderateur').hidden = !g.moderateur;
 
   // Le démarrage avec Windows n'existe que dans l'application Electron : lancé
   // en ligne de commande, l'option est simplement masquée plutôt que grisée.
@@ -488,6 +491,7 @@ function dessinerRail() {
   $('#entree-connecteurs').classList.toggle('actif', etat.selection === CONNECTEURS);
   $('#entree-activite').classList.toggle('actif', etat.selection === ACTIVITE);
   $('#entree-metriques').classList.toggle('actif', etat.selection === METRIQUES);
+  $('#entree-moderateur').classList.toggle('actif', etat.selection === MODERATEUR);
   const groupes = grouperParCategorie();
 
   $('#liste-modules').innerHTML = groupes
@@ -1444,6 +1448,250 @@ function brancherMetriques() {
   });
 }
 
+// --- Modérateur ------------------------------------------------------------------
+
+// Les statistiques d'usage de tous les streamers (maquette C choisie par le user
+// le 10/10/2026 : carte streamer × module, et le détail d'un streamer au clic,
+// façon maquette A). Seulement sur le PC du développeur : le socle ne répond
+// que s'il trouve la clé modérateur.
+const vueModerateur = { periode: '30', selection: null, donnees: null, charge: null };
+
+const PERIODES_MOD = [
+  ['7', '7 jours'],
+  ['30', '30 jours'],
+  ['365', '12 mois'],
+];
+
+async function chargerModerateur() {
+  const p = vueModerateur.periode;
+  const d = new Date();
+  d.setDate(d.getDate() - Number(p) + 1);
+  const pad = (x) => String(x).padStart(2, '0');
+  const depuis = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  try {
+    vueModerateur.donnees = await api('/api/moderateur?depuis=' + depuis);
+  } catch (e) {
+    vueModerateur.donnees = { ok: false, erreur: e.message };
+  }
+  vueModerateur.charge = p;
+  if (etat.selection === MODERATEUR) dessinerModerateur();
+}
+
+// L'usage d'un module sur un ensemble de compteurs : son compteur principal,
+// ou ses parties jouées s'il compte victoires et défaites.
+function usageModule(mod, c = {}) {
+  const cles = Object.keys(mod.compteurs);
+  if (cles.includes('victoires') && cles.includes('defaites')) {
+    return (c.victoires || 0) + (c.defaites || 0) + (c.nuls || 0);
+  }
+  return c[cles[0]] || 0;
+}
+
+const versionAvant = (a, b) => {
+  const na = String(a).split('.').map(Number);
+  const nb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((na[i] || 0) !== (nb[i] || 0)) return (na[i] || 0) < (nb[i] || 0);
+  return false;
+};
+
+function ilYa(iso) {
+  const min = Math.round((Date.now() - Date.parse(iso)) / 60000);
+  if (min < 2) return 'à l’instant';
+  if (min < 60) return 'il y a ' + min + ' min';
+  const h = Math.round(min / 60);
+  if (h < 24) return 'il y a ' + h + ' h';
+  const j = Math.round(h / 24);
+  return j === 1 ? 'hier' : 'il y a ' + j + ' j';
+}
+
+// Une ligne par installation : le cumul de ses relevés sur la période.
+function streamers(d) {
+  const parInstall = new Map();
+  for (const r of d.releves) {
+    let s = parInstall.get(r.install_id);
+    if (!s) {
+      s = {
+        id: r.install_id,
+        chaine: r.chaine,
+        version: r.version,
+        dernier: r.recu_le,
+        lives: 0,
+        minutes: 0,
+        c: {},
+        actifs: {},
+      };
+      parInstall.set(r.install_id, s);
+    }
+    s.lives += r.lives;
+    s.minutes += r.minutes_live;
+    for (const [mod, v] of Object.entries(r.modules ?? {})) {
+      s.c[mod] ??= {};
+      for (const [cle, n] of Object.entries(v.c ?? {})) s.c[mod][cle] = (s.c[mod][cle] || 0) + n;
+    }
+    // Le dernier relevé fait foi pour la version, la chaîne et les modules actifs.
+    if (!s.dernierJour || r.jour > s.dernierJour || (r.jour === s.dernierJour && r.recu_le >= s.dernier)) {
+      s.dernier = r.recu_le;
+      s.dernierJour = r.jour;
+      s.version = r.version;
+      s.chaine = r.chaine || s.chaine;
+      s.actifs = Object.fromEntries(Object.entries(r.modules ?? {}).map(([m, v]) => [m, !!v.a]));
+    }
+  }
+  return [...parInstall.values()];
+}
+
+function dessinerModerateur() {
+  $('#pied-detail').hidden = true;
+  const d = vueModerateur.donnees;
+  if (!d || vueModerateur.charge !== vueModerateur.periode) {
+    redessinerDetail('<div class="vide">Lecture des statistiques…</div>');
+    return;
+  }
+  const chip = (attr, valeur, texte, actif) =>
+    `<button class="act-chip ${actif ? 'on' : ''}" ${attr}="${echapper(valeur)}">${texte}</button>`;
+  const entete = `
+    <div class="titre-module"><span style="font-size:1.6rem">🛡️</span><h1>Modérateur</h1>
+      <span class="badge-toi grand">visible par toi seul</span></div>
+    <p class="act-sous">Qui utilise quoi, et combien. Clique sur un streamer pour son détail.</p>
+    <div class="act-filtres">${PERIODES_MOD.map(([v, t]) => chip('data-md-periode', v, t, vueModerateur.periode === v)).join('')}</div>`;
+
+  if (!d.ok) {
+    redessinerDetail(
+      `<div class="moderateur">${entete}<div class="act-vide">Statistiques illisibles : ${echapper(d.erreur || 'erreur inconnue')}</div></div>`
+    );
+    return;
+  }
+
+  const liste = streamers(d);
+  // Colonnes : les modules connus de cette version, dans l'ordre des univers.
+  const modules = [...d.modules].sort((a, b) => (a.categorie?.ordre ?? 99) - (b.categorie?.ordre ?? 99));
+  const usage = (s, m) => usageModule(m, s.c[m.id]);
+  const max = Object.fromEntries(modules.map((m) => [m.id, Math.max(1, ...liste.map((s) => usage(s, m)))]));
+  const total = (s) => modules.reduce((t, m) => t + (s.actifs[m.id] ? 1 : 0), 0);
+  liste.sort((a, b) => b.lives - a.lives || total(b) - total(a));
+
+  const adoption = modules
+    .map((m) => ({ m, n: liste.filter((s) => s.actifs[m.id] || usage(s, m)).length }))
+    .sort((a, b) => b.n - a.n);
+  const top = adoption[0];
+  const aJour = liste.filter((s) => !versionAvant(s.version, d.version)).length;
+  const minutes = liste.reduce((t, s) => t + s.minutes, 0);
+  const lives = liste.reduce((t, s) => t + s.lives, 0);
+
+  const tuiles = [
+    ['Streamers', String(liste.length), 'relevé reçu sur la période'],
+    ['Lives', String(lives), Math.round(minutes / 60) + ' h en direct'],
+    ['À jour', aJour + ' / ' + liste.length, 'sur ' + d.version],
+    [
+      'Le plus adopté',
+      top?.n ? top.m.icone + ' ' + top.m.nom : '—',
+      top?.n ? top.n + ' streamer' + (top.n > 1 ? 's' : '') : '',
+    ],
+  ];
+
+  const carte = liste.length
+    ? `<div class="md-carte" style="grid-template-columns: 190px repeat(${modules.length}, minmax(44px, 1fr))">
+        <span></span>${modules
+          .map(
+            (m) =>
+              `<span class="md-col" title="${echapper(m.nom)}">${echapper(m.icone)}<small>${echapper(m.nom)}</small></span>`
+          )
+          .join('')}
+        ${liste
+          .map(
+            (s) => `
+          <button class="md-nom ${vueModerateur.selection === s.id ? 'sel' : ''}" data-md-streamer="${s.id}">
+            <b>${echapper(s.chaine || 'chaîne inconnue')}</b>
+            <span class="md-v ${versionAvant(s.version, d.version) ? 'vieux' : ''}">${echapper(s.version)}</span>
+          </button>
+          ${modules
+            .map((m) => {
+              const u = usage(s, m);
+              if (!s.actifs[m.id] && !u) return '<span class="md-c vide"></span>';
+              const a = Math.round(25 + (75 * u) / max[m.id]);
+              const coul = m.categorie?.couleur || '#8b93a7';
+              return `<span class="md-c" style="background:color-mix(in srgb, ${coul} ${u ? a : 12}%, var(--panneau-clair))" title="${echapper(m.nom)} : ${u}">${u}</span>`;
+            })
+            .join('')}`
+          )
+          .join('')}
+      </div>`
+    : '<div class="act-vide">Aucun relevé sur la période. Les streamers à jour envoient leurs statistiques une fois par heure.</div>';
+
+  const choisi = liste.find((s) => s.id === vueModerateur.selection);
+
+  redessinerDetail(`
+    <div class="moderateur">
+      ${entete}
+      <div class="mt-tuiles md-tuiles">${tuiles
+        .map(
+          ([t, v, s]) =>
+            `<div class="mt-tuile"><div class="mt-titre"><span>${t}</span></div><div class="mt-valeur">${echapper(v)}</div><div class="mt-sous">${echapper(s)}</div></div>`
+        )
+        .join('')}</div>
+      <div class="mt-boite md-boite">
+        <div class="mt-boite-titre"><b>Carte d’usage · streamer × module</b>
+          <span class="mt-legende">plus c’est foncé, plus c’est utilisé · vide = désactivé</span></div>
+        ${carte}
+      </div>
+      ${choisi ? dessinerStreamer(choisi, modules, d) : ''}
+    </div>`);
+}
+
+// Le détail d'un streamer (façon maquette A).
+function dessinerStreamer(s, modules, d) {
+  const utilises = modules
+    .map((m) => ({ m, u: usageModule(m, s.c[m.id]) }))
+    .filter((x) => x.u || s.actifs[x.m.id])
+    .sort((a, b) => b.u - a.u);
+  const vieux = versionAvant(s.version, d.version);
+  return `
+    <div class="mt-boite md-detail">
+      <div class="mt-boite-titre"><b>${echapper(s.chaine || 'chaîne inconnue')}</b>
+        <button class="act-chip" data-md-streamer="">Fermer</button></div>
+      <div class="md-fiche">
+        <div><span>Dernier signal</span><b>${echapper(ilYa(s.dernier))}</b></div>
+        <div><span>Version</span><b class="${vieux ? 'md-vieux' : ''}">${echapper(s.version)}${vieux ? ' · en retard' : ''}</b></div>
+        <div><span>Lives</span><b>${s.lives}</b></div>
+        <div><span>En direct</span><b>${Math.round(s.minutes / 60)} h</b></div>
+        <div><span>Modules actifs</span><b>${
+          modules
+            .filter((m) => s.actifs[m.id])
+            .map((m) => echapper(m.icone))
+            .join(' ') || '—'
+        }</b></div>
+      </div>
+      <div class="md-lignes">${utilises
+        .map(
+          ({ m, u }) => `
+        <div class="md-ligne">${etiquetteUnivers(m.categorie)}<span>${echapper(m.icone)} ${echapper(m.nom)}${
+          s.actifs[m.id] ? '' : ' <small>désactivé</small>'
+        }</span><span class="md-detail-c">${
+          Object.entries(s.c[m.id] ?? {})
+            .map(([cle, n]) => `${nombre(n)} ${echapper((m.compteurs[cle] || cle).toLowerCase())}`)
+            .join(' · ') || '—'
+        }</span><b>${nombre(u)}</b></div>`
+        )
+        .join('')}</div>
+    </div>`;
+}
+
+function brancherModerateur() {
+  $('#detail').addEventListener('click', (e) => {
+    if (etat.selection !== MODERATEUR) return;
+    const b = e.target.closest('[data-md-periode], [data-md-streamer]');
+    if (!b) return;
+    if (b.dataset.mdPeriode) {
+      vueModerateur.periode = b.dataset.mdPeriode;
+      dessinerModerateur();
+      return chargerModerateur();
+    }
+    vueModerateur.selection =
+      b.dataset.mdStreamer === vueModerateur.selection ? null : b.dataset.mdStreamer || null;
+    dessinerModerateur();
+  });
+}
+
 async function chargerSante() {
   try {
     etat.sante = await api('/api/sante');
@@ -1669,6 +1917,7 @@ function dessinerDetail() {
   if (etat.selection === CONNECTEURS) return dessinerConnecteurs();
   if (etat.selection === ACTIVITE) return dessinerActivitePage();
   if (etat.selection === METRIQUES) return dessinerMetriques();
+  if (etat.selection === MODERATEUR) return dessinerModerateur();
 
   const m = moduleAffiche();
 
@@ -2029,6 +2278,9 @@ function brancherModales() {
     // L'etat des bascules se lit a l'ouverture : entre deux ouvertures,
     // rafraichirEtat() a pu changer le demarrage auto.
     $('#in-modules-dev').setAttribute('aria-checked', String(modulesDevVisibles));
+    // Lu a l'ouverture seulement : le rafraichissement de 5 s ne doit pas
+    // defaire un choix pas encore enregistre.
+    $('#in-telemetrie').setAttribute('aria-checked', String(etat.general?.telemetrie !== false));
     mR.showModal();
   });
   $('#btn-fermer-reglages').addEventListener('click', () => mR.close());
@@ -2065,6 +2317,11 @@ function brancherModales() {
     dessinerDetail();
   });
 
+  $('#in-telemetrie').addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true');
+  });
+
   $('#in-demarrage-auto').addEventListener('click', (e) => {
     const b = e.currentTarget;
     b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true');
@@ -2080,7 +2337,9 @@ function brancherModales() {
       if (!$('#bloc-demarrage-auto').hidden) {
         corps.demarrageAuto = $('#in-demarrage-auto').getAttribute('aria-checked') === 'true';
       }
+      corps.telemetrie = $('#in-telemetrie').getAttribute('aria-checked') === 'true';
       await api('/api/reglages', { method: 'POST', corps });
+      await rafraichirEtat();
       toast('Réglages enregistrés');
       mR.close();
       verifierMaj();
@@ -2448,6 +2707,13 @@ $('#entree-accueil').addEventListener('click', () => {
   dessinerAccueil();
 });
 
+$('#entree-moderateur').addEventListener('click', () => {
+  etat.selection = MODERATEUR;
+  dessinerRail();
+  dessinerModerateur();
+  chargerModerateur();
+});
+
 $('#entree-metriques').addEventListener('click', () => {
   etat.selection = METRIQUES;
   dessinerRail();
@@ -2466,6 +2732,7 @@ brancherRail();
 brancherDetail();
 brancherActivite();
 brancherMetriques();
+brancherModerateur();
 brancherModales();
 brancherSignalement();
 

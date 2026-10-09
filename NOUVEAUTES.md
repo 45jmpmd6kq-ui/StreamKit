@@ -11,6 +11,19 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.34.0
+
+### Nouveautés
+
+- **StreamKit partage désormais des statistiques d'usage avec son
+  développeur**, pour savoir quels modules servent le plus et où mettre ses
+  efforts. Une fois par heure partent : la version de StreamKit, le nom de ta
+  chaîne, les modules que tu as activés et leurs compteurs du jour, le nombre
+  et la durée de tes lives. **Jamais** un pseudo de viewer, un titre de
+  musique ou un identifiant. C'est gardé 13 mois.
+- **Tu peux couper ce partage à tout moment** : ⚙️ Réglages → « Partager mes
+  statistiques d'usage ». Une fois coupé, plus rien ne part.
+
 ## 0.33.0
 
 ### Nouveautés

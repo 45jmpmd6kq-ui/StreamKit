@@ -911,6 +911,149 @@ a.btn {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- Modérateur (PC du développeur seulement) ---------- */
+/* Une carte streamer × module (maquette C), et le détail d'un streamer au clic.
+   L'ambre signale une vue à part : elle n'existe que chez le développeur. */
+.badge-toi {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #f5c26b;
+  border: 1px solid color-mix(in srgb, var(--avert) 35%, transparent);
+  border-radius: 99px;
+  padding: 0 0.45rem;
+}
+.badge-toi.grand {
+  margin-left: 0.6rem;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--avert) 10%, transparent);
+  padding: 0.05rem 0.6rem;
+}
+.entree-moderateur.actif {
+  background: color-mix(in srgb, var(--avert) 14%, transparent);
+}
+.moderateur .act-filtres {
+  margin-bottom: 1rem;
+}
+.md-tuiles {
+  margin-bottom: 0.9rem;
+}
+.md-carte {
+  display: grid;
+  gap: 4px;
+  padding: 0.4rem 1rem 1rem;
+  overflow-x: auto;
+}
+.md-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 15px;
+  padding-bottom: 0.2rem;
+}
+.md-col small {
+  font-size: 10.5px;
+  color: var(--texte-faible);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.moderateur .md-nom {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 0.4rem;
+  color: var(--texte);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.moderateur .md-nom:hover,
+.moderateur .md-nom.sel {
+  background: var(--panneau-clair);
+}
+.md-nom b {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.md-v {
+  flex: none;
+  font-size: 11px;
+  padding: 0 0.4rem;
+  border-radius: 5px;
+  border: 1px solid var(--bordure);
+  color: var(--texte-doux);
+}
+.md-v.vieux {
+  color: var(--avert);
+  border-color: color-mix(in srgb, var(--avert) 40%, transparent);
+}
+.md-c {
+  height: 32px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.md-c.vide {
+  background: var(--panneau-clair);
+  opacity: 0.45;
+}
+.md-detail {
+  margin-top: 0.9rem;
+}
+.md-fiche {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.6rem;
+  padding: 0 1rem 0.8rem;
+}
+.md-fiche div {
+  background: var(--panneau-clair);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+}
+.md-fiche span {
+  display: block;
+  font-size: 12px;
+  color: var(--texte-faible);
+}
+.md-fiche b {
+  font-weight: 600;
+}
+.md-fiche .md-vieux {
+  color: var(--avert);
+}
+.md-ligne {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 1fr) minmax(0, 2fr) auto;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  font-size: 13px;
+}
+.md-ligne small {
+  color: var(--texte-faible);
+}
+.md-detail-c {
+  color: var(--texte-doux);
+  font-size: 12px;
+}
+.md-ligne b {
+  font-variant-numeric: tabular-nums;
+}
+
 .carte {
   background: var(--panneau);
   border: 1px solid var(--bordure);
@@ -1172,6 +1315,7 @@ a.btn {
 .detail-inner {
   max-width: 720px;
 }
+.detail-inner[data-vue='__moderateur__'],
 .detail-inner[data-vue='__metriques__'],
 .detail-inner[data-vue='__activite__'] {
   max-width: 1240px;

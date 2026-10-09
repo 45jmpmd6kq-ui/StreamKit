@@ -53,6 +53,15 @@
           <span class="nom">Métriques</span>
         </button>
 
+        <!-- Statistiques d'usage de tous les streamers : n'apparait que sur le PC
+             du developpeur (fichier moderateur.json). -->
+        <button class="entree entree-accueil entree-moderateur" id="entree-moderateur" hidden>
+          <span class="point"></span>
+          <span class="icone">🛡️</span>
+          <span class="nom">Modérateur</span>
+          <span class="badge-toi">toi seul</span>
+        </button>
+
         <button class="entree entree-accueil" id="entree-connecteurs">
           <span class="point" id="point-connecteurs"></span>
           <span class="icone">🔌</span>
@@ -90,6 +99,19 @@
           </div>
           <div class="saisie" style="justify-self: end">
             <button class="bascule" id="in-demarrage-auto" role="switch" aria-checked="false"></button>
+          </div>
+        </div>
+
+        <div class="champ">
+          <label>Partager mes statistiques d'usage</label>
+          <div class="aide">
+            Aide le développeur à savoir quels modules servent le plus. Une fois par heure partent :
+            la version, le nom de ta chaîne, les modules actifs et leurs compteurs du jour, le nombre
+            et la durée de tes lives. <b>Jamais</b> un pseudo de viewer, un titre de musique ou un
+            identifiant. Gardé 13 mois.
+          </div>
+          <div class="saisie" style="justify-self: end">
+            <button class="bascule" id="in-telemetrie" role="switch" aria-checked="true"></button>
           </div>
         </div>
 

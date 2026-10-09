@@ -533,6 +533,13 @@ export function creerServeur(app) {
           return json(res, r.ok ? 200 : 400, r);
         }
 
+        // --- Moderateur (PC du developpeur seulement) ---
+        if (chemin === '/api/moderateur' && methode === 'GET') {
+          const depuis = url.searchParams.get('depuis') || '';
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(depuis)) return json(res, 400, { erreur: 'depuis invalide' });
+          return json(res, 200, await app.moderateur(depuis));
+        }
+
         // --- Metriques (page « Metriques ») ---
         if (chemin === '/api/metriques' && methode === 'GET') {
           return json(res, 200, app.metriques());
