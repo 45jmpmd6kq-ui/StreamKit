@@ -181,6 +181,25 @@ test('priorite : un poste impose passe avant, meme en defense ou dans les buts',
   }
 });
 
+test('priorite : les BU d’abord, puis le MOC, avant les autres milieux', () => {
+  for (let s = 1; s < 50; s++) {
+    const postes = (code, n, joueurs = noms(n)) =>
+      tirer({ code, joueurs }, graine(s))
+        .filter((pl) => !pl.ia)
+        .map((pl) => pl.poste)
+        .sort();
+    assert.deepEqual(postes('4-1-2-1-2', 3), ['BU', 'BU', 'MOC']);
+    assert.deepEqual(postes('4-1-2-1-2 (2)', 3), ['BU', 'BU', 'MOC']);
+    assert.deepEqual(postes('3-5-2', 2), ['BU', 'BU']);
+    assert.deepEqual(postes('4-2-3-1', 2), ['BU', 'MOC']);
+    assert.deepEqual(postes('4-3-3', 1), ['BU']);
+    // Un poste impose garde sa place ; les autres suivent la priorite.
+    const joueurs = noms(3);
+    joueurs[0].force = 'DC1';
+    assert.deepEqual(postes('4-1-2-1-2', 3, joueurs), ['BU', 'BU', 'DC']);
+  }
+});
+
 test('priorite : le premier inscrit n’est pas avantage', () => {
   // 7 joueurs en 4-3-3 : 6 places devant, une en defense. Chacun doit y passer.
   const enDefense = new Set();

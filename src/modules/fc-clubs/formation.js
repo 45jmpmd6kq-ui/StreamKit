@@ -221,7 +221,12 @@ export function probleme({ joueurs }) {
 // (demande du user le 08/10/2026) : d'abord l'attaque et le milieu, puis la
 // defense, le gardien en dernier. A 5 joueurs dans un 4-3-3, tous sont donc
 // milieux ou attaquants ; l'IA tient le reste.
-const PRIORITE = { ATT: 0, MIL: 0, DEF: 1, G: 2 };
+// Puis (09/10/2026) : les BU passent avant tout le monde, le MOC juste apres,
+// avant les autres milieux et les ailiers. A 3 joueurs en 4-1-2-1-2 : deux BU
+// et le MOC, sauf poste impose.
+const PRIORITE = { ATT: 2, MIL: 2, DEF: 3, G: 4 };
+const PRIORITE_POSTE = { BU: 0, MOC: 1 };
+const niveauDe = (pl) => PRIORITE_POSTE[pl.poste] ?? PRIORITE[pl.ligne];
 
 function melanger(liste, hasard) {
   const l = [...liste];
@@ -239,9 +244,9 @@ function melanger(liste, hasard) {
 export function tirer({ code, joueurs }, hasard = Math.random) {
   const f = formation(code);
   const libres = f.places.filter((pl) => !joueurs.some((j) => j.force === pl.id));
-  const ordre = [0, 1, 2].flatMap((niveau) =>
+  const ordre = [0, 1, 2, 3, 4].flatMap((niveau) =>
     melanger(
-      libres.filter((pl) => PRIORITE[pl.ligne] === niveau).map((pl) => pl.id),
+      libres.filter((pl) => niveauDe(pl) === niveau).map((pl) => pl.id),
       hasard
     )
   );
