@@ -143,15 +143,53 @@
   .carte {
     position: absolute; width: 13%; aspect-ratio: 5 / 7;
     transform: translate(-50%, -50%);
-    perspective: 700px; container-type: inline-size;
+    container-type: inline-size;
     cursor: pointer; z-index: 1;
     filter: drop-shadow(0 6px 7px rgba(0, 0, 0, .5));
   }
+  /* Le retournement vient de l'animation faite dans Claude Design (zip
+     « Tirage composition footballeur », 09/10/2026) : la carte s'envole,
+     fait cinq tours et demi en ralentissant, une onde doree part et un
+     reflet holographique balaie le recto. */
+  .carte .leve {
+    position: absolute; inset: 0; perspective: 900px;
+    transition: transform .45s cubic-bezier(.3, 1.3, .5, 1);
+  }
   .carte .tourne {
     position: absolute; inset: 0; transform-style: preserve-3d;
-    transition: transform .75s cubic-bezier(.3, 1.35, .45, 1);
+    transition: transform 2.1s cubic-bezier(.1, .7, .15, 1);
   }
-  .carte.retournee .tourne { transform: rotateY(180deg); }
+  .carte.envol { z-index: 30; }
+  .carte.envol .leve { transform: translateY(-9%) scale(1.18); }
+  .carte.envol .tourne,
+  .carte.retournee .tourne { transform: rotateY(1980deg); }
+  .carte .holo {
+    inset: 0; pointer-events: none; mix-blend-mode: color-dodge; z-index: 2;
+    background: linear-gradient(115deg, transparent 25%, #f07cc8b3 38%, #8fd8f5cc 46%, #fff 50%, #9af0a0cc 54%, #f5d77ab3 62%, transparent 75%);
+    background-size: 250% 100%; background-position: 120% 0;
+  }
+  .carte .onde {
+    position: absolute; left: 50%; top: 50%; width: 120%; height: 120%; border-radius: 50%;
+    border: 6px solid var(--or-clair); opacity: 0; pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+  .carte .lueur {
+    position: absolute; left: 50%; top: 50%; width: 300%; height: 300%; border-radius: 50%;
+    pointer-events: none; transform: translate(-50%, -50%); opacity: 0; z-index: -1;
+    transition: opacity .5s;
+    background: radial-gradient(circle, #f0d38a99 0%, #f0d38a26 30%, transparent 60%);
+  }
+  .carte.eclat .onde { animation: onde .75s ease-out forwards; }
+  .carte.eclat .holo { animation: holo 1.4s cubic-bezier(.4, 0, .2, 1) forwards; }
+  .carte.eclat.envol .lueur { opacity: 1; }
+  @keyframes onde {
+    from { transform: translate(-50%, -50%) scale(.4); opacity: 1; }
+    to   { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+  }
+  @keyframes holo {
+    from { background-position: 120% 0; }
+    to   { background-position: -60% 0; }
+  }
   /* Changer de formation fait glisser les cartes vers leurs nouvelles places. */
   .carte { transition: left .5s cubic-bezier(.3, 1.1, .4, 1), top .5s cubic-bezier(.3, 1.1, .4, 1); }
   .carte.apercu { cursor: default; }
@@ -237,10 +275,6 @@
     z-index: 3;
     filter: drop-shadow(0 0 3px var(--or-clair)) drop-shadow(0 0 14px var(--or));
   }
-  .carte.choisie { z-index: 4; animation: choisie .35s ease-out; }
-  @keyframes choisie {
-    50% { transform: translate(-50%, -50%) scale(1.14); }
-  }
   .carte.retournee { z-index: 2; }
   .carte.ia { cursor: default; z-index: 1; }
 
@@ -250,8 +284,10 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .carte .tourne { transition-duration: .01s; }
-    .carte.arrive, .carte.choisie { animation: none; }
+    .carte .tourne { transition-duration: .3s; }
+    .carte.envol .tourne, .carte.retournee .tourne { transform: rotateY(180deg); }
+    .carte.envol .leve { transform: none; }
+    .carte.arrive, .carte.eclat .onde, .carte.eclat .holo { animation: none; }
   }
 </style>
 </head>
@@ -495,7 +531,7 @@ function modifie() {
 // --- Terrain -----------------------------------------------------------------
 
 // Le dos d'une carte porte le nom de son poste (demande du user le 08/10/2026).
-const DOS = (poste) => '<div class="tourne"><div class="face dos"><div class="marque">' + esc(poste) + '</div></div></div>';
+const DOS = (poste) => '<div class="leve"><div class="tourne"><div class="face dos"><div class="marque">' + esc(poste) + '</div></div></div></div>';
 
 // Avant le tirage : la formation choisie, ses 11 cartes de dos. Les cartes deja
 // sur le terrain sont reprises et glissent vers leurs nouvelles places.
@@ -532,7 +568,7 @@ function rendreTerrain({ arrivee = false } = {}) {
   placesEl.innerHTML = tirage.places
     .map((pl, i) =>
       '<div class="carte' + (pl.ia ? ' ia retournee' : '') + (arrivee ? ' arrive' : '') + '" data-i="' + i + '" style="left:' + pl.x + '%;top:' + pl.y + '%;animation-delay:' + (arrivee ? i * 70 : 0) + 'ms">'
-      + '<div class="tourne">'
+      + '<div class="leve"><div class="tourne">'
       + '<div class="face dos"><div class="marque">' + esc(pl.poste) + '</div></div>'
       + '<div class="face recto' + (pl.ia ? ' ia' : BRONZE.has(pl.nom.toLocaleLowerCase('fr')) ? ' bronze' : '') + '">'
       + (pl.impose ? '<span class="cadenas" title="Poste imposé">🔒</span>' : '')
@@ -541,7 +577,10 @@ function rendreTerrain({ arrivee = false } = {}) {
       // Un pseudo peut passer a la ligne apres un « _ » ou un « . ».
       + '<div class="nom">' + esc(pl.nom).replace(/([_.])/g, '$1<wbr>') + '</div>'
       + '<div class="filet"></div>'
+      + '<i class="holo"></i>'
       + '</div></div></div>'
+      + '<i class="onde"></i><i class="lueur"></i>'
+      + '</div>'
     )
     .join('');
   ajusterNoms();
@@ -574,7 +613,7 @@ function ajusterNoms() {
 }
 window.addEventListener('resize', ajusterNoms);
 
-const cachees = () => [...placesEl.querySelectorAll('.carte:not(.retournee):not(.apercu)')];
+const cachees = () => [...placesEl.querySelectorAll('.carte:not(.retournee):not(.envol):not(.apercu)')];
 
 function majBoutons() {
   const reste = tirage ? cachees().length : 0;
@@ -583,20 +622,32 @@ function majBoutons() {
   $('tirer').disabled = roulette;
 }
 
-function retourner(carte) {
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+const lent = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Le retournement : la carte s'envole et tourne (2,1 s), l'onde et le reflet
+// partent a 1,5 s, elle se repose face visible a la fin du dernier tour.
+async function retourner(carte) {
   carte.classList.remove('halo');
+  carte.classList.add('envol');
+  majBoutons();
+  if (!lent()) {
+    await pause(1500);
+    carte.classList.add('eclat');
+    await pause(600);
+  } else {
+    await pause(300);
+  }
   carte.classList.add('retournee');
+  carte.classList.remove('envol');
   majBoutons();
 }
 
 placesEl.addEventListener('click', (e) => {
   const carte = e.target.closest('.carte');
-  if (!carte || roulette || carte.matches('.retournee, .apercu')) return;
+  if (!carte || roulette || carte.matches('.retournee, .envol, .apercu')) return;
   retourner(carte);
 });
-
-const pause = (ms) => new Promise((r) => setTimeout(r, ms));
-const lent = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // La roulette : le halo saute de carte cachee en carte cachee, ralentit, et
 // s'arrete sur celle qui se retourne.
@@ -618,10 +669,9 @@ async function tournerRoulette() {
     }
   }
   for (const c of liste) c.classList.remove('halo');
-  cible.classList.add('halo', 'choisie');
-  await pause(lent() ? 0 : 380);
-  cible.classList.remove('choisie');
-  retourner(cible);
+  cible.classList.add('halo');
+  await pause(lent() ? 0 : 300);
+  await retourner(cible);
   roulette = false;
   majBoutons();
 }
@@ -632,10 +682,13 @@ $('roulette').addEventListener('click', tournerRoulette);
 $('tout').addEventListener('click', async () => {
   roulette = true;
   majBoutons();
+  // Les envols se chevauchent, une carte toutes les 0,5 s.
+  const envols = [];
   for (const carte of cachees()) {
-    retourner(carte);
-    await pause(lent() ? 0 : 180);
+    envols.push(retourner(carte));
+    await pause(lent() ? 0 : 500);
   }
+  await Promise.all(envols);
   roulette = false;
   majBoutons();
 });
