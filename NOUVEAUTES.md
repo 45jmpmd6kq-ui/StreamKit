@@ -11,6 +11,16 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.30.9
+
+### Nouveautés
+
+- **Formation du club : un retournement de carte digne d'un pack.** La carte
+  tirée s'envole, fait plusieurs tours sur elle-même en ralentissant, une onde
+  dorée part et un reflet holographique balaie le recto au moment où le
+  joueur apparaît. « Tout retourner » enchaîne les cartes une demi-seconde
+  l'une après l'autre.
+
 ## 0.30.8
 
 ### Nouveautés
