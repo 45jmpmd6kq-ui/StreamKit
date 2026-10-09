@@ -378,19 +378,21 @@ a.btn {
   .ck-hero { grid-template-columns: auto minmax(0, 1fr); }
   .ck-stats { grid-column: 1 / -1; flex-wrap: wrap; }
 }
-/* En colonnes plutot qu'en grille : une grille aligne ses rangees sur la carte
-   la plus haute (Twitch et ses cinq modules) et laissait un grand trou sous les
-   petites. Ici chaque panneau se pose sous le precedent, sans vide. */
+/* Mur de briques : une grille aux rangees de 4 px, ou chaque panneau occupe
+   autant de rangees que sa hauteur (calculee par caserUnivers). Les panneaux se
+   rangent de gauche a droite, puis chacun se pose sous la colonne la plus
+   courte. Une grille classique laissait un grand vide sous les petits panneaux
+   (ses rangees prennent la hauteur du plus haut) ; des colonnes CSS, elles,
+   remplissaient de haut en bas et pouvaient laisser une colonne vide. */
 .ck-univers {
-  columns: 330px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  grid-auto-rows: 4px;
+  grid-auto-flow: dense;
   column-gap: 0.9rem;
+  align-items: start;
 }
 .ck-u {
-  /* inline-block + width : Chromium ne coupe alors jamais un panneau entre
-     deux colonnes. */
-  display: inline-block;
-  width: 100%;
-  break-inside: avoid;
   margin-bottom: 0.9rem;
   background: var(--panneau);
   border: 1px solid var(--bordure);

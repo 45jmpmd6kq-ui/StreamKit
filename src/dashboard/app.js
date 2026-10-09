@@ -711,7 +711,22 @@ function dessinerAccueil() {
       </div>
     </div>`
   );
+  caserUnivers();
 }
+
+// Chaque panneau reserve autant de rangees de 4 px que sa hauteur reelle (voir
+// .ck-univers). A refaire apres chaque dessin et quand la fenetre change de
+// largeur : les etiquettes passent a la ligne et les hauteurs changent.
+function caserUnivers() {
+  for (const u of document.querySelectorAll('.ck-univers .ck-u')) {
+    u.style.gridRowEnd = '';
+    const marge = parseFloat(getComputedStyle(u).marginBottom) || 0;
+    u.style.gridRowEnd = 'span ' + Math.ceil((u.offsetHeight + marge) / 4);
+  }
+}
+window.addEventListener('resize', () => {
+  if (etat.selection === ACCUEIL) caserUnivers();
+});
 
 // Les univers en service d'abord, ceux en veille a la fin : avant un live, on
 // regarde ce qui tourne. Dans chaque paquet, l'ordre du catalogue est garde.
