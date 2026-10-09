@@ -571,19 +571,12 @@ const PASTILLE = { ok: 'ok', attention: 'av', ko: 'ko', off: 'of', inactif: 'of'
 const universOuverts = new Set();
 
 // Ce qu'on affiche d'un module : son etat, une phrase, ses sous-modules.
-// Les sous-modules sont ses lignes de sante (quand il en declare plusieurs) et
-// ses overlays -- allumes quand une source OBS les ecoute.
+// Les sous-modules sont ses lignes de sante, quand il en declare plusieurs.
 function etatModule(m, s) {
   const lignes = s.connexions.flatMap((g) => g.lignes).filter((l) => l.moduleId === m.id);
-  const overlays = (s.overlays?.[m.id] ?? []).map((o) => ({
-    nom: o.nom,
-    etat: o.sources ? 'ok' : 'off',
-    titre: o.sources ? o.sources + ' source(s) OBS' : 'pas encore dans OBS',
-  }));
-  const sous = [
-    ...(lignes.length > 1 ? lignes.map((l) => ({ nom: l.nom, etat: l.etat, titre: l.detail })) : []),
-    ...overlays,
-  ];
+  // Les overlays n'y sont plus (choix du user le 09/10/2026) : ils sont deja
+  // listes dans la colonne « Overlays OBS », et les cartes en devenaient hautes.
+  const sous = lignes.length > 1 ? lignes.map((l) => ({ nom: l.nom, etat: l.etat, titre: l.detail })) : [];
 
   if (!m.actif) return { etat: 'off', detail: 'Désactivé', aide: '', sous };
   if (m.etat === 'erreur') return { etat: 'ko', detail: m.erreur || 'En erreur', aide: '', sous };
@@ -856,7 +849,9 @@ function dessinerOverlays(actifs, s) {
       ${branches
         .map(
           (o) =>
-            `<button class="ck-obs" data-ck-module="${o.module.id}"><span>${echapper(o.module.nom)} · ${echapper(o.nom)}</span><span class="d ok"></span></button>`
+            `<button class="ck-obs" data-ck-module="${o.module.id}"><span>${echapper(o.module.icone)} ${echapper(o.module.nom)}${
+              o.nom === o.module.nom ? '' : ' · ' + echapper(o.nom)
+            }</span><span class="d ok"></span></button>`
         )
         .join('')}
       ${reste ? `<div class="ck-obs faible">${reste} pas encore dans OBS</div>` : ''}

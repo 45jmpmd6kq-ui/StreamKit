@@ -18,6 +18,9 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 - **Vue d'ensemble : les panneaux de jeux se rangent mieux.** Ils se placent
   de gauche à droite puis comblent la colonne la plus courte : plus de colonne
   vide ni de grand trou sous un petit panneau.
+- **Des cartes plus compactes.** Les overlays ne sont plus répétés sous chaque
+  module : ils restent listés dans « Overlays OBS », à droite, avec l'icône du
+  module pour distinguer deux overlays du même nom.
 
 ## 0.31.0
 
