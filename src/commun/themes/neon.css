@@ -1,6 +1,6 @@
 /* Thème « Néon » : synthwave.
- * Verre sombre, contours lumineux magenta, titres en italique qui grésillent,
- * dégradé magenta → cyan. Contrat des jetons : LISEZ-MOI.md. */
+ * Verre sombre, contours lumineux, titres en italique qui grésillent, dégradé
+ * entre les deux couleurs choisies (magenta → cyan par défaut). Contrat des jetons : LISEZ-MOI.md. */
 
 @font-face {
   font-family: "SK Exo 2";
@@ -18,16 +18,24 @@
 }
 
 :root {
-  --sk-fond-rvb: 16, 6, 30;
+  /* Les deux couleurs se choisissent dans Personnalisation : StreamKit pose
+     --sk-neon-* sur <html> (core/themes.js, variablesNeon). Les valeurs de
+     repli sont la palette d'origine, magenta et cyan. */
+  --n1: var(--sk-neon-1, #ff3df2);
+  --n1-rvb: var(--sk-neon-1-rvb, 255, 61, 242);
+  --n2: var(--sk-neon-2, #3df5ff);
+  --n2-rvb: var(--sk-neon-2-rvb, 61, 245, 255);
+
+  --sk-fond-rvb: var(--sk-neon-fond-rvb, 16, 6, 30);
   --sk-fond-alpha: 0.88;
-  --sk-encre: 251, 234, 255;
-  --sk-attenue: #b9a0d6;
-  --sk-accent: #ff3df2;
-  --sk-accent-rvb: 255, 61, 242;
-  --sk-accent2: #3df5ff;
-  --sk-accent2-rvb: 61, 245, 255;
+  --sk-encre: var(--sk-neon-encre, 251, 234, 255);
+  --sk-attenue: var(--sk-neon-attenue, #b9a0d6);
+  --sk-accent: var(--n1);
+  --sk-accent-rvb: var(--n1-rvb);
+  --sk-accent2: var(--n2);
+  --sk-accent2-rvb: var(--n2-rvb);
   --sk-sur-accent2: #10061e;
-  --sk-or: #3df5ff;
+  --sk-or: var(--n2);
   --sk-typo: "SK Exo 2", Bahnschrift, "Segoe UI", system-ui, sans-serif;
   --sk-typo-titre: "SK Exo 2", Bahnschrift, "Segoe UI", system-ui, sans-serif;
 }
@@ -35,32 +43,34 @@
 .sk-panneau {
   border-radius: 16px !important;
   box-shadow:
-    inset 0 0 0 1.5px rgba(255, 61, 242, 0.8),
-    0 0 14px rgba(255, 61, 242, 0.45),
-    0 0 36px rgba(255, 61, 242, 0.18),
-    inset 0 0 18px rgba(255, 61, 242, 0.14) !important;
+    inset 0 0 0 1.5px rgba(var(--n1-rvb), 0.8),
+    0 0 14px rgba(var(--n1-rvb), 0.45),
+    0 0 36px rgba(var(--n1-rvb), 0.18),
+    inset 0 0 18px rgba(var(--n1-rvb), 0.14) !important;
 }
 
+/* Pas de !important sur la lueur : il passerait devant l'animation, et le
+   titre ne gresillerait jamais. */
 .sk-titre {
   font-family: var(--sk-typo-titre) !important;
   font-style: italic !important;
   text-shadow:
     0 0 6px rgba(255, 255, 255, 0.35),
-    0 0 16px rgba(255, 61, 242, 0.75) !important;
+    0 0 16px rgba(var(--n1-rvb), 0.75);
   animation: sk-neon-gresille 5s linear infinite;
 }
 @keyframes sk-neon-gresille {
-  0%, 92%, 94.5%, 97.5%, 100% { text-shadow: 0 0 6px rgba(255, 255, 255, 0.35), 0 0 16px rgba(255, 61, 242, 0.75); }
+  0%, 92%, 94.5%, 97.5%, 100% { text-shadow: 0 0 6px rgba(255, 255, 255, 0.35), 0 0 16px rgba(var(--n1-rvb), 0.75); }
   93%, 96.5% { text-shadow: none; }
 }
 
 .sk-remplissage {
-  background: linear-gradient(90deg, #ff3df2, #3df5ff) !important;
-  box-shadow: 0 0 8px rgba(255, 61, 242, 0.8) !important;
+  background: linear-gradient(90deg, var(--n1), var(--n2)) !important;
+  box-shadow: 0 0 8px rgba(var(--n1-rvb), 0.8) !important;
 }
 
 .sk-silhouette {
-  filter: drop-shadow(0 0 2px #ff3df2) drop-shadow(0 0 10px rgba(255, 61, 242, 0.65)) !important;
+  filter: drop-shadow(0 0 2px var(--n1)) drop-shadow(0 0 10px rgba(var(--n1-rvb), 0.65)) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

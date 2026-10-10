@@ -336,6 +336,11 @@ disparaîtrait. Les couleurs qui ont un sens (victoire, défaite, rang, équipe)
 restent les tiennes. Contrat complet : `src/commun/themes/LISEZ-MOI.md` ; un test
 refuse un `var(--sk-…)` sans repli.
 
+Le thème suit la `categorie` de ton module : c'est elle qui range ses overlays dans un
+univers de la page Personnalisation. Pour qu'ils y apparaissent en aperçu, ajoute-les à
+`APERCUS` dans `src/dashboard/app.js` : l'aperçu charge ton overlay avec `?demo=1&apercu=1`,
+ta démo doit donc se suffire à elle-même (le flux ne s'y branche pas).
+
 ## Les actions, et lesquelles deviennent des boutons
 
 Une action est une fonction appelable en `POST /api/modules/<id>/action/<nom>`.

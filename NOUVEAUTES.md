@@ -17,9 +17,13 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 
 - **Personnalise le style de tes overlays.** La nouvelle page Personnalisation
   propose cinq thèmes : Standard esport (le style d'origine), Esport, Néon,
-  Minimal clair et Rétro arcade. Un clic, et tous tes overlays changent d'un
-  coup, tout de suite dans OBS.
-- Chaque thème a son aperçu dans la page, pour voir le rendu avant de choisir.
+  Minimal clair et Rétro arcade. Tout change tout de suite dans OBS.
+- Un thème par défaut pour tous tes overlays, et si tu veux un thème différent
+  par univers : Esport sur LoL, Arcade sur Rocket League…
+- Tes vrais overlays s'affichent en aperçu dans la page, pour voir le rendu
+  avant de choisir.
+- Le Néon se met à tes couleurs : une palette prête à l'emploi, ou les deux
+  couleurs de ton choix.
 - Une source peut garder son propre thème : ajoute `?theme=neon` (ou `esport`,
   `minimal`, `arcade`) à la fin de son adresse.
 - Après cette mise à jour, recharge une fois tes sources StreamKit dans OBS

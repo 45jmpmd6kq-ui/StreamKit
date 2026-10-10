@@ -294,8 +294,14 @@ est dans tes scènes, mais n'affiche rien.
 
 Dans le menu de gauche, **Personnalisation** propose cinq thèmes : **Standard
 esport** (le style d'origine), **Esport**, **Néon**, **Minimal clair** et **Rétro
-arcade**. Chaque carte montre un aperçu ; clique **Choisir ce thème** et tous tes
-overlays changent d'un coup, tout de suite dans OBS, sans recharger tes sources.
+arcade**. Tout change tout de suite dans OBS, sans recharger tes sources.
+
+- **Thème par défaut**, en haut : il s'applique à tous tes overlays.
+- **Par univers** (Twitch, League of Legends, Rocket League, Valorant, EA FC) :
+  choisis un univers à gauche, puis « Thème par défaut » ou un autre thème. À
+  droite, tes vrais overlays de cet univers s'affichent avec le thème choisi.
+- **Néon** : choisis ses deux couleurs dans une palette, ou librement avec les
+  deux sélecteurs. Elles valent pour tous les univers en Néon.
 
 - Le thème change l'habillage (fond, couleurs, police, cadres), pas la place de
   tes overlays.
@@ -305,7 +311,7 @@ overlays changent d'un coup, tout de suite dans OBS, sans recharger tes sources.
   qu'avec **Standard esport**.
 - Pour qu'**une seule** source garde un autre thème, ajoute `?theme=neon` à la
   fin de son adresse (ou `esport`, `minimal`, `arcade`, `standard`). Elle ne
-  suivra plus le thème choisi dans Personnalisation.
+  suivra plus les thèmes choisis dans Personnalisation.
 
 ---
 

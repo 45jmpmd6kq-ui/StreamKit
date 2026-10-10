@@ -1968,82 +1968,285 @@ kbd {
 }
 
 /* ---------- Personnalisation : thèmes d'overlay ---------- */
-.themes-grille {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-  margin-top: 1.25rem;
-}
-.theme-carte {
+.perso-defaut {
   background: var(--panneau);
   border: 1px solid var(--bordure);
   border-radius: var(--rayon);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  padding: 1rem 1.1rem;
+  margin: 1.25rem 0 1rem;
+  display: grid;
+  gap: 0.7rem;
 }
-.theme-carte.actif {
+.perso-defaut-tete {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.perso-defaut-tete h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.perso-defaut-tete span,
+.univers-modules {
+  color: var(--texte-doux);
+  font-size: 0.85rem;
+}
+
+.themes-choix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pastille-theme {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.8rem 0.35rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--bordure-vive);
+  background: var(--panneau-clair);
+  color: var(--texte);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.pastille-theme:hover {
+  border-color: var(--texte-faible);
+}
+.pastille-theme.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  cursor: default;
+}
+.sw {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex: none;
+}
+.sw-defaut {
+  background: conic-gradient(#ffd24a 0 25%, #22d3ee 0 50%, #ff3df2 0 75%, #e9e9f2 0);
+}
+.sw-standard {
+  background: linear-gradient(135deg, #0b1220 50%, #ffd24a 50%);
+}
+.sw-esport {
+  background: linear-gradient(135deg, #09101f 50%, #22d3ee 50%);
+}
+.sw-minimal {
+  background: linear-gradient(135deg, #ffffff 50%, #3b5bdb 50%);
+}
+.sw-arcade {
+  background: repeating-conic-gradient(#0b0b12 0 25%, #4dff6a 0 50%) 0 0 / 11px 11px;
+}
+
+/* Liste des univers à gauche, univers choisi à droite. */
+.perso-corps {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.univers-liste {
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  padding: 0.35rem;
+  display: grid;
+  gap: 2px;
+}
+.univers-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--texte);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.univers-ligne:hover {
+  background: var(--panneau-clair);
+}
+.univers-ligne.on {
+  background: var(--accent-doux);
+  border-color: #9146ff55;
+}
+.univers-icone {
+  font-size: 1.15rem;
+}
+.univers-nom {
+  flex: 1;
+  min-width: 0;
+}
+.univers-nom b {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.univers-nom span {
+  font-size: 0.78rem;
+  color: var(--texte-doux);
+}
+.univers-ligne .sw {
+  width: 18px;
+  height: 18px;
+}
+.univers-detail {
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  padding: 1rem 1.1rem 1.1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+.univers-tete {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.univers-tete h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  flex: 1;
+}
+.badge-theme {
+  font-size: 0.75rem;
+  padding: 0.12rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--bordure-vive);
+  background: var(--panneau-clair);
+  color: var(--texte-doux);
+  white-space: nowrap;
+}
+.badge-theme.perso {
+  color: #c9a6ff;
+  border-color: #9146ff66;
+  background: var(--accent-doux);
+}
+
+/* Couleurs du Néon */
+.neon-palette {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 8px;
+  background: var(--panneau-clair);
+  border: 1px solid var(--bordure);
+}
+.neon-titre {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.neon-titre span {
+  color: var(--texte-faible);
+  font-size: 0.8rem;
+}
+.neon-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.neon-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem 0.25rem 0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--bordure-vive);
+  background: var(--panneau);
+  color: var(--texte);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.neon-preset i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+.neon-preset.on {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
-/* Vignette 16:9 : l'apercu fait 960 x 540, reduit par app.js (ajusterApercus). */
-.theme-apercu {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: #1e2622;
-  border-bottom: 1px solid var(--bordure);
-}
-.theme-apercu iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 960px;
-  height: 540px;
-  border: 0;
-  transform-origin: 0 0;
-  pointer-events: none;
-}
-.theme-infos {
-  padding: 0.9rem 1rem 1rem;
+.neon-libres {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--texte-doux);
 }
-.theme-nom {
-  display: flex;
+.neon-libres label {
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
 }
-.theme-nom h3 {
-  margin: 0;
-  font-size: 1.05rem;
+.neon-libres input[type="color"] {
+  width: 38px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--bordure-vive);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
 }
-.theme-badge {
-  display: none;
+
+/* Aperçu : les vrais overlays, dans une scène de 1280 x 720 réduite par app.js
+   (--k, voir ajusterApercus). */
+.scene-apercu {
+  --k: 0.5;
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 70% at 72% 40%, rgba(90, 160, 120, 0.55), transparent 60%),
+    radial-gradient(40% 50% at 25% 70%, rgba(170, 120, 70, 0.45), transparent 65%),
+    radial-gradient(30% 35% at 50% 20%, rgba(120, 150, 210, 0.4), transparent 70%),
+    linear-gradient(160deg, #2b3a35 0%, #3b4a3f 40%, #4a4433 70%, #2a2f2c 100%);
+}
+.scene-apercu iframe {
+  position: absolute;
+  width: 1280px;
+  height: 720px;
+  border: 0;
+  transform: scale(var(--k));
+  transform-origin: 0 0;
+  /* Décalage de la source, en pixels de la scène de 1280. */
+  left: calc(var(--x, 0) * var(--k) * 1px);
+  top: calc(var(--y, 0) * var(--k) * 1px);
+  pointer-events: none;
+  /* Même schéma que l'overlay (clair, par défaut) : sinon le navigateur peint
+     un fond opaque derrière la page transparente. */
+  color-scheme: light;
+}
+.scene-etiquette {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
   font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.1rem 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.1rem 0.55rem;
   border-radius: 999px;
-  background: var(--accent-doux);
-  color: var(--accent);
-}
-.theme-carte.actif .theme-badge {
-  display: inline-block;
-}
-.theme-infos p {
-  margin: 0;
-  color: var(--texte-doux);
-  font-size: 0.88rem;
-  flex: 1;
-}
-.theme-infos .btn {
-  align-self: flex-start;
 }
 .themes-note {
   color: var(--texte-faible);
   font-size: 0.85rem;
   margin: 1.25rem 0 0;
   max-width: 760px;
+}
+@media (max-width: 1000px) {
+  .perso-corps {
+    grid-template-columns: 1fr;
+  }
 }

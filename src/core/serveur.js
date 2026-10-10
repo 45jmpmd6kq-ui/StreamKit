@@ -22,6 +22,7 @@ import * as journal from './journal.js';
 import * as activite from './activite.js';
 import * as diffusion from './diffusion.js';
 import * as themes from './themes.js';
+import { resoudre as resoudreCategorie } from './categories.js';
 
 const log = journal.pour('serveur');
 
@@ -141,8 +142,8 @@ function csp(nonce, { cadre = false } = {}) {
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
-    // L'apercu des themes est la seule page affichee dans un cadre -- celui de
-    // la page Personnalisation du dashboard, donc de la meme origine.
+    // Un overlay en apercu (?apercu=1) est la seule page affichee dans un cadre
+    // -- celui de la page Personnalisation du dashboard, de la meme origine.
     cadre ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
     "form-action 'none'",
   ].join('; ');
@@ -163,10 +164,20 @@ export const ENTETES_PAGE_OAUTH = {
 
 // Pose le theme d'overlay sur une page (voir core/themes.js) : sa feuille en
 // fin de <head> -- APRES le <style> de l'overlay, dont elle remplace les jetons
-// -- et le script qui en change a chaud. data-sk-fige : l'apercu d'un theme
-// dans le dashboard, qui ne doit pas suivre le theme choisi.
-function poserTheme(html, theme, { fige = false } = {}) {
-  const attributs = ' data-sk-theme="' + theme + '"' + (fige ? ' data-sk-fige' : '');
+// -- et le script qui en change a chaud. Sur <html> : le theme, l'univers (pour
+// suivre son theme a chaud) et les couleurs du Neon. data-sk-fige : une source
+// figee sur un theme (?theme=), qui ne suit plus les reglages.
+function poserTheme(html, theme, { fige = false, univers = '' } = {}) {
+  const attributs =
+    ' data-sk-theme="' +
+    theme +
+    '" data-sk-univers="' +
+    univers +
+    '"' +
+    (fige ? ' data-sk-fige' : '') +
+    ' style="' +
+    themes.styleNeon() +
+    '"';
   html = html.replace(/<html(?=[\s>])/i, '<html' + attributs);
   const balises =
     '<link rel="stylesheet" id="sk-theme" href="/commun/themes/' +
@@ -181,15 +192,15 @@ function poserTheme(html, theme, { fige = false } = {}) {
 // sont quelques kilo-octets, et ces pages ne sont de toute facon jamais mises
 // en cache -- contrairement a leurs images, qui passent par servirFichier.
 //
-// theme : les overlays (et l'apercu des themes) recoivent le theme d'overlay.
-async function servirHtml(res, chemin, { theme = null, fige = false, cadre = false } = {}) {
+// theme : les overlays recoivent le theme d'overlay de leur univers.
+async function servirHtml(res, chemin, { theme = null, fige = false, univers = '', cadre = false } = {}) {
   let html;
   try {
     html = await readFile(chemin, 'utf8');
   } catch {
     return texte(res, 404, 'Introuvable');
   }
-  if (theme) html = poserTheme(html, theme, { fige });
+  if (theme) html = poserTheme(html, theme, { fige, univers });
 
   const nonce = randomBytes(16).toString('base64');
   // « <script> » et « <script src=... > », jamais « </script> » : le lookahead
@@ -444,23 +455,13 @@ export function creerServeur(app) {
         if (!page) return texte(res, 403, 'Interdit');
         // ?theme=<id> : cette source garde ce theme, quel que soit celui choisi
         // dans Personnalisation (un overlay a part, ou la verification d'un
-        // theme sans changer celui du live).
+        // theme sans changer celui du live). ?apercu=1 : la vignette de la page
+        // Personnalisation, seule a pouvoir encadrer un overlay.
+        const univers = resoudreCategorie(m.manifeste.categorie).id;
         const force = url.searchParams.get('theme');
-        if (themes.existe(force)) return servirHtml(res, page, { theme: force, fige: true });
-        return servirHtml(res, page, { theme: themes.actuel() });
-      }
-
-      // --- Apercu d'un theme d'overlay ---------------------------------------
-      // /apercu-theme/<id> : une fausse scene de jeu habillee par ce theme, que
-      // la page Personnalisation affiche en vignette. Figee sur SON theme.
-      const mApercu = chemin.match(/^\/apercu-theme\/([\w-]+)$/);
-      if (mApercu) {
-        if (!themes.existe(mApercu[1])) return texte(res, 404, 'Thème inconnu');
-        return servirHtml(res, join(COMMUN_DIR, 'themes', 'apercu.html'), {
-          theme: mApercu[1],
-          fige: true,
-          cadre: true,
-        });
+        const cadre = url.searchParams.has('apercu');
+        if (themes.existe(force)) return servirHtml(res, page, { theme: force, fige: true, univers, cadre });
+        return servirHtml(res, page, { theme: themes.pourUnivers(univers), univers, cadre });
       }
 
       // --- Pages d'un module -----------------------------------------------
@@ -690,7 +691,15 @@ export function creerServeur(app) {
         }
         if (chemin === '/api/themes' && methode === 'POST') {
           const body = await corpsJson(req);
-          const r = themes.choisir(String(body.theme ?? ''));
+          const r = themes.choisir({ cible: String(body.cible ?? ''), theme: String(body.theme ?? '') });
+          return json(res, r.ok ? 200 : 400, r);
+        }
+        if (chemin === '/api/themes/neon' && methode === 'POST') {
+          const body = await corpsJson(req);
+          const r = themes.choisirNeon({
+            principale: String(body.principale ?? ''),
+            secondaire: String(body.secondaire ?? ''),
+          });
           return json(res, r.ok ? 200 : 400, r);
         }
 

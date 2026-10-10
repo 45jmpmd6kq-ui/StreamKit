@@ -23,6 +23,7 @@
   'use strict';
 
   const RECONNEXION = 2000; // le « retry: 2000 » de l'ancien flux SSE
+  const APERCU = new URLSearchParams(location.search).has('apercu');
 
   class FluxStreamKit {
     constructor(chemin) {
@@ -72,6 +73,10 @@
 
     _connecter() {
       if (this.readyState === FluxStreamKit.CLOSED) return;
+      // ?apercu=1 : la vignette de la page Personnalisation. Elle montre la
+      // demo et ne se branche pas : elle ne doit compter ni comme une source
+      // OBS, ni recevoir l'etat du live.
+      if (APERCU) return;
       this.readyState = FluxStreamKit.CONNECTING;
       let ws;
       try {

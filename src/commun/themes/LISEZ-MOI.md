@@ -1,15 +1,24 @@
 # Thèmes d'overlay
 
-Un thème habille **tous** les overlays du streamer d'un coup. Il se choisit dans
-le dashboard, page **Personnalisation**. Le catalogue est dans `src/core/themes.js`.
+Un thème habille les overlays du streamer. Il se choisit dans le dashboard, page
+**Personnalisation** : un thème **par défaut**, et un thème facultatif **par univers**
+(Twitch, LoL, Rocket League, Valorant, EA FC — la `categorie` du module, voir
+`src/core/categories.js`). Le catalogue et les réglages sont dans `src/core/themes.js`.
 
 ## Mécanique
 
 Le serveur pose sur chaque overlay (voir `poserTheme` dans `src/core/serveur.js`) :
 
-- l'attribut `data-sk-theme="<id>"` sur `<html>` ;
+- sur `<html>` : `data-sk-theme="<id>"` (le thème de son univers), `data-sk-univers="<id>"`,
+  et les couleurs du Néon en variables (`style="--sk-neon-1: …"`) ;
 - la feuille `/commun/themes/<id>.css`, en fin de `<head>`, après le `<style>` de l'overlay ;
-- `/commun/theme.js`, qui remplace la feuille à chaud quand le streamer change de thème.
+- `/commun/theme.js`, qui suit les réglages à chaud (canal `themes`) : il remplace la feuille
+  quand le thème de son univers change, et les couleurs quand le Néon change.
+
+`?theme=<id>` fige une source sur un thème (`data-sk-fige`) ; elle suit encore les couleurs
+du Néon. `?apercu=1` : la vignette de la page Personnalisation — l'overlay peut alors être
+encadré par le dashboard, et `flux.js` ne se branche pas (la vignette ne compte pas comme
+une source OBS).
 
 Une feuille de thème définit des **jetons** `--sk-*` sur `:root`. Chaque overlay les
 lit en gardant **ses** valeurs d'origine en repli :
@@ -63,6 +72,14 @@ la mise en page d'un pixel) : les contours passent par `box-shadow`.
 Les couleurs qui portent un sens : victoire et défaite, couleurs de rang, couleur du club FC,
 équipes bleu et rose des prédictions, températures de Rocket League, rouge Valorant.
 
+## Couleurs du Néon
+
+Le streamer choisit deux couleurs (une palette proposée, ou deux sélecteurs libres).
+`core/themes.js` (`variablesNeon`) en tire `--sk-neon-1`, `--sk-neon-2`, leurs triplets
+`-rvb`, le fond, l'encre et le texte atténué ; `neon.css` les lit avec la palette d'origine
+(magenta, cyan) en repli. Les autres thèmes ne lisent pas ces variables : elles sont posées
+sur tous les overlays.
+
 ## Polices
 
 Dans `polices/`, sous-ensemble latin (Google Fonts, licence SIL Open Font License 1.1) :
@@ -72,4 +89,5 @@ Inter, Oxanium, Exo 2, Press Start 2P, VT323. Rien n'est chargé depuis internet
 
 1. `src/commun/themes/<id>.css` : les jetons, puis les trois classes ;
 2. une entrée dans `THEMES` de `src/core/themes.js` ;
-3. vérifier `/apercu-theme/<id>` et quelques overlays en `?demo=1`.
+3. vérifier la page Personnalisation (vrais overlays en aperçu) et quelques overlays en
+   `?demo=1&theme=<id>`.

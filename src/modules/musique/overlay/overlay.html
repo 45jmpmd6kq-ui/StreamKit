@@ -674,6 +674,14 @@
             requester: "Mouette_404",
             boucle: true,
           };
+          // ?bloc=1 (ou ?bloc=normale) : le bloc « en cours + à venir » sans
+          // attendre le réglage du flux. C'est ce que montre l'aperçu de la page
+          // Personnalisation, qui ne se branche pas au flux.
+          const bloc = new URLSearchParams(location.search).get("bloc");
+          if (bloc !== null) {
+            modeBloc = true;
+            compacte = bloc !== "normale";
+          }
           afficherPanneau();
         }
         if (vue.notifs.length) {
