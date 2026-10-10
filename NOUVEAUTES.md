@@ -11,6 +11,42 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 1.0.0
+
+StreamKit passe en version 1.0 🎉 Merci à toutes celles et ceux qui l'ont
+utilisé en live depuis septembre : chaque version est partie de vos retours.
+Voici tout ce qu'il fait aujourd'hui.
+
+### Nouveautés
+
+- **Un tableau de bord pour ton live.** La Vue d'ensemble te dit d'un coup
+  d'œil si tu es prêt : une jauge, tes connexions, un panneau par jeu avec
+  l'état de chaque module et son interrupteur, et les alertes avec un bouton
+  pour aller les régler.
+- **Activité récente** : le fil de ton live, jour par jour — clips, musiques,
+  sondages, parties, moments forts, matchs… — avec un calendrier pour revenir
+  sur les 60 derniers jours.
+- **Métriques** : tes chiffres sur ce live, 7 jours, 30 jours ou depuis
+  toujours, leur évolution, ton taux de victoire par jeu et le top de tes
+  viewers.
+- **Twitch** : la musique demandée par tes viewers sur Spotify, les clips au
+  chat, les prédictions et les sondages à l'écran, l'annonce des pubs.
+- **Rocket League** : le compteur de session (une classée quittée compte comme
+  une défaite, correction à la main, une session par mode si tu veux), les
+  moments forts (game de chauffe, overtime) et la Random Car.
+- **League of Legends** : le suivi de session (bandeau et tableau de bord) et
+  les moments forts, avec clips automatiques pour les plus beaux.
+- **Valorant** : le bandeau de session.
+- **EA FC** : la soirée Clubs — bandeau, carte de fin de match, trophées de
+  fin de soirée et formation du club.
+- **Toujours à jour, et de l'aide en un clic** : les mises à jour s'installent
+  toutes seules (jamais pendant un live), et « Signaler un bug » envoie ton
+  problème avec tout ce qu'il faut pour le comprendre.
+- **Tes accès restent sur ton PC.** Seules des statistiques d'usage anonymes
+  partent à la fin de chaque live, et tu peux les couper dans les réglages.
+- **Le guide d'installation est à jour** : il est sur la page GitHub de
+  StreamKit (GUIDE-STREAMER.md).
+
 ## 0.34.1
 
 ### Nouveautés
