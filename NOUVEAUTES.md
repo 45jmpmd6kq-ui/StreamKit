@@ -15,10 +15,10 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 
 ### Nouveautés
 
-- **Personnalise le style de tes overlays.** Une nouvelle page
-  **Personnalisation** propose cinq thèmes : Standard esport (le style
-  d'origine), Esport, Néon, Minimal clair et Rétro arcade. Un clic, et tous tes
-  overlays changent d'un coup, tout de suite dans OBS.
+- **Personnalise le style de tes overlays.** La nouvelle page Personnalisation
+  propose cinq thèmes : Standard esport (le style d'origine), Esport, Néon,
+  Minimal clair et Rétro arcade. Un clic, et tous tes overlays changent d'un
+  coup, tout de suite dans OBS.
 - Chaque thème a son aperçu dans la page, pour voir le rendu avant de choisir.
 - Une source peut garder son propre thème : ajoute `?theme=neon` (ou `esport`,
   `minimal`, `arcade`) à la fin de son adresse.
