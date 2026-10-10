@@ -11,6 +11,14 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 0.34.1
+
+### Corrections
+
+- **Les statistiques d'usage ne partent plus qu'à la fin de chaque live**, et
+  plus toutes les heures. Si StreamKit est fermé pendant un stream, ce live
+  part au lancement suivant. Toujours coupable dans ⚙️ Réglages.
+
 ## 0.34.0
 
 ### Nouveautés

@@ -144,6 +144,12 @@ export function tic() {
   marquer();
 }
 
+// La télémétrie a bien envoyé ce live : il ne repartira pas.
+export function marquerEnvoye(live) {
+  live.envoye = true;
+  marquer();
+}
+
 function elaguerJours() {
   const cles = Object.keys(jours).sort();
   for (const j of cles.slice(0, Math.max(0, cles.length - JOURS_GARDES))) delete jours[j];

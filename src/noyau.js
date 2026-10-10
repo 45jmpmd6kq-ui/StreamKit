@@ -310,20 +310,13 @@ export async function demarrerNoyau({
         activite.noter('live', 'Live démarré');
       },
       fin: () => {
-        const debut = etatDirect.depuis;
         etatDirect.enCours = false;
         compteurs.finLive();
         log.info('Live terminé. Les compteurs de la session restent affichés.');
         activite.noter('live', 'Live terminé', 'info');
-        // Les statistiques du live partent tout de suite, sans attendre l'envoi
-        // horaire : un streamer qui ferme StreamKit juste apres son stream ne
-        // perd plus sa derniere heure. Un live qui passe minuit compte sur son
-        // jour de debut : les deux jours partent.
-        const jours = new Set([
-          compteurs.jourDe(new Date()),
-          compteurs.jourDe(new Date(debut ?? Date.now())),
-        ]);
-        for (const j of jours) telemetrie.envoyer(registre, j, maj.versionActuelle());
+        // Les statistiques partent a la fin du live, et seulement la (voir
+        // core/telemetrie.js).
+        telemetrie.envoyerLives(registre, maj.versionActuelle());
       },
     });
 
