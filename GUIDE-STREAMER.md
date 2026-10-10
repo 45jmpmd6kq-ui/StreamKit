@@ -3,8 +3,10 @@
 StreamKit rassemble des outils pour ton live dans une seule application Windows :
 musique demandée par les viewers, clips au chat, prédictions et sondages Twitch en
 direct à l'écran, annonce des pubs, voiture au hasard, compteur de victoires et moments forts sur Rocket League, bandeau
-de session Valorant, suivi de session et moments forts League of Legends. Tout tourne **sur ton PC** : pas de compte
-à créer chez nous, pas de serveur, et tes accès restent chez toi.
+de session Valorant, suivi de session et moments forts League of Legends, soirée Clubs EA FC — avec un
+tableau de bord pour vérifier d'un coup d'œil que tout est prêt avant le live. Tout tourne **sur ton PC** :
+pas de compte à créer chez nous, et tes accès restent chez toi. Seules des statistiques d'usage anonymes
+partent à la fin de chaque live, et tu peux les couper (voir la partie 6).
 
 Compte une vingtaine de minutes la première fois. Ensuite, StreamKit se met à
 jour tout seul.
@@ -103,9 +105,15 @@ Dans **Connecteurs**, déplie la carte **Spotify**.
 
 ## 4. Activer tes modules
 
-Les modules sont listés à gauche. Clique sur un module, puis sur
-**l'interrupteur à droite de son titre** pour l'allumer. Modifie ses réglages si
-tu veux, puis clique sur **Enregistrer** en bas.
+Les modules sont listés à gauche, rangés par jeu. Clique sur un module, puis sur
+**l'interrupteur à droite de son titre** pour l'allumer — ou allume-le
+directement depuis la **Vue d'ensemble**, avec l'interrupteur de sa ligne.
+Modifie ses réglages si tu veux, puis clique sur **Enregistrer** en bas.
+
+Les réglages de dépannage (chemin d'un fichier du jeu, port, pseudo forcé…)
+sont rangés dans la section **Avancé**, repliée en bas des réglages : tu n'en as
+besoin que si la Vue d'ensemble te le demande. Elle s'ouvre d'un clic, et toute
+seule si tu y as déjà changé quelque chose.
 
 - **Bot Musique** et **Random Car** créent **eux-mêmes** leur récompense de
   points de chaîne, avec le nom et le coût indiqués dans leurs réglages. Tu n'as
@@ -115,8 +123,8 @@ tu veux, puis clique sur **Enregistrer** en bas.
   au prochain démarrage. Si tu avais déjà créé à la main une récompense du même
   nom, supprime-la sur Twitch : StreamKit ne peut piloter que les récompenses
   qu'il a créées lui-même, et le module te le signale. Pour vérifier d'un coup
-  d'œil que le coût est bien parti, regarde la **Vue d'ensemble** : la carte
-  **Bot Musique** et la ligne **Random Car** de la carte **Rocket League**
+  d'œil que le coût est bien parti, regarde la **Vue d'ensemble** : les lignes
+  **Bot Musique** (panneau Twitch) et **Random Car** (panneau Rocket League)
   affichent le nom et le coût que la récompense porte **sur Twitch**.
 - **Bot Musique** : active **Afficher le morceau en cours** pour que l'overlay
   « Liste » montre aussi ce qui tourne sur Spotify (pochette, titre, avancement),
@@ -168,11 +176,18 @@ tu veux, puis clique sur **Enregistrer** en bas.
   modifie le réglage du jeu et en garde une copie), puis **relance Rocket
   League** : le jeu ne lit ce réglage qu'au démarrage. Ensuite, chaque fin de
   partie classée met le compteur à jour. Les matchs privés, les parties hors
-  ligne et les replays ne comptent jamais. **Réinitialiser la session** remet le
-  compteur à zéro en début de live.
+  ligne et les replays ne comptent jamais. Une partie **classée quittée avant la
+  fin** (abandon, déconnexion, jeu fermé) compte comme une **défaite**, comme
+  pour le jeu. **Réinitialiser la session** remet le compteur à zéro en début de
+  live. Une partie ratée ou comptée à tort ? Les boutons **➕ Victoire**,
+  **➖ Victoire**, **➕ Défaite** et **➖ Défaite** corrigent le compteur à la
+  main, et l'overlay suit aussitôt. L'option **Remettre à zéro quand le mode
+  change** (éteinte par défaut) donne une session à chaque playlist classée : le
+  compteur repart de zéro quand tu passes du 2v2 au 3v3, par exemple.
   **Rocket League éteint parfois cette API tout seul** (mise à jour du jeu,
   vérification des fichiers par Epic ou Steam). Tant que le module est allumé,
-  StreamKit la remet en marche et l'écrit dans le journal ; si le jeu tournait
+  StreamKit la remet en marche et le note dans **Activité récente** (avec
+  **+ technique**) ; si le jeu tournait
   déjà, relance-le. La Vue d'ensemble dit « jeu lancé avec l'API éteinte » dans
   ce cas — c'est le jeu lui-même qui le déclare, pas une supposition.
 - **Moments forts** (Rocket League) : même API que le compteur de session (si ce
@@ -269,19 +284,36 @@ tu veux, puis clique sur **Enregistrer** en bas.
    bouton **Afficher un exemple** du module montre aussi un exemple, sans toucher
    à l'adresse.
 
-Pour vérifier : dans **Vue d'ensemble**, la ligne **OBS** de la carte **Connexions** compte les sources
-connectées.
+Pour vérifier : dans la **Vue d'ensemble**, la carte **OBS** compte les sources
+connectées, et la liste **Overlays OBS** (à droite) dit lesquelles, avec leur
+jeu. Une source qui pointe vers un module désactivé y apparaît en orange : elle
+est dans tes scènes, mais n'affiche rien.
 
 ---
 
 ## 6. Au quotidien
 
-- **Avant le live**, jette un œil à la **Vue d'ensemble**. Elle a une carte par
-  univers — **Connexions** (Twitch, OBS, Spotify), **Twitch**, **Rocket
-  League**, **League of Legends** — et dans chacune, **une ligne par module**
-  avec son icône. Une pastille verte, ça marche ; orange ou rouge, lis le texte
-  gris sous la ligne, il dit quoi faire. La carte prend l'état de sa ligne la
-  plus inquiétante : rien ne se cache derrière un module qui va bien.
+- **Avant le live**, jette un œil à la **Vue d'ensemble** :
+  - **en haut**, une jauge et une phrase : **Prêt pour le live**, **Presque
+    prêt** ou **Pas prêt**, avec la raison ;
+  - **Connexions** : Twitch, OBS, Spotify… ;
+  - **un panneau par jeu**, avec une ligne par module : sa pastille, ce qu'il
+    fait en ce moment, et son interrupteur. Vert, ça marche ; **orange**, le
+    module attend (jeu fermé, pas de partie en cours) ou demande ton attention ;
+    **rouge**, il est en panne ;
+  - **à droite**, les **Alertes** : chaque souci avec un bouton pour aller le
+    régler, puis la liste des **Overlays OBS** branchés.
+- **Activité récente** (sous la Vue d'ensemble) : le fil de ton live, du plus
+  récent au plus ancien — clips, musiques demandées, sondages, prédictions,
+  pubs, parties RL et LoL, moments forts, matchs du club, voitures tirées, début
+  et fin du live, et les erreurs en rouge. Change de jour avec les flèches,
+  **Hier** ou le calendrier (60 jours gardés), filtre par jeu, cherche un pseudo.
+  **+ technique** y ajoute le journal détaillé du même jour.
+- **Métriques** : tes chiffres sur **ce live**, **7 jours**, **30 jours** ou
+  **depuis toujours**, avec leur évolution par rapport à la période d'avant,
+  ton taux de victoire par jeu, un graphique par live pour Twitch et le top de
+  tes viewers (musiques demandées, clips). Les graphiques se remplissent au fil
+  de tes lives.
 - **Démarrer avec Windows** : roue dentée en haut à droite → **Réglages de
   StreamKit** → **Démarrer avec Windows**. StreamKit se lance alors tout seul,
   près de l'horloge, sans ouvrir de fenêtre. S'il démarre avant ta connexion
@@ -293,14 +325,23 @@ connectées.
   te le rappelle, et le bouton **Mettre à jour → x.y.z** reste en haut aussi
   longtemps que tu veux. Au redémarrage, StreamKit te montre ce qu'il vient
   d'installer.
+- **Statistiques d'usage** : à la fin de chaque live, StreamKit envoie au
+  développeur un petit relevé pour savoir quels modules servent le plus — la
+  version, le nom de ta chaîne, les modules activés et leurs compteurs du jour,
+  le nombre et la durée de tes lives. **Jamais** un pseudo de viewer, un titre
+  de musique ou un identifiant. C'est gardé 13 mois. Pour le couper : roue
+  dentée → **Réglages de StreamKit** → **Partager mes statistiques d'usage**.
 
 ---
 
 ## 7. En cas de souci
 
-**Une carte est rouge ou orange dans la Vue d'ensemble.**
-Repère la ligne dont la pastille n'est pas verte : c'est ce module-là qui
-coince. Le texte gris sous la ligne indique la marche à suivre.
+**La Vue d'ensemble dit « Pas prêt » ou « Presque prêt ».**
+Regarde les **Alertes** à droite : chaque souci y est expliqué, avec un bouton
+pour ouvrir le module ou la connexion à régler. Une pastille **orange** sans
+alerte, c'est juste un module qui attend (jeu fermé, pas de partie) : rien à
+faire. Pour comprendre ce qui s'est passé, ouvre **Activité récente** et coche
+**+ technique**.
 
 **Twitch affiche « Twitch injoignable — nouvel essai automatique ».**
 StreamKit s'est lancé avant ta connexion Internet (démarrage avec Windows), ou
@@ -329,22 +370,24 @@ Les deux modules lisent la même chose : l'API de stats du jeu. Regarde la carte
 désactivée » (clique sur **Activer l'API**, puis relance le jeu), « jeu lancé
 avec l'API éteinte » ou « jeu lancé, mais l'API ne répond pas » (**relance le
 jeu** : il ne lit ce réglage qu'au démarrage), ou « joueur non identifié »
-(renseigne ton pseudo en jeu tout en bas des réglages du module). Seules les
-parties **classées** comptent par défaut : c'est réglable.
-Dans le journal du jour, la ligne « Connecté à Rocket League » est la preuve que
-la liaison est bonne : sans elle, aucun overlay Rocket League ne peut rien
-afficher, et ce n'est pas la faute d'OBS.
+(renseigne ton pseudo en jeu dans la section **Avancé** des réglages du
+module). Seules les parties **classées** comptent par défaut : c'est réglable.
+Dans **Activité récente**, avec **+ technique**, la ligne « Connecté à Rocket
+League » est la preuve que la liaison est bonne : sans elle, aucun overlay
+Rocket League ne peut rien afficher, et ce n'est pas la faute d'OBS. Une partie
+manque au compteur ? Corrige-la avec **➕ Défaite** ou **➕ Victoire** dans le
+module.
 
 **Le suivi League of Legends ne bouge pas.**
-Regarde la ligne **Suivi de session** de la carte **League of Legends** de la Vue d'ensemble : « client fermé »
+Regarde la ligne **Suivi de session** du panneau **League of Legends** de la Vue d'ensemble : « client fermé »
 (lance le jeu), ou « League of Legends introuvable » (indique le dossier du jeu
-tout en bas des réglages du module, par exemple `C:\Riot Games\League of Legends`).
+dans la section **Avancé** des réglages du module, par exemple `C:\Riot Games\League of Legends`).
 Vérifie aussi **Parties comptées** : une Flexible ne compte pas si le module suit
 la Solo/Duo. Rien à l'écran quand le client est fermé : c'est voulu.
 
 **Les moments forts LoL n'apparaissent pas.**
 Clique sur **Afficher un exemple** dans le module. S'il s'affiche, la source OBS
-est bonne : regarde alors, pendant une partie, la ligne **Moments forts** de la carte **League of
+est bonne : regarde alors, pendant une partie, la ligne **Moments forts** du panneau **League of
 Legends** de la Vue d'ensemble, qui doit dire « en partie » avec ton champion.
 Seuls **tes** moments comptent (et l'ace de ton équipe), et un moment réglé sur
 « Ignoré » ne s'affiche pas. Pas de clip : tu n'étais pas en live, ou ta chaîne
@@ -354,10 +397,10 @@ doit être reconnectée.
 Clique sur **Lancer un tirage de test** dans le module. Si le message ajoute
 « aucune source OBS n'affiche la machine à sous », c'est la source OBS : recopie
 son adresse, à la taille de ta scène. Si la machine s'affiche au test mais pas
-quand un viewer utilise la récompense, regarde la ligne **Random Car** de la
-carte **Rocket League**, dans la Vue d'ensemble (aucune voiture cochée ?), puis
-le journal : chaque utilisation y laisse une ligne, et un souci de connexion
-avec Twitch aussi.
+quand un viewer utilise la récompense, regarde la ligne **Random Car** du
+panneau **Rocket League**, dans la Vue d'ensemble (aucune voiture cochée ?),
+puis **Activité récente** : chaque tirage y laisse une ligne, et **+ technique**
+montre aussi un souci de connexion avec Twitch.
 
 **Le coût de la récompense n'est pas celui de StreamKit.**
 Clique sur **Enregistrer** dans le module : StreamKit remet le nom, le coût et
@@ -367,16 +410,16 @@ chaîne, mais StreamKit ne l'a pas créée », supprime cette récompense sur Tw
 
 **Le scoreboard de sondage n'apparaît pas.**
 Clique sur **Simuler un sondage** dans le module. S'il s'affiche, la source OBS
-est bonne : regarde alors la ligne **Sondages** de la carte **Twitch** de la Vue d'ensemble (droit
-manquant : reconnecte ta chaîne), puis le journal. Un sondage lancé y laisse la
-ligne « Sondage lancé » ; sans elle, Twitch n'a rien transmis, et le journal dit
-pourquoi (abonnement refusé, ou horloge du PC en avance : remets Windows à
-l'heure). Si rien ne s'affiche à la simulation, c'est la source OBS : recopie son
+est bonne : regarde alors la ligne **Sondages** du panneau **Twitch** de la Vue d'ensemble (droit
+manquant : reconnecte ta chaîne), puis **Activité récente**. Un sondage lancé y
+laisse la ligne « Sondage lancé » ; sans elle, Twitch n'a rien transmis, et
+**+ technique** dit pourquoi (abonnement refusé, ou horloge du PC en avance :
+remets Windows à l'heure). Si rien ne s'affiche à la simulation, c'est la source OBS : recopie son
 adresse.
 
 **Le scoreboard de prédiction n'apparaît pas.**
 Clique sur **Simuler une prédiction** dans le module. S'il s'affiche,
-l'overlay est bien placé : regarde alors la ligne **Prédictions** de la carte **Twitch** de la Vue
+l'overlay est bien placé : regarde alors la ligne **Prédictions** du panneau **Twitch** de la Vue
 d'ensemble — droit manquant (reconnecte ta chaîne) ou chaîne ni Affiliée ni
 Partenaire. Si rien ne s'affiche, c'est la source OBS : recopie son adresse.
 
@@ -395,8 +438,10 @@ retrouver ton rapport.
 
 Si le rapport n'a pas pu partir (pas d'Internet, par exemple), il est enregistré
 sur ton PC : clique sur **Ouvrir le dossier** et envoie ses fichiers sur
-Discord. Et si StreamKit ne s'ouvre plus du tout, envoie le journal à la main :
-un fichier par jour dans `%APPDATA%\StreamKit\journaux`.
+Discord. Si on te demande le journal, roue dentée → **Réglages de StreamKit** →
+**Ouvrir le dossier des journaux** (un fichier par jour, gardé 14 jours). Et si
+StreamKit ne s'ouvre plus du tout, le dossier est
+`%APPDATA%\StreamKit\journaux`.
 
 **Tu changes de PC ou de compte Windows.**
 Réinstalle StreamKit et reconnecte Twitch et Spotify : tes accès sont chiffrés
@@ -404,5 +449,6 @@ avec une clé liée à ta session Windows, ils ne se recopient pas d'un PC à
 l'autre.
 
 **Tes données.**
-Tes réglages et tes accès sont dans `%APPDATA%\StreamKit`. Désinstaller
-StreamKit les conserve. N'envoie jamais le fichier `tokens.json` à personne.
+Tes réglages, tes accès, ton activité (60 jours) et l'historique de tes
+métriques sont dans `%APPDATA%\StreamKit`. Désinstaller StreamKit les conserve.
+N'envoie jamais le fichier `tokens.json` à personne.
