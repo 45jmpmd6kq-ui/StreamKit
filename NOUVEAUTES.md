@@ -26,6 +26,9 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 
 ### Corrections
 
+- **Compteur de session RL : une partie classée quittée avant la fin compte
+  comme une défaite**, comme pour le jeu — abandon, déconnexion ou jeu fermé
+  en pleine partie. Hors classé, elle ne compte toujours pas.
 - **Les statistiques d'usage ne partent plus qu'à la fin de chaque live**, et
   plus toutes les heures. Si StreamKit est fermé pendant un stream, ce live
   part au lancement suivant. Toujours coupable dans ⚙️ Réglages.

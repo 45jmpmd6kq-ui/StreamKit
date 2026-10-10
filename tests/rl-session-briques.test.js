@@ -259,10 +259,21 @@ test('les images du podium n ouvrent pas une nouvelle partie', () => {
   assert.equal(resultats.length, 1);
 });
 
-test('quitter avant la fin ne donne aucun resultat, meme en menant', () => {
-  const { envoyer, resultats, ignorees } = monter();
+// Le jeu compte une defaite a qui quitte une partie classee, meme en menant :
+// le suivi la rapporte comme telle, le module ne la garde qu'en classe.
+test('quitter avant la fin : une defaite marquee abandon, meme en menant', () => {
+  const { envoyer, resultats } = monter();
   envoyer('MatchCreated', { MatchGuid: 'G1' });
   envoyer('UpdateState', image({ score: [4, 0] }));
+  envoyer('MatchDestroyed');
+  assert.equal(resultats.length, 1);
+  assert.equal(resultats[0].victoire, false);
+  assert.equal(resultats[0].abandon, true);
+});
+
+test('quitter avant d avoir vu son equipe ne compte pas', () => {
+  const { envoyer, resultats, ignorees } = monter();
+  envoyer('MatchCreated', { MatchGuid: 'G1' });
   envoyer('MatchDestroyed');
   assert.equal(resultats.length, 0);
   assert.match(ignorees[0], /quittee/);

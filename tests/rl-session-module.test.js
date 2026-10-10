@@ -355,3 +355,29 @@ test('changement de mode classe : remise a zero seulement si l option est cochee
     }
   }
 });
+
+test('partie quittee : defaite en classe, ignoree hors classe', async () => {
+  const { t, launchLog, connexions, fermer } = await monterRL();
+  try {
+    await attendre(() => connexions.length === 1, 'connexion au faux jeu');
+    const quitter = (guid) => [
+      ['MatchCreated', { MatchGuid: guid }],
+      ['UpdateState', image(guid, 0, [2, 0])],
+      ['MatchDestroyed', { MatchGuid: guid }],
+    ];
+    envoyer(connexions[0], quitter('Q1'));
+    await attendre(() => t.session()?.defaites === 1, 'abandon en classe compte');
+    assert.ok(t.journal.some(([, m]) => /partie quittée/.test(m)));
+
+    // Partie occasionnelle (playlist 6, non classee) : quitter ne compte pas.
+    appendFileSync(launchLog, '[0900.00] TryToPlayOnlineWithAntiCheat bIsRanked=(False) PlaylistId=(6)\r\n');
+    envoyer(connexions[0], quitter('Q2'));
+    await attendre(
+      () => t.journal.some(([, m]) => /quittée avant la fin, hors classé/.test(m)),
+      'abandon hors classe ignore'
+    );
+    assert.equal(t.session().defaites, 1);
+  } finally {
+    await fermer();
+  }
+});

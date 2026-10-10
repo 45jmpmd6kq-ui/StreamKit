@@ -16,7 +16,10 @@
 //   - MatchEnded arrive parfois SANS WinnerTeamNum (forfait, deconnexion de
 //     l'hote) : on tranche au score, et une egalite ne compte pas ;
 //   - StreamKit peut demarrer en pleine partie : le premier UpdateState ouvre
-//     la partie a la volee.
+//     la partie a la volee ;
+//   - quitter avant la fin (abandon, deconnexion, jeu ferme) : pas de
+//     MatchEnded. Le jeu, lui, compte une defaite en classe : on rapporte la
+//     partie avec `abandon: true`, et le module decide (voir module.js).
 //
 // Ce fichier ne filtre pas classe / non classe : il rapporte chaque partie
 // terminee, le module decide ce qui compte.
@@ -43,7 +46,7 @@ const equipeValide = (n) => n === 0 || n === 1;
 
 // identite()            -> { primaryId, pseudo }
 // playlist({ forcer })  -> numero de playlist en cours d'apres Launch.log, ou null
-// surResultat(r)        -> une partie terminee : { victoire, guid, playlist, taille, scores, source }
+// surResultat(r)        -> une partie terminee : { victoire, guid, playlist, taille, scores, source, abandon? }
 // surIgnoree(raison)    -> une fin de partie ecartee (journal du module)
 export function creerSuiviParties({ identite, playlist, surResultat, surIgnoree = () => {} }) {
   let enReplay = false;
@@ -154,13 +157,7 @@ export function creerSuiviParties({ identite, playlist, surResultat, surIgnoree 
         return;
 
       case 'MatchDestroyed':
-        // Quitter une partie avant MatchEnded : abandon ou deconnexion. On ne
-        // devine pas un resultat au score -- on pourrait offrir une victoire a
-        // quelqu'un qui a quitte en menant.
-        if (!enReplay && partie && !partie.finie) {
-          partie.finie = true;
-          surIgnoree('partie quittee avant la fin');
-        }
+        if (!enReplay) abandonner();
         enReplay = false;
         partie = null;
         return;
@@ -169,8 +166,40 @@ export function creerSuiviParties({ identite, playlist, surResultat, surIgnoree 
     }
   }
 
+  // Quitter une partie avant MatchEnded : abandon, deconnexion, ou jeu ferme
+  // (le module appelle aussi cette fonction quand l'API se coupe en pleine
+  // partie). C'est TOUJOURS une defaite, jamais devinee au score : quitter en
+  // menant ne fait pas gagner. Le module ne la compte qu'en classe -- ce que
+  // fait le jeu (decide par le user le 10/10/2026, apres un stream de nhs_rl).
+  function abandonner() {
+    if (!partie || partie.finie) return;
+    partie.finie = true;
+    if (partie.equipe == null) {
+      surIgnoree('partie quittee avant la fin (equipe du joueur inconnue)');
+      return;
+    }
+    if (partie.guid) {
+      if (comptees.includes(partie.guid)) return;
+      comptees.push(partie.guid);
+      if (comptees.length > 50) comptees.shift();
+    }
+    surResultat({
+      victoire: false,
+      guid: partie.guid,
+      playlist: partie.playlist,
+      taille: partie.taille,
+      scores: partie.scores,
+      source: 'abandon',
+      abandon: true,
+    });
+  }
+
   return {
     recevoir,
+    abandonner: () => {
+      if (!enReplay) abandonner();
+      partie = null;
+    },
     enPartie: () => !!partie && !partie.finie,
   };
 }

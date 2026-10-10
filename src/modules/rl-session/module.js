@@ -13,7 +13,7 @@
 
 import { abonner, PORT_PAR_DEFAUT } from './flux.js';
 import { creerSuiviParties } from './partie.js';
-import { creerLecteur, creerSuiviFichier, nomPlaylist, trouverLaunchLog } from './journal-jeu.js';
+import { creerLecteur, creerSuiviFichier, nomPlaylist, PLAYLISTS, trouverLaunchLog } from './journal-jeu.js';
 import {
   activerFichiers,
   etatApi,
@@ -400,6 +400,7 @@ export default {
     await veillerApi({ premiere: true });
 
     // --- Parties -------------------------------------------------------------
+    let arretEnCours = false;
     const parties = creerSuiviParties({
       identite,
       playlist: ({ forcer }) => {
@@ -408,10 +409,17 @@ export default {
       },
       surIgnoree: (raison) => ctx.log.info('Partie non comptée : ' + raison + '.'),
       surResultat: (r) => {
+        // Une partie quittee avant la fin n'est une defaite qu'en classe, comme
+        // pour le jeu. Ailleurs, elle ne compte pas.
+        if (r.abandon && !PLAYLISTS[r.playlist]?.classe) {
+          ctx.log.info('Partie non comptée : quittée avant la fin, hors classé.');
+          return;
+        }
         const decision = accepter(r, c);
         const quoi =
           (r.victoire ? 'Victoire' : 'Défaite') +
           ' (' +
+          (r.abandon ? 'partie quittée, ' : '') +
           nomPlaylist(r.playlist) +
           (r.scores ? ', ' + r.scores.join('-') : '') +
           ')';
@@ -455,6 +463,10 @@ export default {
           }
         } else {
           ctx.log.info('Rocket League fermé.');
+          // Jeu ferme (ou plante) en pleine partie : pas de MatchDestroyed.
+          // Sauf si c'est StreamKit qui coupe (Enregistrer, redemarrage) : le
+          // streamer joue toujours.
+          if (!arretEnCours) parties.abandonner();
         }
       },
       surMessage: (m) => {
@@ -534,6 +546,7 @@ export default {
 
     return {
       async arreter() {
+        arretEnCours = true;
         client.arreter();
         sauver();
       },
