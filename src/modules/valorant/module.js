@@ -58,6 +58,7 @@ export default {
         label: 'Région (si la détection échoue)',
         aide: 'Laisse vide : détectée depuis le journal du jeu. Sinon eu, na, ap, kr, br, latam.',
         defaut: '',
+        groupe: 'Avancé',
       },
       {
         cle: 'shard',
@@ -65,6 +66,7 @@ export default {
         label: 'Shard (si la détection échoue)',
         aide: 'Généralement identique à la région. Exceptions : latam et br sont sur le shard « na ».',
         defaut: '',
+        groupe: 'Avancé',
       },
       {
         cle: 'pollPresenceSec',
@@ -74,6 +76,7 @@ export default {
         defaut: 2,
         min: 1,
         max: 30,
+        groupe: 'Avancé',
       },
       {
         cle: 'pollMmrSec',
@@ -83,6 +86,7 @@ export default {
         defaut: 30,
         min: 10,
         max: 300,
+        groupe: 'Avancé',
       },
     ],
   },

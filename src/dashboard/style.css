@@ -1057,6 +1057,51 @@ a.btn {
   font-variant-numeric: tabular-nums;
 }
 
+
+/* Section repliable des réglages d'un même `groupe` (« Avancé »). */
+.groupe-champs {
+  margin-top: 0.6rem;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: color-mix(in srgb, var(--panneau) 60%, transparent);
+}
+.groupe-champs > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+  color: var(--texte-doux);
+  font-weight: 600;
+  user-select: none;
+}
+.groupe-champs > summary::-webkit-details-marker {
+  display: none;
+}
+.groupe-champs > summary:hover {
+  color: var(--texte);
+}
+.groupe-champs > summary small {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--texte-faible);
+}
+.groupe-champs .chevron {
+  display: inline-block;
+  transition: transform 0.15s;
+}
+.groupe-champs[open] .chevron {
+  transform: rotate(90deg);
+}
+.groupe-champs[open] > summary {
+  border-bottom: 1px solid var(--bordure);
+}
+.groupe-champs > .champ {
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
+
 .carte {
   background: var(--panneau);
   border: 1px solid var(--bordure);

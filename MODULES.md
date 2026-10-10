@@ -158,6 +158,12 @@ une ligne dans `config.champs`, rien d'autre.
 
 Options communes : `cle`, `label`, `aide`, `defaut`, `groupe`, `requis`.
 
+`groupe: 'Avancé'` range le champ dans une section repliable du même nom, en
+fin de formulaire, **fermée par défaut** : à réserver aux réglages de dépannage
+(chemin d'un fichier, port, identifiant forcé, rythme d'interrogation…) que le
+streamer n'a pas à voir au quotidien. La section s'ouvre seule si l'un de ses
+réglages n'est plus à sa valeur par défaut.
+
 Un champ `requis: true` encore vide empêche le module de démarrer : il passe en
 état **incomplet** et le dashboard dit précisément quoi remplir — plutôt qu'un
 plantage obscur en plein live.

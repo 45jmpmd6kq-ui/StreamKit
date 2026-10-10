@@ -23,6 +23,10 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   option « Remettre à zéro quand le mode change » (désactivée par défaut) : le
   compteur repart de zéro quand tu passes d'une playlist classée à une autre
   (1v1, 2v2, 3v3…).
+- **Des pages de module plus lisibles** : les réglages de dépannage (chemin du
+  journal du jeu, port, pseudo forcé, région Valorant…) sont rangés dans une
+  section « Avancé » repliée. Elle s'ouvre d'un clic, et toute seule si tu y
+  as changé quelque chose.
 
 ### Corrections
 

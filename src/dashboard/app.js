@@ -1963,9 +1963,7 @@ function dessinerDetail() {
 
     ${
       m.champs.length
-        ? `<div class="section"><h3>Réglages</h3><div id="formulaire">${m.champs
-            .map((c) => dessinerChamp(c, m.reglages[c.cle]))
-            .join('')}</div></div>`
+        ? `<div class="section"><h3>Réglages</h3><div id="formulaire">${dessinerChamps(m)}</div></div>`
         : ''
     }
 
@@ -2072,6 +2070,25 @@ async function redemarrerModule(m) {
 function brancherDetail() {
   const zone = $('#detail');
 
+  // Une section « Avancé » ouverte ou fermée à la main le reste malgré le
+  // rafraîchissement de 5 s (l'événement toggle ne remonte pas : capture).
+  zone.addEventListener(
+    'toggle',
+    (e) => {
+      const d = e.target;
+      if (!d.matches?.('details.groupe-champs')) return;
+      const cle = d.dataset.groupe;
+      if (d.open) {
+        groupesOuverts.add(cle);
+        groupesFermes.delete(cle);
+      } else {
+        groupesOuverts.delete(cle);
+        groupesFermes.add(cle);
+      }
+    },
+    true
+  );
+
   zone.addEventListener('click', (e) => {
     // --- Vue d'ensemble (cockpit) ---
     // Les lignes de module sont cliquables en entier : on les aiguille avant
@@ -2165,6 +2182,41 @@ async function basculerModule(m) {
 }
 
 // --------------------------------------------------- formulaire généré du module
+
+// Les champs d'un module : ceux sans `groupe` d'abord, puis chaque groupe
+// (« Avancé »…) dans une section repliable, fermée par défaut (demande du user
+// le 10/10/2026 : ne pas polluer l'écran avec des réglages de dépannage).
+// Elle s'ouvre seule si l'un de ses réglages n'est plus à sa valeur par défaut :
+// une valeur personnalisée ne se cache pas. Les champs restent dans
+// #formulaire, repliés ou non : l'enregistrement les lit tous.
+const groupesOuverts = new Set(); // 'moduleId|groupe', ouverts à la main
+const groupesFermes = new Set(); // refermés à la main malgré une valeur perso
+
+function dessinerChamps(m) {
+  const libres = m.champs.filter((c) => !c.groupe);
+  const groupes = new Map();
+  for (const c of m.champs.filter((x) => x.groupe)) {
+    if (!groupes.has(c.groupe)) groupes.set(c.groupe, []);
+    groupes.get(c.groupe).push(c);
+  }
+  const html = libres.map((c) => dessinerChamp(c, m.reglages[c.cle]));
+  for (const [nom, champs] of groupes) {
+    const cle = m.id + '|' + nom;
+    const perso = champs.some((c) => {
+      const v = m.reglages[c.cle];
+      return v != null && v !== '' && JSON.stringify(v) !== JSON.stringify(c.defaut);
+    });
+    const ouvert = groupesOuverts.has(cle) || (perso && !groupesFermes.has(cle));
+    html.push(`
+      <details class="groupe-champs" data-groupe="${echapper(cle)}" ${ouvert ? 'open' : ''}>
+        <summary><span class="chevron">▸</span>${echapper(nom)}<small>${champs.length} réglage${
+          champs.length > 1 ? 's' : ''
+        }</small></summary>
+        ${champs.map((c) => dessinerChamp(c, m.reglages[c.cle])).join('')}
+      </details>`);
+  }
+  return html.join('');
+}
 
 // Un champ du schéma -> un morceau de HTML. C'est la seule fonction à étendre
 // quand on ajoute un type de champ.
