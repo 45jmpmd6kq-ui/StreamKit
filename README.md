@@ -202,9 +202,18 @@ npm run publier            # build + envoi des fichiers dans ce brouillon
 ```
 
 `npm run publier` fait tout d'un coup. Il lui faut un jeton dans la variable
-d'environnement `GH_TOKEN` — un jeton *fine-grained* limité à ce dépôt avec la
-seule permission **Contents : Read and write** suffit (sur GitHub, les releases
-et leurs fichiers relèvent de « Contents »).
+d'environnement `GH_TOKEN` — un jeton *fine-grained* avec la seule permission
+**Contents : Read and write** suffit (sur GitHub, les releases et leurs
+fichiers relèvent de « Contents »).
+
+**Deux dépôts depuis la 1.0.2.** Le code vit dans `StreamKit`, **privé**. Les
+releases partent dans `StreamKit-Releases`, **public** et sans code : c'est là
+que l'updater des streamers lit `latest.yml`, sans jeton (`build.publish`). Le
+tag est donc poussé sur `StreamKit` (`git push --follow-tags`), et la release
+brouillon se crée sur `StreamKit-Releases` (`POST /repos/45jmpmd6kq-ui/StreamKit-Releases/releases`,
+GitHub y pose le tag sur sa branche par défaut). Le jeton doit couvrir
+`StreamKit-Releases`. Ne jamais repasser `StreamKit-Releases` en privé : toutes
+les mises à jour tomberaient en 404, sans message chez le streamer.
 
 ### Les notes de version ne sont pas facultatives
 

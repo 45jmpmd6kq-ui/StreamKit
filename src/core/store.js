@@ -46,7 +46,8 @@ const CONFIG_DEFAUT = {
   // la compilation, et ce champ n'a aucun effet. Il n'est donc plus expose dans
   // l'etat general ni modifiable par /api/reglages -- le dashboard avait deja
   // cesse de l'envoyer, il ne restait qu'un reglage qui faisait semblant.
-  maj: { auto: true, depot: '45jmpmd6kq-ui/StreamKit' },
+  // Depot PUBLIC dedie aux releases : le code vit dans StreamKit, prive.
+  maj: { auto: true, depot: '45jmpmd6kq-ui/StreamKit-Releases' },
   // Statistiques d'usage pour le développeur (core/telemetrie.js) : actives par
   // défaut, coupées d'un clic dans les réglages. installId est tiré au hasard
   // au premier envoi.

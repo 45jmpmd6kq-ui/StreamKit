@@ -36,10 +36,11 @@ veux utiliser.
 ## 1. Installer
 
 1. Ouvre la page des versions :
-   **https://github.com/45jmpmd6kq-ui/StreamKit/releases/latest**
+   **https://github.com/45jmpmd6kq-ui/StreamKit-Releases/releases/latest**
 2. Dans la partie **Assets**, télécharge **uniquement** `StreamKit-Setup-x.y.z.exe`.
    Les autres fichiers (`latest.yml`, `.blockmap`, `Source code`) ne te servent
-   à rien : ils sont là pour les mises à jour automatiques et pour le code.
+   à rien : ils sont là pour les mises à jour automatiques (le `Source code` de
+   ce dépôt est vide).
 3. Lance le fichier téléchargé.
 
 **Windows va probablement afficher « Windows a protégé votre ordinateur ».**
