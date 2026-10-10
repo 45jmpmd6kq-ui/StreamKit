@@ -22,7 +22,7 @@ import {
   rallumerApi,
   trouverInstallations,
 } from './installation.js';
-import { accepter, ajouter, bilan, debutSession } from './session.js';
+import { accepter, ajouter, bilan, debutSession, dernierePlaylist, retirer } from './session.js';
 
 // Evenements qui racontent la vie d'une partie : on les trace (niveau debug)
 // pour le support. Les autres arrivent jusqu'a 30 fois par seconde.
@@ -36,6 +36,12 @@ const EVENEMENTS_TRACES = new Set([
 
 async function fichiersIni(ctx) {
   return fichiersApi(await trouverLaunchLog(ctx.config.cheminLaunchLog));
+}
+
+// Les quatre boutons de correction passent par ici.
+function corriger(ctx, victoire, sens) {
+  if (!ctx._corriger) return { ok: false, erreur: 'Le module doit être démarré.' };
+  return ctx._corriger(victoire, sens);
 }
 
 export default {
@@ -84,6 +90,13 @@ export default {
           { valeur: 'launch', label: 'Au lancement de StreamKit' },
           { valeur: 'day', label: 'À minuit (journée en cours)' },
         ],
+      },
+      {
+        cle: 'resetMode',
+        type: 'bool',
+        label: 'Remettre à zéro quand le mode change',
+        aide: 'Le compteur repart de zéro dès que tu changes de playlist classée (1v1, 2v2, 3v3…) : chaque mode a sa propre session.',
+        defaut: false,
       },
       {
         cle: 'coin',
@@ -147,6 +160,10 @@ export default {
   libellesActions: {
     activerApi: 'Activer l’API dans Rocket League',
     reinitialiserSession: 'Réinitialiser la session',
+    ajouterVictoire: '➕ Victoire',
+    retirerVictoire: '➖ Victoire',
+    ajouterDefaite: '➕ Défaite',
+    retirerDefaite: '➖ Défaite',
   },
 
   actions: {
@@ -187,6 +204,21 @@ export default {
     async reinitialiserSession(ctx) {
       if (!ctx._reinitialiser) return { ok: false, erreur: 'Le module doit être démarré.' };
       return { message: 'Session repartie de ' + ctx._reinitialiser() + '.' };
+    },
+
+    // Correction a la main : une partie que le compteur a ratee (quittee avant
+    // la fin, deconnexion…) ou comptee a tort.
+    async ajouterVictoire(ctx) {
+      return corriger(ctx, true, +1);
+    },
+    async retirerVictoire(ctx) {
+      return corriger(ctx, true, -1);
+    },
+    async ajouterDefaite(ctx) {
+      return corriger(ctx, false, +1);
+    },
+    async retirerDefaite(ctx) {
+      return corriger(ctx, false, -1);
     },
   },
 
@@ -387,6 +419,15 @@ export default {
           ctx.log.info(quoi + ' non comptée : ' + decision.raison + '.');
           return;
         }
+        // Option : un autre mode classe que la partie d'avant = une autre
+        // session. La remise a zero tombe juste avant cette partie.
+        const avant = dernierePlaylist(historique, depuis());
+        if (c.resetMode && r.playlist != null && avant != null && avant !== r.playlist) {
+          reinitA = Date.now() - 1;
+          const libelle = nomPlaylist(avant) + ' → ' + nomPlaylist(r.playlist);
+          ctx.log.ok('Changement de mode (' + libelle + ') : session remise à zéro.');
+          ctx.activite('Changement de mode (' + libelle + ') : session remise à zéro', 'info');
+        }
         ajouter(historique, r);
         sauver();
         ctx.compteur.incr(r.victoire ? 'victoires' : 'defaites');
@@ -456,6 +497,24 @@ export default {
       apiDuJeu: lecteur.etat.api,
       bilan: calculer(),
     });
+
+    ctx._corriger = (victoire, sens) => {
+      const quoi = victoire ? 'victoire' : 'défaite';
+      if (sens > 0) {
+        ajouter(historique, { victoire, playlist: null, manuel: true });
+      } else if (!retirer(historique, victoire, depuis())) {
+        return { ok: false, erreur: 'Aucune ' + quoi + ' à retirer dans la session.' };
+      }
+      sauver();
+      // Les metriques suivent la correction.
+      ctx.compteur.incr(victoire ? 'victoires' : 'defaites', sens);
+      const b = calculer();
+      const texte = (sens > 0 ? 'Une ' + quoi + ' ajoutée' : 'Une ' + quoi + ' retirée') + ' à la main';
+      ctx.log.ok(texte + ' — session ' + b.victoires + ' V / ' + b.defaites + ' D.');
+      ctx.activite(texte + ' — session ' + b.victoires + ' V / ' + b.defaites + ' D', 'info');
+      pousser();
+      return { message: texte + ' : ' + b.victoires + ' V – ' + b.defaites + ' D.' };
+    };
 
     ctx._reinitialiser = () => {
       reinitA = Date.now();

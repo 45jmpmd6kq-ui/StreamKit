@@ -279,3 +279,79 @@ test('vue d ensemble : API allumee au lancement du jeu, mais rien ne repond', as
   const [ligne] = await manifeste.sante(ctx);
   assert.match(ligne.detail, /l’API ne répond pas/);
 });
+
+// Monte le module sur un faux jeu, Launch.log en classe 3v3 (playlist 13).
+async function monterRL(reglages = {}) {
+  const dossier = mkdtempSync(join(tmpdir(), 'rl-module-'));
+  const launchLog = join(dossier, 'Launch.log');
+  writeFileSync(
+    launchLog,
+    'Log: Log file open\r\n[0024.61] SettingsExport: {"userId":"' +
+      MOI +
+      '"}\r\n[0169.11] TryToPlayOnlineWithAntiCheat bIsRanked=(True) PlaylistId=(13)\r\n'
+  );
+  const connexions = [];
+  const jeu = net.createServer((s) => connexions.push(s));
+  await new Promise((r) => {
+    jeu.listen(0, '127.0.0.1', r);
+  });
+  const t = contexte({ port: jeu.address().port, cheminLaunchLog: launchLog, reglages });
+  const instance = await manifeste.demarrer(t.ctx);
+  const fermer = async () => {
+    await instance.arreter();
+    t.couper();
+    jeu.close();
+    connexions.forEach((s) => s.destroy());
+    rmSync(dossier, { recursive: true, force: true });
+  };
+  return { t, launchLog, connexions, fermer };
+}
+
+test('corriger a la main : ajouter et retirer victoires et defaites', async () => {
+  const { t, fermer } = await monterRL();
+  try {
+    const a = manifeste.actions;
+    await a.ajouterDefaite(t.ctx);
+    await a.ajouterDefaite(t.ctx);
+    await a.ajouterVictoire(t.ctx);
+    assert.deepEqual([t.session().victoires, t.session().defaites], [1, 2]);
+
+    const r = await a.retirerDefaite(t.ctx);
+    assert.match(r.message, /1 V – 1 D/);
+    assert.deepEqual(t.compteurs, { defaites: 1, victoires: 1 }, 'les metriques suivent');
+
+    await a.retirerVictoire(t.ctx);
+    const vide = await a.retirerVictoire(t.ctx);
+    assert.equal(vide.ok, false, 'rien a retirer : refus explicite');
+    assert.deepEqual([t.session().victoires, t.session().defaites], [0, 1]);
+  } finally {
+    await fermer();
+  }
+});
+
+test('changement de mode classe : remise a zero seulement si l option est cochee', async () => {
+  for (const resetMode of [false, true]) {
+    const { t, launchLog, connexions, fermer } = await monterRL({ resetMode });
+    try {
+      await attendre(() => connexions.length === 1, 'connexion au faux jeu');
+      envoyer(connexions[0], partie('M1', { equipe: 0, score: [3, 1], gagnant: 0 }));
+      await attendre(() => t.session()?.victoires === 1, 'victoire en 3v3');
+      appendFileSync(
+        launchLog,
+        '[0801.02] TryToPlayOnlineWithAntiCheat bIsRanked=(True) PlaylistId=(11)\r\n'
+      );
+      envoyer(connexions[0], partie('M2', { equipe: 1, score: [4, 2], gagnant: 0 }));
+      await attendre(() => t.session()?.defaites === 1, 'defaite en 2v2');
+
+      const s = t.session();
+      if (resetMode) {
+        assert.deepEqual([s.victoires, s.defaites], [0, 1], 'le 2v2 repart de zero');
+        assert.ok(t.journal.some(([, m]) => /Changement de mode/.test(m)));
+      } else {
+        assert.deepEqual([s.victoires, s.defaites], [1, 1], 'sans option, tout continue');
+      }
+    } finally {
+      await fermer();
+    }
+  }
+});

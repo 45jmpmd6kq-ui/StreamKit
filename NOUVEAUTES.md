@@ -13,6 +13,17 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 
 ## 0.34.1
 
+### Nouveautés
+
+- **Compteur de session RL : corrige-le à la main.** Quatre boutons dans la
+  page du module — ➕ Victoire, ➖ Victoire, ➕ Défaite, ➖ Défaite — pour une
+  partie que le compteur a ratée ou comptée à tort. L'overlay suit tout de
+  suite.
+- **Compteur de session RL : une session par mode, si tu veux.** Nouvelle
+  option « Remettre à zéro quand le mode change » (désactivée par défaut) : le
+  compteur repart de zéro quand tu passes d'une playlist classée à une autre
+  (1v1, 2v2, 3v3…).
+
 ### Corrections
 
 - **Les statistiques d'usage ne partent plus qu'à la fin de chaque live**, et

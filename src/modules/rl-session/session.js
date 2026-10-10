@@ -53,6 +53,30 @@ export function ajouter(historique, resultat, maintenant = Date.now()) {
   return historique;
 }
 
+// Retire la derniere partie de la session du type demande (victoire ou
+// defaite) : la correction a la main d'une partie mal comptee. -> vrai si une
+// partie a ete retiree.
+export function retirer(historique, victoire, depuis) {
+  for (let i = historique.length - 1; i >= 0; i--) {
+    const p = historique[i];
+    if (p.a < depuis) break;
+    if (p.victoire === !!victoire) {
+      historique.splice(i, 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+// La playlist de la derniere partie JOUEE de la session (les corrections a la
+// main n'en ont pas) : sert a remettre a zero quand le mode classe change.
+export function dernierePlaylist(historique, depuis) {
+  for (let i = historique.length - 1; i >= 0 && historique[i].a >= depuis; i--) {
+    if (historique[i].playlist != null) return historique[i].playlist;
+  }
+  return null;
+}
+
 // Debut de la session : lancement de StreamKit, ou minuit ; une remise a zero
 // manuelle l'emporte si elle est plus recente.
 export function debutSession({ mode = 'launch', lanceA, reinitA = 0, maintenant = Date.now() }) {
