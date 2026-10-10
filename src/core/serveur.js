@@ -21,6 +21,7 @@ import { DASHBOARD_DIR, MODULES_DIR, JOURNAUX_DIR, COMMUN_DIR } from './paths.js
 import * as journal from './journal.js';
 import * as activite from './activite.js';
 import * as diffusion from './diffusion.js';
+import * as themes from './themes.js';
 
 const log = journal.pour('serveur');
 
@@ -123,7 +124,7 @@ async function corpsJson(req, limite = 512 * 1024) {
 // connait pas -- et « Ouvrir dans le navigateur » y enverrait un dashboard sans
 // mise en page. Un style injecte n'execute pas de code : le risque n'a rien de
 // comparable a celui d'un script.
-function csp(nonce) {
+function csp(nonce, { cadre = false } = {}) {
   return [
     "default-src 'self'",
     nonce ? "script-src 'self' 'nonce-" + nonce + "'" : "script-src 'self'",
@@ -140,7 +141,9 @@ function csp(nonce) {
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
-    "frame-ancestors 'none'",
+    // L'apercu des themes est la seule page affichee dans un cadre -- celui de
+    // la page Personnalisation du dashboard, donc de la meme origine.
+    cadre ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
     "form-action 'none'",
   ].join('; ');
 }
@@ -158,18 +161,35 @@ export const ENTETES_PAGE_OAUTH = {
   'X-Content-Type-Options': 'nosniff',
 };
 
+// Pose le theme d'overlay sur une page (voir core/themes.js) : sa feuille en
+// fin de <head> -- APRES le <style> de l'overlay, dont elle remplace les jetons
+// -- et le script qui en change a chaud. data-sk-fige : l'apercu d'un theme
+// dans le dashboard, qui ne doit pas suivre le theme choisi.
+function poserTheme(html, theme, { fige = false } = {}) {
+  const attributs = ' data-sk-theme="' + theme + '"' + (fige ? ' data-sk-fige' : '');
+  html = html.replace(/<html(?=[\s>])/i, '<html' + attributs);
+  const balises =
+    '<link rel="stylesheet" id="sk-theme" href="/commun/themes/' +
+    theme +
+    '.css" />\n<script src="/commun/theme.js"></script>\n';
+  return /<\/head>/i.test(html) ? html.replace(/<\/head>/i, balises + '</head>') : balises + html;
+}
+
 // Sert une page HTML en y posant le nonce de ses scripts.
 //
 // On lit le fichier au lieu de le diffuser en flux : il faut le reecrire. Ce
 // sont quelques kilo-octets, et ces pages ne sont de toute facon jamais mises
 // en cache -- contrairement a leurs images, qui passent par servirFichier.
-async function servirHtml(res, chemin) {
+//
+// theme : les overlays (et l'apercu des themes) recoivent le theme d'overlay.
+async function servirHtml(res, chemin, { theme = null, fige = false, cadre = false } = {}) {
   let html;
   try {
     html = await readFile(chemin, 'utf8');
   } catch {
     return texte(res, 404, 'Introuvable');
   }
+  if (theme) html = poserTheme(html, theme, { fige });
 
   const nonce = randomBytes(16).toString('base64');
   // « <script> » et « <script src=... > », jamais « </script> » : le lookahead
@@ -179,7 +199,7 @@ async function servirHtml(res, chemin) {
   res.writeHead(200, {
     'Content-Type': MIME['.html'],
     'Cache-Control': 'no-cache',
-    'Content-Security-Policy': csp(nonce),
+    'Content-Security-Policy': csp(nonce, { cadre }),
     'X-Content-Type-Options': 'nosniff',
   });
   res.end(html);
@@ -422,7 +442,25 @@ export function creerServeur(app) {
         if (!def) return texte(res, 404, 'Overlay inconnu');
         const page = cheminSous(dossierOverlay, def.fichier);
         if (!page) return texte(res, 403, 'Interdit');
-        return servirHtml(res, page);
+        // ?theme=<id> : cette source garde ce theme, quel que soit celui choisi
+        // dans Personnalisation (un overlay a part, ou la verification d'un
+        // theme sans changer celui du live).
+        const force = url.searchParams.get('theme');
+        if (themes.existe(force)) return servirHtml(res, page, { theme: force, fige: true });
+        return servirHtml(res, page, { theme: themes.actuel() });
+      }
+
+      // --- Apercu d'un theme d'overlay ---------------------------------------
+      // /apercu-theme/<id> : une fausse scene de jeu habillee par ce theme, que
+      // la page Personnalisation affiche en vignette. Figee sur SON theme.
+      const mApercu = chemin.match(/^\/apercu-theme\/([\w-]+)$/);
+      if (mApercu) {
+        if (!themes.existe(mApercu[1])) return texte(res, 404, 'Thème inconnu');
+        return servirHtml(res, join(COMMUN_DIR, 'themes', 'apercu.html'), {
+          theme: mApercu[1],
+          fige: true,
+          cadre: true,
+        });
       }
 
       // --- Pages d'un module -----------------------------------------------
@@ -646,6 +684,16 @@ export function creerServeur(app) {
           return json(res, r.ok ? 200 : 400, r);
         }
 
+        // --- Themes d'overlay (page Personnalisation) ---
+        if (chemin === '/api/themes' && methode === 'GET') {
+          return json(res, 200, themes.liste());
+        }
+        if (chemin === '/api/themes' && methode === 'POST') {
+          const body = await corpsJson(req);
+          const r = themes.choisir(String(body.theme ?? ''));
+          return json(res, r.ok ? 200 : 400, r);
+        }
+
         // --- Reglages generaux ---
         if (chemin === '/api/reglages' && methode === 'POST') {
           const body = await corpsJson(req);
@@ -724,8 +772,10 @@ export function creerServeur(app) {
   // Une ouverture de WebSocket refusee : une reponse HTTP ordinaire, puis on raccroche.
   const fermerWs = (socket, statut) => socket.end('HTTP/1.1 ' + statut + '\r\nConnection: close\r\n\r\n');
 
-  // Ouverture d'un WebSocket : seul le flux d'un overlay en accepte un.
-  // /overlay/<module>/<vue>/flux, meme adresse que le flux SSE.
+  // Ouverture d'un WebSocket : seuls le flux d'un overlay et celui des themes
+  // en acceptent un.
+  //   /overlay/<module>/<vue>/flux   meme adresse que le flux SSE ;
+  //   /commun/theme/flux             le theme d'overlay (src/commun/theme.js).
   const upgrade = (req, socket) => {
     socket.on('error', () => {}); // une socket coupee net ne doit rien faire tomber
     let chemin;
@@ -736,6 +786,11 @@ export function creerServeur(app) {
     }
     if (refuser(req, 'GET', chemin)) {
       return fermerWs(socket, '403 Forbidden');
+    }
+    if (chemin === '/commun/theme/flux') {
+      themes.amorcer();
+      diffusion.brancherWs(themes.CANAL, req, socket);
+      return;
     }
     const m = chemin.match(/^\/overlay\/([^/]+)\/([^/]+)\/flux$/);
     const mod = m && app.registre.get(m[1]);

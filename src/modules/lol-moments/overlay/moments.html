@@ -18,14 +18,18 @@
         overflow: hidden;
       }
 
+      /* Theme d'overlay (src/commun/themes) : chaque valeur retombe sur
+         l'habillage d'origine quand le theme n'en donne pas. Les accents par
+         famille de moment restent : ils disent de quoi il s'agit. */
       :root {
-        --fond: rgba(6, 12, 20, 0.92);
-        --fond-annonce: rgba(6, 12, 20, 0.94);
-        --texte: #f0e6d2;
-        --attenue: rgba(240, 230, 210, 0.62);
+        --encre: var(--sk-encre, 240, 230, 210);
+        --fond: rgba(var(--sk-fond-rvb, 6, 12, 20), var(--sk-fond-alpha, 0.92));
+        --fond-annonce: rgba(var(--sk-fond-rvb, 6, 12, 20), var(--sk-fond-alpha, 0.94));
+        --texte: rgb(var(--encre));
+        --attenue: var(--sk-attenue, rgba(240, 230, 210, 0.62));
         --defaite: #ff5a6e;
         /* Meme famille que le suivi de session : livree avec Windows 10 et 11. */
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
@@ -281,7 +285,7 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        color: rgba(240, 230, 210, 0.7);
+        color: rgba(var(--encre), 0.7);
       }
       .annonce .victimes { gap: 6px; }
       .annonce .victime { width: 44px; height: 44px; }
@@ -420,7 +424,7 @@
           return;
         }
         const el = document.createElement("div");
-        el.className = "carte accent-" + accent(v.accent);
+        el.className = "carte sk-silhouette accent-" + accent(v.accent);
         if (v.groupe) {
           el.dataset.groupe = v.groupe;
           parGroupe.set(v.groupe, el);
@@ -482,7 +486,7 @@
           : v.embleme && v.embleme !== "portrait" && v.champion
             ? medaillon({ champion: v.champion }, "medaillon mini")
             : "";
-        annonce.className = "annonce accent-" + accent(v.accent) + (String(v.titre ?? "").length > 10 ? " long" : "");
+        annonce.className = "annonce sk-silhouette accent-" + accent(v.accent) + (String(v.titre ?? "").length > 10 ? " long" : "");
         annonce.innerHTML =
           '<div class="filet haut"></div>' +
           '<div class="annonce-corps"><div class="eclat"></div>' +

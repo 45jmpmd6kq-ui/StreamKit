@@ -1,0 +1,58 @@
+/* Thème « Esport » : rendu de tournoi.
+ * Panneaux nuit à coins coupés, liseré cyan, Oxanium en capitales.
+ * Contrat des jetons : LISEZ-MOI.md. */
+
+@font-face {
+  font-family: "SK Oxanium";
+  src: url(/commun/themes/polices/oxanium.woff2) format("woff2");
+  font-weight: 500 800;
+  font-display: block;
+}
+@font-face {
+  font-family: "SK Inter";
+  src: url(/commun/themes/polices/inter.woff2) format("woff2");
+  font-weight: 400 800;
+  font-display: block;
+}
+
+:root {
+  --sk-fond-rvb: 9, 16, 31;
+  --sk-fond-alpha: 0.94;
+  --sk-encre: 238, 244, 255;
+  --sk-attenue: #8ea0c0;
+  --sk-accent: #22d3ee;
+  --sk-accent-rvb: 34, 211, 238;
+  --sk-accent2: #5fa8ff;
+  --sk-accent2-rvb: 95, 168, 255;
+  --sk-sur-accent2: #06121f;
+  --sk-or: #f5c542;
+  --sk-typo: "SK Oxanium", Bahnschrift, "Segoe UI", system-ui, sans-serif;
+  --sk-typo-titre: "SK Oxanium", Bahnschrift, "Segoe UI", system-ui, sans-serif;
+}
+
+.sk-panneau {
+  border-radius: 0 !important;
+  /* Coins coupés en haut à gauche et en bas à droite. */
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px) !important;
+  /* Liseré cyan à gauche + contour fin : en box-shadow, pour ne rien décaler. */
+  box-shadow:
+    inset 3px 0 0 var(--sk-accent),
+    inset 0 0 0 1px rgba(34, 211, 238, 0.32) !important;
+}
+
+.sk-titre {
+  font-family: var(--sk-typo-titre) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+.sk-remplissage {
+  background: linear-gradient(90deg, #22d3ee, #3b82f6) !important;
+  border-radius: 0 !important;
+}
+
+/* Formes biseautées (pub, prédictions, sondages) : un trait cyan qui épouse la
+   découpe, sous l'ombre portée. */
+.sk-silhouette {
+  filter: drop-shadow(0 0 1px #22d3ee) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5)) !important;
+}

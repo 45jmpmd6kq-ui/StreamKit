@@ -290,6 +290,23 @@ connectées, et la liste **Overlays OBS** (à droite) dit lesquelles, avec leur
 jeu. Une source qui pointe vers un module désactivé y apparaît en orange : elle
 est dans tes scènes, mais n'affiche rien.
 
+### Changer le style de tes overlays
+
+Dans le menu de gauche, **Personnalisation** propose cinq thèmes : **Standard
+esport** (le style d'origine), **Esport**, **Néon**, **Minimal clair** et **Rétro
+arcade**. Chaque carte montre un aperçu ; clique **Choisir ce thème** et tous tes
+overlays changent d'un coup, tout de suite dans OBS, sans recharger tes sources.
+
+- Le thème change l'habillage (fond, couleurs, police, cadres), pas la place de
+  tes overlays.
+- Les couleurs qui ont un sens restent les mêmes : victoire et défaite, rangs,
+  couleur de ton club.
+- Les couleurs réglées dans un module (Bot Musique, Random Car) ne s'appliquent
+  qu'avec **Standard esport**.
+- Pour qu'**une seule** source garde un autre thème, ajoute `?theme=neon` à la
+  fin de son adresse (ou `esport`, `minimal`, `arcade`, `standard`). Elle ne
+  suivra plus le thème choisi dans Personnalisation.
+
 ---
 
 ## 6. Au quotidien

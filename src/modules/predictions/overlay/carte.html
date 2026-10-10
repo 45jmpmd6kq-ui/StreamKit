@@ -21,19 +21,23 @@
            color-mix() n'existe pas dans le navigateur des OBS antérieurs à la 31. */
         --bleu-rvb: 47, 124, 255;
         --rose-rvb: 232, 64, 154;
-        --fond: rgba(14, 14, 20, 0.94);
-        --violet: #c3a6ff;
-        --or: #ffd24a;
-        --gris: #a9a9bf;
+        /* Thème d'overlay (src/commun/themes) : chaque valeur retombe sur
+           l'habillage d'origine quand le thème n'en donne pas. Le bleu et le
+           rose des deux camps restent ceux réglés dans le module. */
+        --fond: rgba(var(--sk-fond-rvb, 14, 14, 20), var(--sk-fond-alpha, 0.94));
+        --encre: var(--sk-encre, 255, 255, 255);
+        --violet: var(--sk-accent2, #c3a6ff);
+        --or: var(--sk-or, #ffd24a);
+        --gris: var(--sk-attenue, #a9a9bf);
         /* Bahnschrift est livrée avec Windows 10 et 11 : le côté « diffusion esport »
            sans police à télécharger (la CSP des overlays l'interdirait de toute façon). */
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
         display: flex;
         font-family: var(--typo);
-        color: #fff;
+        color: rgb(var(--encre));
       }
       body[data-coin="top-left"] { align-items: flex-start; justify-content: flex-start; }
       body[data-coin="top-center"] { align-items: flex-start; justify-content: center; }
@@ -122,6 +126,8 @@
         /* Un voile sombre en dégradé par-dessus la couleur choisie : du relief,
            quelle que soit la teinte réglée dans le dashboard. */
         background: linear-gradient(100deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.1)), var(--c);
+        /* Blanc sur la couleur du camp, même sous un thème clair. */
+        color: #fff;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
       }
       [data-couleur="rose"] { --c: var(--rose); --c-rvb: var(--rose-rvb); }
@@ -215,6 +221,7 @@
         font-weight: 700;
         background: linear-gradient(100deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.1)), var(--c);
         clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+        color: #fff;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
       }
       .rang .piste {
@@ -241,7 +248,7 @@
       }
       .rang .nom, .rang .det { position: relative; white-space: nowrap; }
       .rang .nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 15px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; }
-      .rang .det { font-size: 12px; color: #d4d4e4; }
+      .rang .det { font-size: 12px; color: var(--sk-attenue, #d4d4e4); }
       .rang .tag { position: relative; top: auto; margin-right: 8px; }
       .rang.gagnant .tag { display: inline-block; }
       #sb.compacte .rang { height: 32px; }
@@ -259,11 +266,11 @@
         align-items: center;
         gap: 14px;
         font-size: 13px;
-        color: #c9c9dd;
+        color: var(--sk-attenue, #c9c9dd);
         background: var(--fond);
         clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 16px 100%);
       }
-      .pied b { color: #fff; }
+      .pied b { color: rgb(var(--encre)); }
       .sep {
         width: 2px;
         height: 12px;
@@ -281,10 +288,10 @@
     </style>
   </head>
   <body data-coin="top-right">
-    <div id="sb" data-statut="active" data-mode="duel">
+    <div id="sb" class="sk-silhouette" data-statut="active" data-mode="duel">
       <div class="tete">
         <span class="etiquette" id="etiquette">Prédiction en direct</span>
-        <span class="titre"><span class="ico" aria-hidden="true">⚔️</span><span id="titre"></span></span>
+        <span class="titre sk-titre"><span class="ico" aria-hidden="true">⚔️</span><span id="titre"></span></span>
       </div>
 
       <div class="duel">

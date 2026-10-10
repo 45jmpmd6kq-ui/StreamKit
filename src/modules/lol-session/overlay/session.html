@@ -18,21 +18,29 @@
         overflow: hidden;
       }
 
+      /* Thème d'overlay (src/commun/themes) : chaque valeur retombe sur
+         l'habillage d'origine (les ors de LoL) quand le thème n'en donne pas.
+         Victoire et défaite gardent leurs couleurs. */
       :root {
-        --fond: rgba(6, 12, 20, 0.92);
-        --or: #c8aa6e;
-        --texte: #f0e6d2;
-        --attenue: rgba(240, 230, 210, 0.6);
-        --pale: rgba(240, 230, 210, 0.4);
-        --filet: rgba(240, 230, 210, 0.14);
+        --encre: var(--sk-encre, 240, 230, 210);
+        --fond: rgba(var(--sk-fond-rvb, 6, 12, 20), var(--sk-fond-alpha, 0.92));
+        --fond-tableau: rgba(var(--sk-fond-rvb, 6, 12, 20), var(--sk-fond-alpha, 0.94));
+        --or: var(--sk-or, #c8aa6e);
+        /* Le liseré des cadres. */
+        --trait: var(--sk-accent, #c8aa6e);
+        --trait-rvb: var(--sk-accent-rvb, 200, 170, 110);
+        --texte: rgb(var(--encre));
+        --attenue: var(--sk-attenue, rgba(240, 230, 210, 0.6));
+        --pale: rgba(var(--encre), 0.4);
+        --filet: rgba(var(--encre), 0.14);
         /* Bleu et rouge, comme l'historique de LoL : distinguables aussi en
            deuteranopie, contrairement au vert et au rouge. */
         --victoire: #4da3ff;
         --defaite: #ff5a6e;
-        --serie: #ffc857;
+        --serie: var(--sk-or, #ffc857);
         /* Bahnschrift est livree avec Windows 10 et 11 : meme famille que les
            autres overlays StreamKit, sans police a telecharger. */
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
@@ -137,8 +145,8 @@
         align-items: center;
         padding: 0 28px 0 20px;
         background: var(--fond);
-        border-left: 4px solid var(--or);
-        border-top: 1px solid rgba(200, 170, 110, 0.35);
+        border-left: 4px solid var(--trait);
+        border-top: 1px solid rgba(var(--trait-rvb), 0.35);
         clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%);
       }
       .bandeau .sep {
@@ -232,8 +240,8 @@
         display: flex;
         flex-direction: column;
         gap: 20px;
-        background: rgba(6, 12, 20, 0.94);
-        border-top: 1px solid rgba(200, 170, 110, 0.6);
+        background: var(--fond-tableau);
+        border-top: 1px solid rgba(var(--trait-rvb), 0.6);
         clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
       }
       .tableau .entete {
@@ -301,8 +309,8 @@
         flex-direction: column;
         gap: 10px;
         padding: 14px 16px;
-        background: rgba(240, 230, 210, 0.05);
-        border-top: 2px solid rgba(240, 230, 210, 0.3);
+        background: rgba(var(--encre), 0.05);
+        border-top: 2px solid rgba(var(--encre), 0.3);
       }
       .gros > div.victoire { background: rgba(77, 163, 255, 0.08); border-top-color: var(--victoire); }
       .gros > div.defaite { background: rgba(255, 90, 110, 0.08); border-top-color: var(--defaite); }
@@ -386,7 +394,7 @@
         justify-content: space-between;
         gap: 16px;
         padding-top: 16px;
-        border-top: 1px solid rgba(240, 230, 210, 0.12);
+        border-top: 1px solid rgba(var(--encre), 0.12);
       }
       .bas-tableau > div {
         display: flex;
@@ -398,7 +406,7 @@
         align-items: center;
         gap: 8px;
         padding: 3px 10px 3px 3px;
-        background: rgba(240, 230, 210, 0.06);
+        background: rgba(var(--encre), 0.06);
         font-size: 13px;
         line-height: 1;
         white-space: nowrap;
@@ -418,6 +426,12 @@
         align-items: baseline;
         gap: 10px;
       }
+      /* La courbe est dessinee par le script avec les couleurs d'origine :
+         on les rattache au theme. */
+      .courbe [fill="#F0E6D2"] { fill: var(--texte); }
+      .courbe [stroke="#F0E6D2"] { stroke: var(--texte); }
+      .courbe [fill="#C8AA6E"] { fill: var(--or); }
+      .courbe [stroke="#C8AA6E"] { stroke: var(--or); }
       .moyennes .valeur {
         font-size: 18px;
         font-weight: 700;
@@ -428,7 +442,7 @@
   </head>
   <body>
     <!-- Bandeau : rang, LP de la session, bilan, serie. -->
-    <div class="element" id="bandeau" data-coin="top-left">
+    <div class="element sk-silhouette" id="bandeau" data-coin="top-left">
       <div class="bandeau">
         <div class="rang">
           <div class="embleme" id="b-embleme"></div>
@@ -470,7 +484,7 @@
     </div>
 
     <!-- Tableau de bord : le recap de la session. -->
-    <div class="element" id="tableau" data-coin="center">
+    <div class="element sk-silhouette" id="tableau" data-coin="center">
       <div class="tableau">
         <div class="entete">
           <div class="titre">

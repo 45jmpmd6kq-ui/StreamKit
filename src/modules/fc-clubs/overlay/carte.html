@@ -19,19 +19,23 @@
       }
 
       :root {
-        --fond: rgba(8, 13, 22, 0.93);
-        --texte: #f2f4f7;
-        --attenue: rgba(242, 244, 247, 0.62);
-        --pale: rgba(242, 244, 247, 0.3);
-        --filet: rgba(242, 244, 247, 0.07);
-        --victoire: #3ddc84;
+        --fond: rgba(var(--sk-fond-rvb, 8, 13, 22), var(--sk-fond-alpha, 0.93));
+        /* Theme d'overlay (src/commun/themes) : chaque valeur retombe sur
+           l'habillage d'origine quand le theme n'en donne pas. La couleur du
+           club, elle, reste celle du maillot. */
+        --encre: var(--sk-encre, 242, 244, 247);
+        --texte: rgb(var(--encre));
+        --attenue: var(--sk-attenue, rgba(242, 244, 247, 0.62));
+        --pale: rgba(var(--encre), 0.3);
+        --filet: rgba(var(--encre), 0.07);
+        --victoire: var(--sk-victoire, #3ddc84);
         --nul: #a3acbd;
-        --defaite: #ff4d5e;
+        --defaite: var(--sk-defaite, #ff4d5e);
         --ambre: #f2c14e;
-        --or: #ffd24a;
+        --or: var(--sk-or, #ffd24a);
         --club: #3b7bff;
         --club-voile: rgba(59, 123, 255, 0.16);
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
@@ -130,8 +134,8 @@
       #adversaire { font-size: 12px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--attenue); }
       #adversaire[hidden] { display: none; }
       .chiffres { margin-left: auto; display: flex; align-items: baseline; gap: 8px; font-size: 34px; font-weight: 700; line-height: 1; flex-shrink: 0; }
-      .chiffres .tiret { font-size: 20px; color: rgba(242, 244, 247, 0.4); }
-      #encaisses { color: rgba(242, 244, 247, 0.7); }
+      .chiffres .tiret { font-size: 20px; color: rgba(var(--encre), 0.4); }
+      #encaisses { color: rgba(var(--encre), 0.7); }
 
       .colonnes, .ligne { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
       .c-poste { width: 40px; flex-shrink: 0; text-align: center; }
@@ -149,8 +153,8 @@
         letter-spacing: 0.08em;
         line-height: 1;
         padding: 4px 0;
-        color: rgba(242, 244, 247, 0.85);
-        border: 1px solid rgba(242, 244, 247, 0.25);
+        color: rgba(var(--encre), 0.85);
+        border: 1px solid rgba(var(--encre), 0.25);
       }
       .c-nom { display: flex; flex-direction: column; gap: 5px; }
       .nom-ligne { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -162,7 +166,7 @@
       .nombre.zero { color: var(--pale); }
       .note { box-sizing: border-box; font-size: 15px; font-weight: 700; line-height: 1; padding: 5px 0; }
       .note.vert { color: #062814; background: var(--victoire); }
-      .note.neutre { color: var(--texte); background: rgba(242, 244, 247, 0.12); }
+      .note.neutre { color: var(--texte); background: rgba(var(--encre), 0.12); }
       .note.ambre { color: #2a1e04; background: var(--ambre); }
       .note.rouge { color: #2a0509; background: var(--defaite); }
 
@@ -173,18 +177,18 @@
       #sans-joueur { font-size: 11px; line-height: 1; color: var(--attenue); padding: 0 4px; }
       #sans-joueur[hidden] { display: none; }
 
-      #stat { display: flex; flex-direction: column; gap: 9px; padding: 12px 14px; background: rgba(242, 244, 247, 0.05); }
+      #stat { display: flex; flex-direction: column; gap: 9px; padding: 12px 14px; background: rgba(var(--encre), 0.05); }
       #stat[hidden] { display: none; }
       .stat-haut { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
       #stat-valeur { font-size: 12px; font-weight: 700; line-height: 1; }
       #stat-texte { font-size: 15px; font-weight: 600; line-height: 1.15; }
-      .barre { height: 5px; background: rgba(242, 244, 247, 0.12); }
+      .barre { height: 5px; background: rgba(var(--encre), 0.12); }
       .barre[hidden] { display: none; }
       #stat-barre { height: 5px; width: 0; background: var(--club); }
     </style>
   </head>
   <body>
-    <div id="cadre">
+    <div id="cadre" class="sk-silhouette">
       <div id="carte">
         <div class="entete">
           <span id="resultat"></span>

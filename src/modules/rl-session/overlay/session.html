@@ -14,20 +14,24 @@
         overflow: hidden;
       }
 
+      /* Thème d'overlay (src/commun/themes) : chaque valeur retombe sur
+         l'habillage d'origine quand le thème n'en donne pas. Victoire et
+         défaite gardent leur sens ; seul un thème clair les assombrit. */
       :root {
-        --victoire: #3ddc84;
-        --defaite: #ff4d5e;
-        --or: #ffd24a;
-        --gris: #a8a8bd;
+        --victoire: var(--sk-victoire, #3ddc84);
+        --defaite: var(--sk-defaite, #ff4d5e);
+        --or: var(--sk-or, #ffd24a);
+        --gris: var(--sk-attenue, #a8a8bd);
+        --encre: var(--sk-encre, 255, 255, 255);
         /* Bahnschrift est livrée avec Windows 10 et 11 : même famille que le
            scoreboard des prédictions, sans police à télécharger. */
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
         display: flex;
         font-family: var(--typo);
-        color: #fff;
+        color: rgb(var(--encre));
       }
       body[data-coin="top-left"] { align-items: flex-start; justify-content: flex-start; }
       body[data-coin="top-center"] { align-items: flex-start; justify-content: center; }
@@ -46,8 +50,8 @@
            meme distance du bord (17 px), d'ou le haut a 13 et le bas a 12. */
         padding: 13px 18px 12px;
         border-radius: 18px;
-        background: rgba(14, 16, 24, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.09);
+        background: rgba(var(--sk-fond-rvb, 14, 16, 24), var(--sk-fond-alpha, 0.9));
+        border: 1px solid rgba(var(--encre), 0.09);
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
         opacity: 0;
         transform: translateY(-8px);
@@ -63,7 +67,7 @@
       .paire.defaites { color: var(--defaite); }
       .gros { font-size: 46px; font-weight: 700; line-height: 1; }
       .lettre { font-size: 20px; font-weight: 700; line-height: 1; opacity: 0.75; }
-      .tiret { font-size: 26px; color: rgba(255, 255, 255, 0.4); }
+      .tiret { font-size: 26px; color: rgba(var(--encre), 0.4); }
 
       /* Le chiffre qui vient de bouger saute : on voit tout de suite ce qui a changé. */
       .saut { animation: saut 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
@@ -86,7 +90,7 @@
     </style>
   </head>
   <body data-coin="top-left">
-    <div id="carte">
+    <div id="carte" class="sk-panneau">
       <div class="score nb">
         <span class="paire victoires"><span class="gros" id="victoires">0</span><span class="lettre">W</span></span>
         <span class="tiret">–</span>

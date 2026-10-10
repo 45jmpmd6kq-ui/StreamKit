@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <title>StreamKit — annonce de clip</title>
     <style>
+      /* Thème d'overlay (src/commun/themes) : chaque valeur retombe sur
+         l'habillage d'origine quand le thème n'en donne pas. --accent, posé
+         par le script, est la couleur réglée dans le module. */
+      :root {
+        --a: var(--sk-accent2, var(--accent, #9146ff));
+        --encre: var(--sk-encre, 255, 255, 255);
+      }
+
       /* Fond transparent obligatoire : OBS incruste la page telle quelle. */
       html,
       body {
@@ -12,7 +20,7 @@
         height: 100%;
         background: transparent;
         overflow: hidden;
-        font-family: "Segoe UI", Inter, system-ui, sans-serif;
+        font-family: var(--sk-typo, "Segoe UI", Inter, system-ui, sans-serif);
       }
 
       body {
@@ -31,10 +39,10 @@
         max-width: 560px;
         padding: 14px 20px 14px 16px;
         border-radius: 14px;
-        background: rgba(16, 16, 20, 0.92);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-left: 5px solid var(--accent, #9146ff);
-        color: #fff;
+        background: rgba(var(--sk-fond-rvb, 16, 16, 20), var(--sk-fond-alpha, 0.92));
+        border: 1px solid rgba(var(--encre), 0.1);
+        border-left: 5px solid var(--a);
+        color: rgb(var(--encre));
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
         /* Au repos l'overlay est totalement invisible : pas de cadre vide à l'écran. */
         opacity: 0;
@@ -48,8 +56,8 @@
 
       .ico { font-size: 26px; line-height: 1; }
       .lignes { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-      .haut { font-size: 13px; color: #b9b9c6; letter-spacing: 0.3px; }
-      .haut b { color: var(--accent, #9146ff); font-weight: 700; }
+      .haut { font-size: 13px; color: var(--sk-attenue, #b9b9c6); letter-spacing: 0.3px; }
+      .haut b { color: var(--a); font-weight: 700; }
       .titre {
         font-size: 18px;
         font-weight: 700;
@@ -58,15 +66,15 @@
         text-overflow: ellipsis;
         max-width: 460px;
       }
-      .lien { font-size: 14px; color: var(--accent, #9146ff); font-weight: 600; }
+      .lien { font-size: 14px; color: var(--a); font-weight: 600; }
     </style>
   </head>
   <body data-coin="top-left">
-    <div id="carte">
+    <div id="carte" class="sk-panneau">
       <div class="ico">✂️</div>
       <div class="lignes">
         <div class="haut" id="haut"></div>
-        <div class="titre" id="titre"></div>
+        <div class="titre sk-titre" id="titre"></div>
         <div class="lien" id="lien"></div>
       </div>
     </div>

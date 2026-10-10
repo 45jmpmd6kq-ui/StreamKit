@@ -312,6 +312,30 @@ plus :
 { chemin: 'session', nom: 'Ancienne source unique', fichier: 'session.html', masque: true }
 ```
 
+### Le thème d'overlay
+
+Le streamer choisit un thème dans **Personnalisation** ; StreamKit le pose sur
+**chaque** overlay (une feuille `/commun/themes/<id>.css` après ton `<style>`). Ton
+overlay n'a rien à charger, mais il doit lire les jetons du thème, **toujours avec
+ta valeur d'origine en repli** — c'est ce qui garde le thème « Standard esport »
+identique à ton dessin :
+
+```css
+:root {
+  --encre: var(--sk-encre, 242, 244, 247);
+  --fond: rgba(var(--sk-fond-rvb, 8, 13, 22), var(--sk-fond-alpha, 0.92));
+  --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
+}
+```
+
+Puis pose les classes communes : `sk-panneau` sur tes cadres, `sk-titre` sur tes
+gros titres, `sk-remplissage` sur une barre de progression, `sk-silhouette` sur
+l'enveloppe d'un dessin découpé en `clip-path`. Pas de `#fff` ni de
+`rgba(255, 255, 255, …)` en dur pour un texte ou un filet : sous un thème clair, il
+disparaîtrait. Les couleurs qui ont un sens (victoire, défaite, rang, équipe)
+restent les tiennes. Contrat complet : `src/commun/themes/LISEZ-MOI.md` ; un test
+refuse un `var(--sk-…)` sans repli.
+
 ## Les actions, et lesquelles deviennent des boutons
 
 Une action est une fonction appelable en `POST /api/modules/<id>/action/<nom>`.

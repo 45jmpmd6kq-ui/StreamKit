@@ -14,19 +14,23 @@
         overflow: hidden;
       }
 
+      /* Thème d'overlay (src/commun/themes) : chaque valeur retombe sur
+         l'habillage d'origine quand le thème n'en donne pas. Les formes
+         biseautées restent : le thème colore, et habille la silhouette. */
       :root {
-        --twitch: #9146ff;
-        --violet: #c3a6ff;
-        --or: #ffd24a;
-        --fond: rgba(14, 14, 20, 0.94);
+        --twitch: var(--sk-accent, #9146ff);
+        --violet: var(--sk-accent2, #c3a6ff);
+        --or: var(--sk-or, #ffd24a);
+        --fond: rgba(var(--sk-fond-rvb, 14, 14, 20), var(--sk-fond-alpha, 0.94));
+        --encre: var(--sk-encre, 255, 255, 255);
         /* Même famille que le scoreboard des prédictions : Bahnschrift, livrée avec Windows. */
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
         display: flex;
         font-family: var(--typo);
-        color: #fff;
+        color: rgb(var(--encre));
       }
       body[data-coin="top-left"] { align-items: flex-start; justify-content: flex-start; }
       body[data-coin="top-center"] { align-items: flex-start; justify-content: center; }
@@ -102,7 +106,7 @@
         font-weight: 700;
         color: var(--or);
       }
-      #pub[data-phase="pendant"] .chrono { color: #fff; }
+      #pub[data-phase="pendant"] .chrono { color: rgb(var(--encre)); }
       #pub[data-phase="fin"] .chrono { display: none; }
       #pub[data-phase="fin"] .etiquette { color: var(--or); }
       .urgent { animation: pouls 1s ease-in-out infinite; }
@@ -126,12 +130,12 @@
     </style>
   </head>
   <body data-coin="bottom-left">
-    <div id="pub" data-phase="">
+    <div id="pub" class="sk-silhouette" data-phase="">
       <div class="corps">
         <div class="ico" id="ico" aria-hidden="true">📺</div>
         <div class="txt">
           <div class="etiquette" id="etiquette">Pause pub dans</div>
-          <div class="chrono nb" id="chrono">0:00</div>
+          <div class="chrono nb sk-titre" id="chrono">0:00</div>
           <div class="phrase" id="phrase"></div>
         </div>
       </div>

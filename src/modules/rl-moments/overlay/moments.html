@@ -18,23 +18,27 @@
         overflow: hidden;
       }
 
+      /* Theme d'overlay (src/commun/themes) : chaque valeur retombe sur
+         l'habillage d'origine quand le theme n'en donne pas. Les couleurs de
+         temperature (froid, tiede, chaud, braise) restent : c'est le sujet. */
       :root {
-        --fond: rgba(8, 12, 20, 0.93);
+        --encre: var(--sk-encre, 255, 255, 255);
+        --fond: rgba(var(--sk-fond-rvb, 8, 12, 20), var(--sk-fond-alpha, 0.93));
         --froid: #4da3ff;
         --tiede: #ffb347;
         --chaud: #ff5a3c;
         --braise: #ff7a3c;
         --rouge: #ff4a3d;
-        --creme: #fff3e6;
-        --peche: #ffe3d1;
+        --creme: rgb(var(--sk-encre, 255, 243, 230));
+        --peche: var(--sk-attenue, #ffe3d1);
         /* Bahnschrift est livree avec Windows 10 et 11 : meme famille que les
            autres overlays StreamKit, sans police a telecharger. */
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
         font-family: var(--typo);
-        color: #fff;
+        color: rgb(var(--encre));
       }
 
       /* --- Annonces (3,8 s) ------------------------------------------------------ */
@@ -121,7 +125,7 @@
         width: 27px;
         height: 123px;
         box-sizing: border-box;
-        border: 4px solid rgba(255, 255, 255, 0.85);
+        border: 4px solid rgba(var(--encre), 0.85);
         border-bottom: none;
         border-radius: 14px 14px 0 0;
         overflow: hidden;
@@ -143,7 +147,7 @@
         height: 54px;
         box-sizing: border-box;
         border-radius: 50%;
-        border: 4px solid rgba(255, 255, 255, 0.85);
+        border: 4px solid rgba(var(--encre), 0.85);
         background: var(--froid);
       }
       .joue .mercure { animation: mercure 3.8s ease-in-out both; }
@@ -327,7 +331,7 @@
         width: 10px;
         height: 23px;
         box-sizing: border-box;
-        border: 3px solid rgba(255, 255, 255, 0.85);
+        border: 3px solid rgba(var(--encre), 0.85);
         border-bottom: none;
         border-radius: 5px 5px 0 0;
         overflow: hidden;
@@ -341,7 +345,7 @@
         height: 18px;
         box-sizing: border-box;
         border-radius: 50%;
-        border: 3px solid rgba(255, 255, 255, 0.85);
+        border: 3px solid rgba(var(--encre), 0.85);
         background: var(--chaud);
       }
       .point {
@@ -413,7 +417,7 @@
     <div id="vignette"><div></div></div>
 
     <div id="annonces">
-      <div class="annonce chauffe" id="annonce-chauffe">
+      <div class="annonce chauffe sk-silhouette" id="annonce-chauffe">
         <div class="filet haut"></div>
         <div class="corps">
           <div class="thermo">
@@ -436,7 +440,7 @@
         <div class="filet bas"></div>
       </div>
 
-      <div class="annonce overtime" id="annonce-overtime">
+      <div class="annonce overtime sk-silhouette" id="annonce-overtime">
         <div class="secousse">
           <div class="filet haut"></div>
           <div class="corps">

@@ -13,14 +13,18 @@
    distinguable du rouge en deutéranopie.
    ========================================================================== */
 
+/* Thème d'overlay (src/commun/themes) : chaque valeur retombe sur la charte
+   Valorant quand le thème n'en donne pas. Le rouge Valorant reste (liseré,
+   défaite, progression) : c'est la signature du jeu. */
 :root {
-  --bg:        rgba(15, 25, 35, .85);
+  --encre:     var(--sk-encre, 236, 232, 225);
+  --bg:        rgba(var(--sk-fond-rvb, 15, 25, 35), var(--sk-fond-alpha, .85));
   --bg-solid:  #0F1923;
   --red:       #FF4655;
-  --green:     #7BC96F;
-  --text:      #ECE8E1;
-  --muted:     rgba(236, 232, 225, .52);
-  --line:      rgba(236, 232, 225, .14);
+  --green:     var(--sk-victoire, #7BC96F);
+  --text:      rgb(var(--encre));
+  --muted:     var(--sk-attenue, rgba(236, 232, 225, .52));
+  --line:      rgba(var(--encre), .14);
   --bar-h:     70px;
 }
 
@@ -34,7 +38,7 @@ html, body {
 }
 
 body {
-  font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: var(--sk-typo, "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif);
   font-variant-numeric: tabular-nums;
   color: var(--text);
   display: flex;
@@ -78,7 +82,7 @@ body {
   position: absolute;
   inset: 0 0 auto 0;
   height: 1px;
-  background: linear-gradient(90deg, rgba(236, 232, 225, .28), rgba(236, 232, 225, 0) 70%);
+  background: linear-gradient(90deg, rgba(var(--encre), .28), rgba(var(--encre), 0) 70%);
 }
 
 /* -- segments ------------------------------------------------------------- */
@@ -212,7 +216,7 @@ body {
   position: absolute;
   left: 0; right: 0; bottom: 0;
   height: 3px;
-  background: rgba(236, 232, 225, .10);
+  background: rgba(var(--encre), .10);
 }
 
 .progress-fill {
@@ -255,7 +259,7 @@ body {
 }
 </style>
 </head>
-<body>
+<body class="sk-silhouette">
 
 <div class="bar" id="bar" data-status="loading">
 

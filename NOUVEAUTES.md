@@ -11,6 +11,21 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 1.1.0
+
+### Nouveautés
+
+- **Personnalise le style de tes overlays.** Une nouvelle page
+  **Personnalisation** propose cinq thèmes : Standard esport (le style
+  d'origine), Esport, Néon, Minimal clair et Rétro arcade. Un clic, et tous tes
+  overlays changent d'un coup, tout de suite dans OBS.
+- Chaque thème a son aperçu dans la page, pour voir le rendu avant de choisir.
+- Une source peut garder son propre thème : ajoute `?theme=neon` (ou `esport`,
+  `minimal`, `arcade`) à la fin de son adresse.
+- Après cette mise à jour, recharge une fois tes sources StreamKit dans OBS
+  (clic droit ▸ Actualiser) : ensuite, les changements de thème arrivent tout
+  seuls.
+
 ## 1.0.2
 
 ### Corrections

@@ -52,6 +52,9 @@ const CONFIG_DEFAUT = {
   // défaut, coupées d'un clic dans les réglages. installId est tiré au hasard
   // au premier envoi.
   telemetrie: { actif: true, installId: '' },
+  // Theme d'overlay choisi dans « Personnalisation » (core/themes.js).
+  // « standard » : le style d'origine de chaque overlay.
+  apparence: { theme: 'standard' },
   modules: {}, // { <id>: { actif, schemaVersion, reglages } }
 };
 

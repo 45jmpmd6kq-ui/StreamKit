@@ -14,15 +14,19 @@
         overflow: hidden;
       }
 
+      /* Thème d'overlay (src/commun/themes) : chaque valeur retombe sur
+         l'habillage d'origine quand le thème n'en donne pas. Les couleurs des
+         choix restent : elles servent à les distinguer d'un coup d'œil. */
       :root {
-        --fond: rgba(14, 14, 20, 0.94);
-        --violet: #c3a6ff;
-        --or: #ffd24a;
+        --fond: rgba(var(--sk-fond-rvb, 14, 14, 20), var(--sk-fond-alpha, 0.94));
+        --encre: var(--sk-encre, 255, 255, 255);
+        --violet: var(--sk-accent2, #c3a6ff);
+        --or: var(--sk-or, #ffd24a);
         /* Même famille que le scoreboard des prédictions : Bahnschrift, livrée avec Windows. */
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
-      body { display: flex; font-family: var(--typo); color: #fff; }
+      body { display: flex; font-family: var(--typo); color: rgb(var(--encre)); }
       body[data-coin="top-left"] { align-items: flex-start; justify-content: flex-start; }
       body[data-coin="top-center"] { align-items: flex-start; justify-content: center; }
       body[data-coin="top-right"] { align-items: flex-start; justify-content: flex-end; }
@@ -106,6 +110,8 @@
         font-weight: 700;
         background: linear-gradient(100deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.1)), var(--c);
         clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+        /* Blanc sur la couleur du choix, même sous un thème clair. */
+        color: #fff;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
       }
       .rang .piste {
@@ -139,7 +145,7 @@
         letter-spacing: 0.6px;
         text-transform: uppercase;
       }
-      .rang .det { font-size: 12px; color: #d4d4e4; }
+      .rang .det { font-size: 12px; color: var(--sk-attenue, #d4d4e4); }
       .tag {
         display: none;
         margin-right: 8px;
@@ -177,21 +183,21 @@
         align-items: center;
         gap: 14px;
         font-size: 13px;
-        color: #c9c9dd;
+        color: var(--sk-attenue, #c9c9dd);
         background: var(--fond);
         clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 16px 100%);
       }
-      .pied b { color: #fff; }
+      .pied b { color: rgb(var(--encre)); }
       .sep { width: 2px; height: 12px; background: var(--violet); opacity: 0.7; transform: skewX(-20deg); }
       .chrono { font-weight: 700; color: var(--or); }
       .chrono.urgent { color: #ff5d5d; }
     </style>
   </head>
   <body data-coin="top-right">
-    <div id="sb" data-statut="actif">
+    <div id="sb" class="sk-silhouette" data-statut="actif">
       <div class="tete">
         <span class="etiquette" id="etiquette">Sondage en direct</span>
-        <span class="titre"><span class="ico" aria-hidden="true">🗳️</span><span id="titre"></span></span>
+        <span class="titre sk-titre"><span class="ico" aria-hidden="true">🗳️</span><span id="titre"></span></span>
       </div>
       <div class="liste" id="liste"></div>
       <div class="pied nb">

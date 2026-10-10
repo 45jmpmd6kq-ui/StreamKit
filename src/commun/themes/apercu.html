@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — aperçu de thème</title>
+    <!--
+      Apercu d'un theme d'overlay, servi par /apercu-theme/<id> et affiche en
+      vignette dans la page Personnalisation du dashboard. Le serveur y pose le
+      theme comme sur un vrai overlay (voir poserTheme) : cette page lit les
+      memes jetons --sk-* et porte les memes classes communes. Les valeurs de
+      repli sont celles des overlays StreamKit d'origine -- c'est donc aussi
+      l'apercu du theme « Standard esport ».
+
+      Concue pour 960 x 540 : le dashboard la reduit a la taille de la vignette.
+    -->
+    <style>
+      :root {
+        --fond: rgba(var(--sk-fond-rvb, 8, 13, 22), var(--sk-fond-alpha, 0.92));
+        --texte: rgb(var(--sk-encre, 242, 244, 247));
+        --attenue: var(--sk-attenue, rgba(242, 244, 247, 0.62));
+        --filet: rgba(var(--sk-encre, 242, 244, 247), 0.12);
+        --voile: rgba(var(--sk-encre, 242, 244, 247), 0.14);
+        --accent: var(--sk-accent, #1db954);
+        --accent2: var(--sk-accent2, #9146ff);
+        --sur-accent2: var(--sk-sur-accent2, #fff);
+        --or: var(--sk-or, #ffd24a);
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
+        --typo-titre: var(--sk-typo-titre, var(--typo));
+        /* Sens fixe : ne suivent pas le theme. */
+        --victoire: #3ddc84;
+        --defaite: #ff4d5e;
+        --rang: #2fc79a;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { width: 960px; height: 540px; overflow: hidden; }
+      body {
+        position: relative;
+        font-family: var(--typo);
+        color: var(--texte);
+        /* Fausse image de jeu : des masses claires et sombres, pour juger la
+           lisibilite des panneaux par-dessus. */
+        background:
+          radial-gradient(60% 70% at 72% 40%, rgba(90, 160, 120, 0.55), transparent 60%),
+          radial-gradient(40% 50% at 25% 70%, rgba(170, 120, 70, 0.45), transparent 65%),
+          radial-gradient(30% 35% at 50% 20%, rgba(120, 150, 210, 0.4), transparent 70%),
+          linear-gradient(160deg, #2b3a35 0%, #3b4a3f 40%, #4a4433 70%, #2a2f2c 100%);
+      }
+
+      .panneau {
+        position: absolute;
+        background: var(--fond);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      }
+      .lab { font-size: 13px; color: var(--attenue); text-transform: uppercase; letter-spacing: 0.12em; }
+
+      /* Bandeau de session */
+      .bandeau { top: 24px; left: 50%; transform: translateX(-50%); display: flex; }
+      .seg { padding: 12px 18px; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+      .seg + .seg { border-left: 1px solid var(--filet); }
+      .val { font-size: 24px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+      .seg-rang { flex-direction: row; align-items: center; gap: 16px; }
+      .embleme {
+        width: 50px; height: 50px; border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #8ff0d0, var(--rang) 55%, #0d6b52);
+        display: grid; place-items: center; font: 800 20px/1 Bahnschrift, sans-serif; color: #063a2c;
+      }
+      .positif { color: var(--victoire); }
+      .pastilles { display: flex; gap: 5px; margin-top: 4px; }
+      .pastilles span { width: 13px; height: 13px; border-radius: 3px; background: var(--victoire); }
+      .pastilles span.d { background: var(--defaite); }
+      .flamme { color: var(--or); }
+
+      /* Morceau en cours */
+      .musique { left: 24px; bottom: 28px; width: 440px; padding: 16px; display: grid; grid-template-columns: 92px 1fr; gap: 16px; overflow: hidden; }
+      .pochette { width: 92px; height: 92px; border-radius: 10px; background: linear-gradient(135deg, #ff3d6e, #7a2bd9 60%, #1b1b3a); }
+      .entete-m { display: flex; align-items: center; gap: 8px; }
+      .eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 13px; }
+      .eq i { width: 3px; background: var(--accent); animation: eq 0.9s ease-in-out infinite; }
+      .eq i:nth-child(2) { animation-delay: -0.3s; background: var(--accent2); }
+      .eq i:nth-child(3) { animation-delay: -0.6s; }
+      @keyframes eq { 0%, 100% { height: 3px; } 50% { height: 13px; } }
+      .titre-m { font-family: var(--typo-titre); font-size: 25px; font-weight: 700; line-height: 1.2; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .artiste { font-size: 18px; color: var(--attenue); }
+      .prog { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--attenue); font-variant-numeric: tabular-nums; }
+      .barre { flex: 1; height: 5px; background: var(--voile); border-radius: 3px; overflow: hidden; }
+      .barre i { display: block; height: 100%; width: 52%; background: var(--accent); }
+      .demande { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 16px; color: var(--attenue); border-top: 1px solid var(--filet); padding-top: 10px; }
+      .demande b { color: var(--accent2); font-weight: 600; }
+
+      /* Moment fort */
+      .moment { right: 28px; top: 190px; width: 340px; padding: 22px 24px; text-align: center; }
+      .gros { font-family: var(--typo-titre); font-size: 46px; font-weight: 800; line-height: 1.1; margin: 8px 0 6px; color: var(--or); }
+      .sous { font-size: 18px; }
+      .sous span { color: var(--attenue); }
+      .traits { display: flex; justify-content: center; gap: 6px; margin-top: 14px; }
+      .traits i { width: 30px; height: 5px; border-radius: 3px; background: var(--or); }
+      .traits i.off { background: var(--voile); }
+    </style>
+  </head>
+  <body>
+    <div class="panneau sk-panneau bandeau">
+      <div class="seg seg-rang">
+        <div class="embleme">E</div>
+        <div><div class="lab">Rang</div><div class="val">Émeraude II · 47 LP</div></div>
+      </div>
+      <div class="seg"><div class="lab">Session</div><div class="val positif">+38 LP</div></div>
+      <div class="seg">
+        <div class="lab">Bilan</div>
+        <div class="val">5V – 2D</div>
+        <div class="pastilles"><span></span><span class="d"></span><span></span><span></span><span class="d"></span><span></span><span></span></div>
+      </div>
+      <div class="seg"><div class="lab">Série</div><div class="val"><span class="flamme">🔥</span> 3 victoires</div></div>
+    </div>
+
+    <div class="panneau sk-panneau musique">
+      <div class="pochette"></div>
+      <div style="min-width: 0">
+        <div class="lab entete-m"><span class="eq"><i></i><i></i><i></i></span> En cours</div>
+        <div class="titre-m sk-titre">Blinding Lights</div>
+        <div class="artiste">The Weeknd</div>
+      </div>
+      <div class="prog"><span>1:42</span><span class="barre"><i class="sk-remplissage"></i></span><span>3:20</span></div>
+      <div class="demande"><span>Demandé par <b>@kyra_tv</b></span><span>2 à venir</span></div>
+    </div>
+
+    <div class="panneau sk-panneau moment">
+      <div class="lab">Moment fort</div>
+      <div class="gros sk-titre">Triple kill</div>
+      <div class="sous">Ahri <span>· 24:13</span></div>
+      <div class="traits"><i></i><i></i><i></i><i class="off"></i><i class="off"></i></div>
+    </div>
+  </body>
+</html>

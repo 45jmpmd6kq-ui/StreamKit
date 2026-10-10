@@ -1,0 +1,55 @@
+/* Thème « Minimal clair » : cartes blanches givrées.
+ * Ombre douce, texte encre, un seul accent bleu. Les couleurs à sens fixe
+ * (victoire, défaite...) restent celles des overlays. Contrat des jetons :
+ * LISEZ-MOI.md. */
+
+@font-face {
+  font-family: "SK Inter";
+  src: url(/commun/themes/polices/inter.woff2) format("woff2");
+  font-weight: 400 800;
+  font-display: block;
+}
+
+:root {
+  --sk-fond-rvb: 255, 255, 255;
+  --sk-fond-alpha: 0.88;
+  --sk-encre: 20, 22, 28;
+  --sk-attenue: #5f6675;
+  --sk-accent: #3b5bdb;
+  --sk-accent-rvb: 59, 91, 219;
+  --sk-accent2: #3b5bdb;
+  --sk-accent2-rvb: 59, 91, 219;
+  --sk-sur-accent2: #ffffff;
+  --sk-or: #b86e00;
+  /* Victoire et défaite gardent leur sens, en plus foncé : le vert et le
+     rouge des overlays sombres sont trop pâles sur du blanc. */
+  --sk-victoire: #12a150;
+  --sk-defaite: #e0304e;
+  --sk-typo: "SK Inter", "Segoe UI", system-ui, sans-serif;
+  --sk-typo-titre: "SK Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+.sk-panneau {
+  border-radius: 14px !important;
+  backdrop-filter: blur(12px) saturate(1.2);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    0 10px 30px rgba(0, 0, 0, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.08) !important;
+  /* Les ombres portées des overlays sombres font des halos sales sur du blanc. */
+  text-shadow: none !important;
+}
+
+.sk-titre {
+  font-family: var(--sk-typo-titre) !important;
+  letter-spacing: -0.01em !important;
+  text-shadow: none !important;
+}
+
+.sk-remplissage {
+  background: #3b5bdb !important;
+}
+
+.sk-silhouette {
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.22)) !important;
+}

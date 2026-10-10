@@ -1966,3 +1966,84 @@ kbd {
   user-select: all;
   word-break: break-all;
 }
+
+/* ---------- Personnalisation : thèmes d'overlay ---------- */
+.themes-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+.theme-carte {
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.theme-carte.actif {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+/* Vignette 16:9 : l'apercu fait 960 x 540, reduit par app.js (ajusterApercus). */
+.theme-apercu {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #1e2622;
+  border-bottom: 1px solid var(--bordure);
+}
+.theme-apercu iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 960px;
+  height: 540px;
+  border: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.theme-infos {
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+.theme-nom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.theme-nom h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.theme-badge {
+  display: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent-doux);
+  color: var(--accent);
+}
+.theme-carte.actif .theme-badge {
+  display: inline-block;
+}
+.theme-infos p {
+  margin: 0;
+  color: var(--texte-doux);
+  font-size: 0.88rem;
+  flex: 1;
+}
+.theme-infos .btn {
+  align-self: flex-start;
+}
+.themes-note {
+  color: var(--texte-faible);
+  font-size: 0.85rem;
+  margin: 1.25rem 0 0;
+  max-width: 760px;
+}

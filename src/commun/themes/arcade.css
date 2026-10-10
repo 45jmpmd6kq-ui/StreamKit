@@ -1,0 +1,85 @@
+/* Thème « Rétro arcade » : borne 8 bits.
+ * Cadres pixel blanc sur noir, VT323 pour le texte, Press Start 2P pour les
+ * gros titres, barres en segments. Contrat des jetons : LISEZ-MOI.md.
+ *
+ * Press Start 2P est très large (chaque lettre fait 1 em de côté) et n'a pas
+ * les capitales accentuées : elle ne sert qu'aux gros titres, et seulement là
+ * où font-size-adjust la ramène à la taille des autres polices (OBS 31 et
+ * plus). Ailleurs, les titres restent en VT323. */
+
+@font-face {
+  font-family: "SK VT323";
+  src: url(/commun/themes/polices/vt323.woff2) format("woff2");
+  font-display: block;
+}
+@font-face {
+  font-family: "SK Press Start";
+  src: url(/commun/themes/polices/press-start-2p.woff2) format("woff2");
+  font-display: block;
+  unicode-range: U+0000-00BF;
+}
+/* Press Start 2P n'a pas les lettres accentuées (É, À, Ç...) : on les prend
+   dans VT323, agrandie pour tenir la hauteur des capitales pixel. */
+@font-face {
+  font-family: "SK Press Start";
+  src: url(/commun/themes/polices/vt323.woff2) format("woff2");
+  font-display: block;
+  unicode-range: U+00C0-024F;
+  size-adjust: 175%;
+}
+
+:root {
+  --sk-fond-rvb: 11, 11, 18;
+  --sk-fond-alpha: 0.96;
+  --sk-encre: 244, 244, 244;
+  --sk-attenue: #a0a6ba;
+  --sk-accent: #4dff6a;
+  --sk-accent-rvb: 77, 255, 106;
+  --sk-accent2: #ffd400;
+  --sk-accent2-rvb: 255, 212, 0;
+  --sk-sur-accent2: #0b0b12;
+  --sk-or: #ffd400;
+  --sk-typo: "SK VT323", Consolas, monospace;
+  --sk-typo-titre: "SK VT323", Consolas, monospace;
+}
+
+/* VT323 a un petit œil : à taille égale elle paraît une taille en dessous. */
+@supports (font-size-adjust: 0.5) {
+  body {
+    font-size-adjust: 0.55;
+  }
+}
+
+.sk-panneau {
+  border-radius: 0 !important;
+  box-shadow:
+    0 0 0 3px #f4f4f4,
+    0 0 0 6px #0b0b12,
+    6px 6px 0 6px rgba(0, 0, 0, 0.55) !important;
+}
+
+.sk-titre {
+  font-family: var(--sk-typo-titre) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.02em !important;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7) !important;
+}
+@supports (font-size-adjust: 0.5) {
+  .sk-titre {
+    font-family: "SK Press Start", "SK VT323", monospace !important;
+    font-size-adjust: 0.42;
+    letter-spacing: 0 !important;
+    line-height: 1.35 !important;
+  }
+}
+
+.sk-remplissage {
+  background: repeating-linear-gradient(90deg, #4dff6a 0 6px, transparent 6px 8px) !important;
+  border-radius: 0 !important;
+}
+
+/* Contour pixel blanc puis ombre portée dure, comme les cadres. */
+.sk-silhouette {
+  filter: drop-shadow(2px 0 0 #f4f4f4) drop-shadow(-2px 0 0 #f4f4f4) drop-shadow(0 2px 0 #f4f4f4)
+    drop-shadow(0 -2px 0 #f4f4f4) drop-shadow(5px 5px 0 rgba(0, 0, 0, 0.6)) !important;
+}

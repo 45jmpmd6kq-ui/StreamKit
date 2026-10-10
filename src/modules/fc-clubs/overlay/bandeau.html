@@ -18,20 +18,24 @@
       }
 
       :root {
-        --fond: rgba(8, 13, 22, 0.92);
-        --texte: #f2f4f7;
-        --attenue: rgba(242, 244, 247, 0.62);
-        --victoire: #3ddc84;
+        --fond: rgba(var(--sk-fond-rvb, 8, 13, 22), var(--sk-fond-alpha, 0.92));
+        /* Theme d'overlay (src/commun/themes) : chaque valeur retombe sur
+           l'habillage d'origine quand le theme n'en donne pas. La couleur du
+           club, elle, reste celle du maillot. */
+        --encre: var(--sk-encre, 242, 244, 247);
+        --texte: rgb(var(--encre));
+        --attenue: var(--sk-attenue, rgba(242, 244, 247, 0.62));
+        --victoire: var(--sk-victoire, #3ddc84);
         --nul: #a3acbd;
-        --defaite: #ff4d5e;
-        --or: #ffd24a;
+        --defaite: var(--sk-defaite, #ff4d5e);
+        --or: var(--sk-or, #ffd24a);
         /* La couleur du club : reecrite par le module (maillot ou reglage). */
         --club: #3b7bff;
         --club-trait: rgba(59, 123, 255, 0.6);
         --club-voile: rgba(59, 123, 255, 0.16);
         /* Bahnschrift est livree avec Windows 10 et 11 : meme famille que les
            autres overlays StreamKit, sans police a telecharger. */
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
@@ -135,7 +139,7 @@
     </style>
   </head>
   <body>
-    <div id="cadre">
+    <div id="cadre" class="sk-silhouette">
       <div id="bandeau">
         <div class="entete">
           <svg class="blason" viewBox="0 0 38 44" aria-hidden="true">

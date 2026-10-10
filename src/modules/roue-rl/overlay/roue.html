@@ -8,7 +8,7 @@
   html, body {
     margin: 0; padding: 0; width: 100%; height: 100%;
     background: transparent; overflow: hidden;
-    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    font-family: var(--sk-typo, 'Segoe UI', Roboto, system-ui, sans-serif);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -22,6 +22,16 @@
     --accent1-rgb: 0, 176, 255;
     --accent2-rgb: 255, 152, 0;
     --bg-rgb: 11, 18, 32;
+    /* Thème d'overlay (src/commun/themes) : chaque valeur retombe sur les
+       couleurs réglées dans le module quand le thème n'en donne pas. Un thème
+       passe devant ces couleurs. */
+    --a1: var(--sk-accent, var(--accent1));
+    --a2: var(--sk-accent2, var(--accent2));
+    --a1-rgb: var(--sk-accent-rvb, var(--accent1-rgb));
+    --a2-rgb: var(--sk-accent2-rvb, var(--accent2-rgb));
+    --fond-rgb: var(--sk-fond-rvb, var(--bg-rgb));
+    --fond-plein: rgb(var(--fond-rgb));
+    --encre: var(--sk-encre, 255, 255, 255);
     --item: 104px;      /* hauteur d'une case du rouleau */
     --width: 340px;
   }
@@ -37,10 +47,10 @@
   /* Au repos l'overlay est totalement invisible : pas de cadre vide a l'ecran. */
   #machine {
     width: var(--width);
-    background: rgba(var(--bg-rgb), .92);
-    border: 2px solid rgba(var(--accent1-rgb), .55);
+    background: rgba(var(--fond-rgb), .92);
+    border: 2px solid rgba(var(--a1-rgb), .55);
     border-radius: 18px;
-    box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .05) inset;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(var(--encre), .05) inset;
     overflow: hidden;
     opacity: 0;
     transform: translateY(18px) scale(.96);
@@ -53,18 +63,18 @@
     display: flex; align-items: center; gap: 9px;
     padding: 12px 16px;
     background: linear-gradient(90deg,
-      rgba(var(--accent1-rgb), .3),
-      rgba(var(--accent2-rgb), .22));
-    border-bottom: 1px solid rgba(255, 255, 255, .09);
+      rgba(var(--a1-rgb), .3),
+      rgba(var(--a2-rgb), .22));
+    border-bottom: 1px solid rgba(var(--encre), .09);
   }
   .head .ico { font-size: 19px; line-height: 1; }
   .head .txt {
     font-size: 13px; font-weight: 800; letter-spacing: 2.2px;
-    text-transform: uppercase; color: #fff;
+    text-transform: uppercase; color: rgb(var(--encre));
   }
   .head .who {
     margin-left: auto; font-size: 12.5px; font-weight: 700;
-    color: var(--accent2); max-width: 140px;
+    color: var(--a2); max-width: 140px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
@@ -82,7 +92,7 @@
     display: flex; align-items: center; gap: 14px;
     padding: 0 18px;
     box-sizing: border-box;
-    border-bottom: 1px solid rgba(255, 255, 255, .05);
+    border-bottom: 1px solid rgba(var(--encre), .05);
   }
   .cell img {
     width: 76px; height: 56px; object-fit: contain;
@@ -96,7 +106,7 @@
     filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .6));
   }
   .cell .name {
-    font-size: 16px; font-weight: 700; color: #EAF1FA;
+    font-size: 16px; font-weight: 700; color: rgb(var(--sk-encre, 234, 241, 250));
     line-height: 1.2;
     overflow: hidden; display: -webkit-box;
     -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -109,57 +119,57 @@
   }
   .fade.top {
     top: 0;
-    background: linear-gradient(to bottom, var(--bg) 8%, rgba(var(--bg-rgb), .3) 70%, rgba(var(--bg-rgb), 0));
+    background: linear-gradient(to bottom, var(--fond-plein) 8%, rgba(var(--fond-rgb), .3) 70%, rgba(var(--fond-rgb), 0));
   }
   .fade.bottom {
     bottom: 0;
-    background: linear-gradient(to top, var(--bg) 8%, rgba(var(--bg-rgb), .3) 70%, rgba(var(--bg-rgb), 0));
+    background: linear-gradient(to top, var(--fond-plein) 8%, rgba(var(--fond-rgb), .3) 70%, rgba(var(--fond-rgb), 0));
   }
 
   /* Curseur : encadre la case centrale. */
   .selector {
     position: absolute; z-index: 4; left: 0; right: 0;
     top: var(--item); height: var(--item);
-    border-top: 2px solid var(--accent1);
-    border-bottom: 2px solid var(--accent1);
-    box-shadow: 0 0 22px rgba(var(--accent1-rgb), .45) inset;
+    border-top: 2px solid var(--a1);
+    border-bottom: 2px solid var(--a1);
+    box-shadow: 0 0 22px rgba(var(--a1-rgb), .45) inset;
     transition: border-color .3s ease, box-shadow .3s ease;
   }
   .selector::before, .selector::after {
     content: ''; position: absolute; top: 50%; margin-top: -8px;
     border-top: 8px solid transparent; border-bottom: 8px solid transparent;
   }
-  .selector::before { left: 0;  border-left: 11px solid var(--accent1); }
-  .selector::after  { right: 0; border-right: 11px solid var(--accent1); }
+  .selector::before { left: 0;  border-left: 11px solid var(--a1); }
+  .selector::after  { right: 0; border-right: 11px solid var(--a1); }
 
   /* Etat "resultat" : le curseur passe a la couleur d'accent 2 et pulse. */
   #machine.landed .selector {
-    border-color: var(--accent2);
-    box-shadow: 0 0 34px rgba(var(--accent2-rgb), .6) inset;
+    border-color: var(--a2);
+    box-shadow: 0 0 34px rgba(var(--a2-rgb), .6) inset;
     animation: pulse 1.1s ease-in-out 2;
   }
-  #machine.landed .selector::before { border-left-color: var(--accent2); }
-  #machine.landed .selector::after  { border-right-color: var(--accent2); }
+  #machine.landed .selector::before { border-left-color: var(--a2); }
+  #machine.landed .selector::after  { border-right-color: var(--a2); }
   @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 34px rgba(var(--accent2-rgb), .6) inset; }
-    50%      { box-shadow: 0 0 60px rgba(var(--accent2-rgb), .85) inset; }
+    0%, 100% { box-shadow: 0 0 34px rgba(var(--a2-rgb), .6) inset; }
+    50%      { box-shadow: 0 0 60px rgba(var(--a2-rgb), .85) inset; }
   }
 
   .foot {
     position: relative;
     padding: 11px 16px 13px;
-    border-top: 1px solid rgba(255, 255, 255, .09);
+    border-top: 1px solid rgba(var(--encre), .09);
     background: rgba(0, 0, 0, .28);
     height: 21px;
   }
   .foot .result {
-    font-size: 17px; font-weight: 800; color: #fff;
+    font-size: 17px; font-weight: 800; color: rgb(var(--encre));
     opacity: 0; transform: translateY(6px);
     transition: opacity .3s ease .1s, transform .3s ease .1s;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   #machine.landed .foot .result { opacity: 1; transform: translateY(0); }
-  .foot .result .car { color: var(--accent2); }
+  .foot .result .car { color: var(--a2); }
 
   /* Trois points qui clignotent pendant le spin, remplaces par le resultat. */
   .foot .spinning {
@@ -169,7 +179,7 @@
   #machine.landed .foot .spinning { display: none; }
   .dot {
     width: 7px; height: 7px; border-radius: 50%;
-    background: var(--accent1); opacity: .35;
+    background: var(--a1); opacity: .35;
     animation: blink 1.05s infinite;
   }
   .dot:nth-child(2) { animation-delay: .18s; }
@@ -179,7 +189,7 @@
 </head>
 <body data-corner="bottom-right">
   <div id="stage">
-    <div id="machine">
+    <div id="machine" class="sk-panneau">
       <div class="head">
         <span class="ico">&#128663;</span>
         <span class="txt">Random Car</span>
@@ -193,7 +203,7 @@
       </div>
       <div class="foot">
         <div class="spinning"><i class="dot"></i><i class="dot"></i><i class="dot"></i></div>
-        <div class="result" id="result"></div>
+        <div class="result sk-titre" id="result"></div>
       </div>
     </div>
   </div>

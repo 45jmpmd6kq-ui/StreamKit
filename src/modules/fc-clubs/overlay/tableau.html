@@ -17,15 +17,19 @@
       }
 
       :root {
-        --fond: rgba(8, 13, 22, 0.93);
-        --texte: #f2f4f7;
-        --attenue: rgba(242, 244, 247, 0.62);
-        --victoire: #3ddc84;
+        --fond: rgba(var(--sk-fond-rvb, 8, 13, 22), var(--sk-fond-alpha, 0.93));
+        /* Theme d'overlay (src/commun/themes) : chaque valeur retombe sur
+           l'habillage d'origine quand le theme n'en donne pas. La couleur du
+           club, elle, reste celle du maillot. */
+        --encre: var(--sk-encre, 242, 244, 247);
+        --texte: rgb(var(--encre));
+        --attenue: var(--sk-attenue, rgba(242, 244, 247, 0.62));
+        --victoire: var(--sk-victoire, #3ddc84);
         --nul: #a3acbd;
-        --defaite: #ff4d5e;
-        --or: #ffd24a;
+        --defaite: var(--sk-defaite, #ff4d5e);
+        --or: var(--sk-or, #ffd24a);
         --club: #3b7bff;
-        --typo: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+        --typo: var(--sk-typo, Bahnschrift, "Segoe UI", system-ui, sans-serif);
       }
 
       body {
@@ -99,11 +103,11 @@
         flex-direction: column;
         gap: 12px;
         padding: 16px 14px;
-        background: rgba(242, 244, 247, 0.05);
+        background: rgba(var(--encre), 0.05);
         border-top: 2px solid var(--or);
         min-width: 0;
       }
-      .trophee.vide { border-top-color: rgba(242, 244, 247, 0.2); }
+      .trophee.vide { border-top-color: rgba(var(--encre), 0.2); }
       .icone {
         width: 38px;
         height: 38px;
@@ -114,7 +118,7 @@
       }
       .icone svg { width: 22px; height: 22px; stroke: var(--or); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
       .icone svg.plein { fill: var(--or); stroke: none; }
-      .trophee.vide .icone { background: rgba(242, 244, 247, 0.06); }
+      .trophee.vide .icone { background: rgba(var(--encre), 0.06); }
       .trophee.vide .icone svg { stroke: var(--attenue); }
       .trophee.vide .icone svg.plein { fill: var(--attenue); }
       .trophee .nom-trophee { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1; white-space: nowrap; color: var(--or); }
@@ -122,7 +126,7 @@
       /* Un pseudo reste tel qu'il est ecrit (pas de majuscules forcees) : c'est
          ainsi que le chat le connait. Trop long, il retrecit (voir ajuster). */
       .trophee .laureat { font-size: 26px; font-weight: 700; letter-spacing: 0.02em; height: 26px; line-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .trophee .detail { font-size: 13px; line-height: 1; color: rgba(242, 244, 247, 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .trophee .detail { font-size: 13px; line-height: 1; color: rgba(var(--encre), 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
       .matchs-bloc { display: flex; flex-direction: column; gap: 8px; }
       .matchs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
@@ -133,7 +137,7 @@
         align-items: center;
         gap: 10px;
         padding-right: 10px;
-        background: rgba(242, 244, 247, 0.05);
+        background: rgba(var(--encre), 0.05);
         min-width: 0;
       }
       .lettre { width: 26px; height: 50px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; line-height: 1; }
@@ -146,7 +150,7 @@
     </style>
   </head>
   <body>
-    <div id="cadre">
+    <div id="cadre" class="sk-silhouette">
       <div id="tableau">
         <div class="entete">
           <svg class="blason" viewBox="0 0 38 44" aria-hidden="true">

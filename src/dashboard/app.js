@@ -14,6 +14,7 @@ const CONNECTEURS = '__connecteurs__';
 const ACTIVITE = '__activite__';
 const METRIQUES = '__metriques__';
 const MODERATEUR = '__moderateur__';
+const PERSONNALISATION = '__personnalisation__';
 
 const etat = {
   modules: [],
@@ -111,7 +112,7 @@ function redessinerDetail(html, apres) {
   const memeVue = cible.dataset.vue === etat.selection;
   // Seulement pour les tableaux de bord : un formulaire de module, lui, compte
   // sur le redessin pour revenir a ce que StreamKit a retenu.
-  const tableau = [ACCUEIL, ACTIVITE, METRIQUES, MODERATEUR].includes(etat.selection);
+  const tableau = [ACCUEIL, ACTIVITE, METRIQUES, MODERATEUR, PERSONNALISATION].includes(etat.selection);
   if (tableau && memeVue && dernierDessin.vue === etat.selection && dernierDessin.html === html)
     return memeVue;
   const defilant = cible.closest('.detail');
@@ -492,6 +493,7 @@ function dessinerRail() {
   $('#entree-activite').classList.toggle('actif', etat.selection === ACTIVITE);
   $('#entree-metriques').classList.toggle('actif', etat.selection === METRIQUES);
   $('#entree-moderateur').classList.toggle('actif', etat.selection === MODERATEUR);
+  $('#entree-personnalisation').classList.toggle('actif', etat.selection === PERSONNALISATION);
   const groupes = grouperParCategorie();
 
   $('#liste-modules').innerHTML = groupes
@@ -1910,6 +1912,108 @@ async function chargerConnecteurs() {
   }
 }
 
+// --- Personnalisation : le thème des overlays --------------------------------
+//
+// Un thème habille tous les overlays d'un coup (voir src/core/themes.js). Chaque
+// carte montre une vraie scène habillée par le thème : /apercu-theme/<id>, une
+// page de 960 x 540 réduite à la taille de la vignette. Le choix s'applique sur
+// le champ, overlays ouverts dans OBS compris : pas de bouton Enregistrer.
+
+let themes = null; // { actuel, themes: [{ id, nom, description }] }
+
+async function chargerThemes() {
+  try {
+    themes = await api('/api/themes');
+  } catch {
+    themes = null;
+  }
+  if (etat.selection === PERSONNALISATION) dessinerPersonnalisation();
+}
+
+function htmlPersonnalisation() {
+  const cartes = themes.themes
+    .map((t) => {
+      const actif = t.id === themes.actuel;
+      return `
+        <div class="theme-carte ${actif ? 'actif' : ''}" data-carte-theme="${t.id}">
+          <div class="theme-apercu">
+            <iframe src="/apercu-theme/${t.id}" title="Aperçu du thème ${echapper(t.nom)}" tabindex="-1" loading="lazy"></iframe>
+          </div>
+          <div class="theme-infos">
+            <div class="theme-nom"><h3>${echapper(t.nom)}</h3><span class="theme-badge">Actif</span></div>
+            <p>${echapper(t.description)}</p>
+            <button class="btn ${actif ? '' : 'primaire'}" data-theme="${t.id}" ${actif ? 'disabled' : ''}>
+              ${actif ? '✓ Thème actif' : 'Choisir ce thème'}
+            </button>
+          </div>
+        </div>`;
+    })
+    .join('');
+  return (
+    '<div class="titre-module"><span style="font-size:1.6rem">🎨</span><h1>Personnalisation</h1></div>' +
+    '<p class="resume-accueil">Choisis le thème de tes overlays : il s’applique à <b>tous</b> les modules, ' +
+    'et change tout de suite dans OBS, sans recharger tes sources.</p>' +
+    '<div class="themes-grille">' +
+    cartes +
+    '</div>' +
+    '<p class="themes-note">Le thème change l’habillage : fond, couleurs, police, cadres. ' +
+    'La disposition de tes overlays ne bouge pas, et les couleurs qui ont un sens restent les mêmes ' +
+    '(victoire, défaite, rangs, couleur de ton club). Les couleurs réglées dans un module ' +
+    '(musique, Random Car) ne s’appliquent qu’avec <b>Standard esport</b>.</p>'
+  );
+}
+
+function dessinerPersonnalisation() {
+  $('#pied-detail').hidden = true;
+  if (!themes) {
+    redessinerDetail('<div class="vide">Lecture des thèmes…</div>');
+    return;
+  }
+  redessinerDetail(htmlPersonnalisation(), ajusterApercus);
+}
+
+// L'apercu est concu pour 960 px de large : on le reduit a la vignette.
+const observateurApercus = new ResizeObserver((entrees) => {
+  for (const e of entrees) {
+    const iframe = e.target.querySelector('iframe');
+    if (iframe) iframe.style.transform = 'scale(' + e.contentRect.width / 960 + ')';
+  }
+});
+function ajusterApercus() {
+  observateurApercus.disconnect();
+  for (const cadre of $$('.theme-apercu')) observateurApercus.observe(cadre);
+}
+
+async function choisirTheme(id, bouton) {
+  bouton.disabled = true;
+  try {
+    const r = await api('/api/themes', { method: 'POST', corps: { theme: id } });
+    themes.actuel = r.actuel;
+    // Mise a jour sur place : redessiner rechargerait les cinq apercus.
+    for (const carte of $$('[data-carte-theme]')) {
+      const actif = carte.dataset.carteTheme === themes.actuel;
+      carte.classList.toggle('actif', actif);
+      const b = carte.querySelector('[data-theme]');
+      b.disabled = actif;
+      b.classList.toggle('primaire', !actif);
+      b.textContent = actif ? '✓ Thème actif' : 'Choisir ce thème';
+    }
+    // Le prochain rafraichissement verra la meme page : pas de redessin.
+    dernierDessin = { vue: PERSONNALISATION, html: htmlPersonnalisation() };
+    const nom = themes.themes.find((t) => t.id === themes.actuel)?.nom ?? themes.actuel;
+    toast('Thème « ' + nom + ' » appliqué à tes overlays');
+  } catch (e) {
+    bouton.disabled = false;
+    toast('Thème non appliqué : ' + e.message, true);
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-theme]');
+  if (!b || etat.selection !== PERSONNALISATION) return;
+  choisirTheme(b.dataset.theme, b);
+});
+
 // --- Détail d'un module -----------------------------------------------------
 
 function dessinerDetail() {
@@ -1918,6 +2022,7 @@ function dessinerDetail() {
   if (etat.selection === ACTIVITE) return dessinerActivitePage();
   if (etat.selection === METRIQUES) return dessinerMetriques();
   if (etat.selection === MODERATEUR) return dessinerModerateur();
+  if (etat.selection === PERSONNALISATION) return dessinerPersonnalisation();
 
   const m = moduleAffiche();
 
@@ -2751,6 +2856,13 @@ $('#entree-connecteurs').addEventListener('click', () => {
   etat.selection = CONNECTEURS;
   dessinerRail();
   dessinerConnecteurs();
+});
+
+$('#entree-personnalisation').addEventListener('click', () => {
+  etat.selection = PERSONNALISATION;
+  dessinerRail();
+  dessinerPersonnalisation();
+  chargerThemes();
 });
 
 $('#entree-accueil').addEventListener('click', () => {

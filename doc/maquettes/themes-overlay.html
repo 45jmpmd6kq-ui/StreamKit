@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thèmes d'overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&family=Exo+2:ital,wght@0,500;0,700;0,800;1,800&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  /* ===== Page (planche) ===== */
+  :root {
+    --page: #0e1014; --page-texte: #e8eaef; --page-attenue: #8a90a0; --page-filet: #232733;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--page); color: var(--page-texte); font: 15px/1.5 Inter, system-ui, sans-serif; padding: 32px 16px 64px; }
+  .planche { max-width: 1120px; margin: 0 auto; }
+  header.intro h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; }
+  header.intro p { color: var(--page-attenue); max-width: 760px; margin-top: 6px; }
+  .legende { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; font-size: 13px; color: var(--page-attenue); }
+  .legende b { color: var(--page-texte); font-weight: 600; }
+  nav.sauts { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 8px; }
+  nav.sauts a { color: var(--page-texte); text-decoration: none; border: 1px solid var(--page-filet); padding: 6px 12px; border-radius: 999px; font-size: 13px; }
+  nav.sauts a:hover { border-color: #4a5266; }
+
+  section.theme { margin-top: 40px; }
+  .theme-entete { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+  .theme-entete .num { font-weight: 800; color: var(--page-attenue); font-size: 14px; }
+  .theme-entete h2 { font-size: 22px; font-weight: 800; }
+  .theme-entete p { color: var(--page-attenue); font-size: 14px; flex: 1 1 320px; }
+  .jetons { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .jeton { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--page-attenue); border: 1px solid var(--page-filet); border-radius: 6px; padding: 3px 8px 3px 4px; }
+  .jeton i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid rgba(255,255,255,.15); }
+
+  /* Fausse image de jeu derrière les overlays */
+  .scene {
+    position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 8.2; min-height: 420px;
+    background:
+      radial-gradient(60% 70% at 72% 40%, rgba(90,160,120,.55), transparent 60%),
+      radial-gradient(40% 50% at 25% 70%, rgba(170,120,70,.45), transparent 65%),
+      radial-gradient(30% 35% at 50% 20%, rgba(120,150,210,.40), transparent 70%),
+      linear-gradient(160deg, #2b3a35 0%, #3b4a3f 40%, #4a4433 70%, #2a2f2c 100%);
+  }
+  .scene::after { /* grain */
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18;
+    background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px);
+  }
+  .scene .etiquette-scene { position: absolute; left: 12px; bottom: 10px; font-size: 11px; color: rgba(255,255,255,.55); z-index: 2; font-family: Inter, sans-serif; }
+
+  .pos-bandeau { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); z-index: 3; }
+  .pos-musique { position: absolute; left: 18px; bottom: 34px; z-index: 3; }
+  .pos-moment  { position: absolute; right: 22px; top: 50%; transform: translateY(-40%); z-index: 3; }
+
+  /* ===== Couleurs à sens fixe (communes à tous les thèmes) ===== */
+  .th { --victoire: #39d98a; --defaite: #ff5470; --rang: #2fc79a; }
+
+  /* ===== Composants : UN SEUL balisage, piloté par les jetons ===== */
+  .th { font-family: var(--typo); color: var(--texte); }
+  .bloc {
+    background: var(--fond); border: var(--bordure); border-radius: var(--rayon);
+    box-shadow: var(--ombre); clip-path: var(--coupe, none);
+    backdrop-filter: var(--flou, none); -webkit-backdrop-filter: var(--flou, none);
+  }
+  .titre { font-family: var(--typo-titre); text-transform: var(--casse); letter-spacing: var(--lettres); }
+  .attenue { color: var(--attenue); }
+
+  /* Bandeau session LoL */
+  .bandeau { display: flex; align-items: stretch; }
+  .bandeau .seg { padding: 10px 18px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  .bandeau .seg + .seg { border-left: 1px solid var(--filet); }
+  .bandeau .lab { font-size: 10.5px; color: var(--attenue); text-transform: uppercase; letter-spacing: .12em; font-family: var(--typo-label, var(--typo)); }
+  .bandeau .val { font-family: var(--typo-titre); font-size: 20px; font-weight: 700; line-height: 1.1; letter-spacing: var(--lettres-chiffres, 0); white-space: nowrap; }
+  .seg-rang { flex-direction: row !important; align-items: center; gap: 12px !important; }
+  .embleme { width: 38px; height: 38px; border-radius: var(--rayon-embleme, 50%); background: radial-gradient(circle at 35% 30%, #8ff0d0, var(--rang) 55%, #0d6b52); box-shadow: 0 0 0 2px var(--filet), var(--lueur-embleme, none); display: grid; place-items: center; font: 800 15px/1 Inter, sans-serif; color: #063a2c; }
+  .positif { color: var(--victoire); } .negatif { color: var(--defaite); }
+  .pastilles { display: flex; gap: 4px; margin-top: 3px; }
+  .pastilles span { width: 10px; height: 10px; border-radius: var(--rayon-pastille, 3px); background: var(--victoire); }
+  .pastilles span.d { background: var(--defaite); }
+  .flamme { color: var(--or); }
+
+  /* Musique en cours */
+  .musique { width: 340px; padding: 12px; display: grid; grid-template-columns: 64px 1fr; gap: 12px; }
+  .pochette { width: 64px; height: 64px; border-radius: var(--rayon-pochette, 8px); background: linear-gradient(135deg, #ff3d6e, #7a2bd9 60%, #1b1b3a); box-shadow: var(--lueur-pochette, none); }
+  .musique .entete-m { font-size: 10.5px; color: var(--accent); text-transform: uppercase; letter-spacing: .14em; display: flex; align-items: center; gap: 6px; font-family: var(--typo-label, var(--typo)); }
+  .eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 10px; }
+  .eq b { width: 2px; background: var(--accent); animation: eq 1s ease-in-out infinite; }
+  .eq b:nth-child(2) { animation-delay: -.3s; } .eq b:nth-child(3) { animation-delay: -.6s; }
+  @keyframes eq { 0%,100% { height: 3px } 50% { height: 10px } }
+  .musique .t { font-family: var(--typo-titre); font-size: 17px; font-weight: 700; line-height: 1.2; margin-top: 3px; text-transform: var(--casse-musique, none); letter-spacing: var(--lettres-musique, 0); }
+  .musique .a { font-size: 13px; color: var(--attenue); }
+  .prog { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--attenue); font-variant-numeric: tabular-nums; }
+  .prog .barre { flex: 1; height: var(--barre-h, 4px); background: var(--filet); border-radius: var(--rayon-barre, 99px); overflow: hidden; }
+  .prog .barre i { display: block; height: 100%; width: 52%; background: var(--remplissage, var(--accent)); box-shadow: var(--lueur-barre, none); }
+  .demande { grid-column: 1 / -1; font-size: 12px; color: var(--attenue); border-top: 1px solid var(--filet); padding-top: 8px; display: flex; justify-content: space-between; gap: 8px; }
+  .demande b { color: var(--accent2); font-weight: 600; }
+
+  /* Moment fort LoL */
+  .moment { width: 260px; padding: 16px 18px; text-align: center; position: relative; overflow: hidden; }
+  .moment .kicker { font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--attenue); font-family: var(--typo-label, var(--typo)); }
+  .moment .gros { font-family: var(--typo-titre); font-size: 34px; font-weight: 800; line-height: 1.05; margin: 6px 0 4px; color: var(--moment-couleur, var(--or)); text-shadow: var(--lueur-texte, none); text-transform: var(--casse); letter-spacing: var(--lettres); font-style: var(--italique, normal); }
+  .moment .sous { font-size: 13px; color: var(--texte); }
+  .moment .sous span { color: var(--attenue); }
+  .moment .traits { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
+  .moment .traits i { width: 22px; height: 4px; border-radius: var(--rayon-barre, 99px); background: var(--moment-couleur, var(--or)); }
+  .moment .traits i.off { background: var(--filet); }
+
+  /* ===== THÈME 1 — Esport ===== */
+  .th-esport {
+    --fond: linear-gradient(180deg, rgba(10,18,34,.94), rgba(8,13,26,.94));
+    --texte: #eef4ff; --attenue: #8ea0c0; --accent: #22d3ee; --accent2: #22d3ee; --or: #f5c542;
+    --filet: rgba(120,160,220,.22); --bordure: 1px solid rgba(34,211,238,.35); --rayon: 0;
+    --coupe: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    --ombre: 0 8px 24px rgba(0,0,0,.45);
+    --typo: Inter, sans-serif; --typo-titre: Oxanium, sans-serif; --typo-label: Oxanium, sans-serif;
+    --casse: uppercase; --lettres: .04em; --lettres-chiffres: .02em;
+    --rayon-embleme: 6px; --rayon-pastille: 1px; --rayon-pochette: 0; --rayon-barre: 0;
+    --remplissage: linear-gradient(90deg, #22d3ee, #3b82f6);
+    --italique: normal;
+  }
+  .th-esport .bloc { position: relative; }
+  .th-esport .bloc::before { /* liseré d'accent à gauche */
+    content: ""; position: absolute; left: 0; top: 14px; bottom: 0; width: 3px; background: var(--accent);
+  }
+  .th-esport .moment::after { /* reflet qui balaye */
+    content: ""; position: absolute; top: 0; bottom: 0; width: 60px; left: -80px;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.18), transparent);
+    animation: balaye 3.2s ease-in-out infinite;
+  }
+  @keyframes balaye { 0%, 55% { left: -80px } 100% { left: 110% } }
+
+  /* ===== THÈME 2 — Néon ===== */
+  .th-neon {
+    --fond: rgba(14,6,28,.86);
+    --texte: #fbeaff; --attenue: #b49ad0; --accent: #ff3df2; --accent2: #3df5ff; --or: #3df5ff;
+    --filet: rgba(255,61,242,.25);
+    --bordure: 1.5px solid rgba(255,61,242,.75); --rayon: 16px;
+    --ombre: 0 0 14px rgba(255,61,242,.45), 0 0 36px rgba(255,61,242,.18), inset 0 0 18px rgba(255,61,242,.12);
+    --typo: "Exo 2", sans-serif; --typo-titre: "Exo 2", sans-serif;
+    --casse: uppercase; --lettres: .03em; --italique: italic;
+    --lueur-texte: 0 0 6px currentColor, 0 0 18px currentColor;
+    --lueur-barre: 0 0 8px #ff3df2; --lueur-pochette: 0 0 16px rgba(255,61,242,.6);
+    --lueur-embleme: 0 0 14px rgba(47,199,154,.7);
+    --rayon-pastille: 50%; --rayon-pochette: 12px;
+    --remplissage: linear-gradient(90deg, #ff3df2, #3df5ff);
+  }
+  .th-neon .bandeau .val { text-shadow: 0 0 8px rgba(255,255,255,.35); }
+  .th-neon .moment .gros { animation: gresille 4s linear infinite; }
+  @keyframes gresille { 0%, 92%, 100% { opacity: 1 } 93% { opacity: .35 } 94% { opacity: 1 } 96% { opacity: .55 } 97% { opacity: 1 } }
+
+  /* ===== THÈME 3 — Minimal clair ===== */
+  .th-minimal {
+    --fond: rgba(255,255,255,.86); --flou: blur(12px) saturate(1.2);
+    --texte: #14161c; --attenue: #646b7a; --accent: #3b5bdb; --accent2: #3b5bdb; --or: #c47a00;
+    --filet: rgba(20,22,28,.10); --bordure: 1px solid rgba(255,255,255,.7); --rayon: 14px;
+    --ombre: 0 10px 30px rgba(0,0,0,.22), 0 1px 2px rgba(0,0,0,.08);
+    --typo: Inter, sans-serif; --typo-titre: Inter, sans-serif;
+    --casse: none; --lettres: -.01em;
+    --rayon-embleme: 50%; --rayon-pastille: 50%; --rayon-pochette: 10px;
+    --moment-couleur: #14161c;
+    /* sens fixe conservé, teinte assombrie pour rester lisible sur fond clair */
+    --victoire: #12a150; --defaite: #e0304e;
+  }
+  .th-minimal .moment .gros { font-weight: 800; font-size: 30px; }
+  .th-minimal .moment .traits i { background: var(--accent); } .th-minimal .moment .traits i.off { background: var(--filet); }
+
+  /* ===== THÈME 4 — Rétro arcade ===== */
+  .th-arcade {
+    --fond: #0b0b12; --texte: #f4f4f4; --attenue: #9aa0b4; --accent: #ffd400; --accent2: #4dff6a; --or: #ffd400;
+    --filet: #2c2c44; --rayon: 0; --bordure: 0;
+    --ombre: 0 0 0 3px #f4f4f4, 0 0 0 6px #0b0b12, 6px 6px 0 6px rgba(0,0,0,.6);
+    --typo: VT323, monospace; --typo-titre: "Press Start 2P", monospace; --typo-label: VT323, monospace;
+    --casse: uppercase; --lettres: 0;
+    --rayon-embleme: 0; --rayon-pastille: 0; --rayon-pochette: 0; --rayon-barre: 0; --barre-h: 8px;
+    --remplissage: repeating-linear-gradient(90deg, #4dff6a 0 6px, transparent 6px 8px);
+    --moment-couleur: #ff3b3b;
+    --casse-musique: uppercase;
+  }
+  .th-arcade { font-size: 18px; }
+  .th-arcade .bandeau .lab, .th-arcade .musique .entete-m, .th-arcade .moment .kicker { font-size: 15px; letter-spacing: .06em; }
+  /* Press Start 2P n'a pas les capitales accentuées (É) : chiffres et rangs en VT323 */
+  .th-arcade .bandeau .val { font-family: VT323, monospace; font-size: 26px; line-height: 1; text-transform: uppercase; }
+  .th-arcade .musique .t { font-size: 11px; line-height: 1.7; }
+  .th-arcade .musique .a, .th-arcade .demande, .th-arcade .prog { font-size: 17px; }
+  .th-arcade .moment .gros { font-size: 20px; line-height: 1.5; text-shadow: 3px 3px 0 #7a0000; }
+  .th-arcade .moment .sous { font-size: 18px; }
+  .th-arcade .embleme { font-family: "Press Start 2P", monospace; font-size: 12px; image-rendering: pixelated; background: var(--rang); }
+  .th-arcade .pochette { background: repeating-conic-gradient(#ff3b3b 0 25%, #ffd400 0 50%) 0 0 / 16px 16px; }
+  .th-arcade .moment .kicker::after { content: " ▮"; animation: clignote 1s steps(1) infinite; }
+  @keyframes clignote { 50% { opacity: 0 } }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+
+  /* ===== Téléphone : la scène se replie en colonne ===== */
+  @media (max-width: 760px) {
+    .scene { aspect-ratio: auto; min-height: 0; padding: 16px 12px 34px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+    .pos-bandeau, .pos-musique, .pos-moment { position: static; transform: none; }
+    .bandeau { flex-wrap: wrap; justify-content: center; }
+    .musique { width: 100%; max-width: 340px; }
+  }
+
+  footer { margin-top: 48px; color: var(--page-attenue); font-size: 13px; border-top: 1px solid var(--page-filet); padding-top: 16px; }
+  footer ul { margin: 6px 0 0 18px; }
+</style>
+</head>
+<body>
+<div class="planche">
+
+  <header class="intro">
+    <h1>Thèmes d'overlay : planche de maquettes</h1>
+    <p>Quatre thèmes appliqués aux mêmes overlays : bandeau de session LoL, morceau en cours, moment fort. Le balisage est <b>identique</b> dans les quatre scènes. Seules les variables du thème changent : c'est exactement le mécanisme prévu dans StreamKit.</p>
+    <div class="legende">
+      <span><b>Change avec le thème :</b> fond, couleurs d'accent, police, arrondis, ombres et lueurs, effets animés</span>
+      <span><b>Ne change jamais :</b> vert victoire, rouge défaite, couleurs de rang</span>
+    </div>
+  </header>
+
+  <nav class="sauts">
+    <a href="#esport">1 · Esport</a><a href="#neon">2 · Néon</a><a href="#minimal">3 · Minimal clair</a><a href="#arcade">4 · Rétro arcade</a>
+  </nav>
+
+  <!-- Gabarit répété : même HTML, seule la classe th-* change -->
+  <template id="overlays">
+    <div class="pos-bandeau">
+      <div class="bloc bandeau">
+        <div class="seg seg-rang">
+          <div class="embleme">E</div>
+          <div><div class="lab">Rang</div><div class="val">Émeraude II · 47 LP</div></div>
+        </div>
+        <div class="seg"><div class="lab">Session</div><div class="val positif">+38 LP</div></div>
+        <div class="seg">
+          <div class="lab">Bilan</div><div class="val">5V – 2D</div>
+          <div class="pastilles"><span></span><span class="d"></span><span></span><span></span><span class="d"></span><span></span><span></span></div>
+        </div>
+        <div class="seg"><div class="lab">Série</div><div class="val"><span class="flamme">🔥</span> 3 victoires</div></div>
+      </div>
+    </div>
+
+    <div class="pos-musique">
+      <div class="bloc musique">
+        <div class="pochette"></div>
+        <div>
+          <div class="entete-m"><span class="eq"><b></b><b></b><b></b></span> En cours</div>
+          <div class="t">Blinding Lights</div>
+          <div class="a">The Weeknd</div>
+        </div>
+        <div class="prog"><span>1:42</span><span class="barre"><i></i></span><span>3:20</span></div>
+        <div class="demande"><span>Demandé par <b>@kyra_tv</b></span><span>2 à venir</span></div>
+      </div>
+    </div>
+
+    <div class="pos-moment">
+      <div class="bloc moment">
+        <div class="kicker">Moment fort</div>
+        <div class="gros">Triple kill</div>
+        <div class="sous">Ahri <span>· 24:13</span></div>
+        <div class="traits"><i></i><i></i><i></i><i class="off"></i><i class="off"></i></div>
+      </div>
+    </div>
+    <div class="etiquette-scene">Image de jeu simulée</div>
+  </template>
+
+  <section class="theme" id="esport">
+    <div class="theme-entete"><span class="num">01</span><h2>Esport</h2><p>Broadcast de tournoi : panneaux sombres à coins coupés, liseré cyan, police technique en capitales, reflet qui balaye. Lisible et sérieux, pour tous les jeux compétitifs.</p></div>
+    <div class="jetons"><span class="jeton"><i style="background:#0a1222"></i>Fond nuit</span><span class="jeton"><i style="background:#22d3ee"></i>Cyan</span><span class="jeton"><i style="background:#f5c542"></i>Or</span><span class="jeton">Oxanium</span><span class="jeton">Coins coupés</span></div>
+    <div class="scene th th-esport" data-overlays></div>
+  </section>
+
+  <section class="theme" id="neon">
+    <div class="theme-entete"><span class="num">02</span><h2>Néon</h2><p>Synthwave : verre sombre, contours lumineux magenta, titres italiques qui grésillent, dégradés magenta → cyan. Le plus « show », idéal pour les streams ambiance et musique.</p></div>
+    <div class="jetons"><span class="jeton"><i style="background:#0e061c"></i>Violet nuit</span><span class="jeton"><i style="background:#ff3df2"></i>Magenta</span><span class="jeton"><i style="background:#3df5ff"></i>Cyan</span><span class="jeton">Exo 2 italique</span><span class="jeton">Lueurs</span></div>
+    <div class="scene th th-neon" data-overlays></div>
+  </section>
+
+  <section class="theme" id="minimal">
+    <div class="theme-entete"><span class="num">03</span><h2>Minimal clair</h2><p>Cartes blanches givrées, ombre douce, typo sobre, un seul accent bleu. Discret, ne vole pas la vedette au jeu ; le plus « pro » pour un stream propre.</p></div>
+    <div class="jetons"><span class="jeton"><i style="background:#ffffff"></i>Blanc givré</span><span class="jeton"><i style="background:#14161c"></i>Encre</span><span class="jeton"><i style="background:#3b5bdb"></i>Bleu</span><span class="jeton">Inter</span><span class="jeton">Flou d'arrière-plan</span></div>
+    <div class="scene th th-minimal" data-overlays></div>
+  </section>
+
+  <section class="theme" id="arcade">
+    <div class="theme-entete"><span class="num">04</span><h2>Rétro arcade</h2><p>Borne 8 bits : cadres pixel blanc sur noir, police pixel, barre de progression en segments, curseur qui clignote. Fun et très reconnaissable, parfait pour Rocket League ou les soirées détente.</p></div>
+    <div class="jetons"><span class="jeton"><i style="background:#0b0b12"></i>Noir borne</span><span class="jeton"><i style="background:#ffd400"></i>Jaune</span><span class="jeton"><i style="background:#4dff6a"></i>Vert</span><span class="jeton"><i style="background:#ff3b3b"></i>Rouge</span><span class="jeton">Press Start 2P · VT323</span></div>
+    <div class="scene th th-arcade" data-overlays></div>
+  </section>
+
+  <footer>
+    Notes pour le choix :
+    <ul>
+      <li>Ces thèmes ne touchent que l'habillage : la disposition des overlays reste celle d'aujourd'hui.</li>
+      <li>Les polices seront embarquées dans StreamKit, sans aucun appel internet en live.</li>
+      <li>Tu peux en garder 2 ou 3, en mixer (par exemple les coins coupés d'Esport avec les couleurs de Néon) ou demander des retouches.</li>
+    </ul>
+  </footer>
+</div>
+<script>
+  const gabarit = document.getElementById('overlays');
+  document.querySelectorAll('[data-overlays]').forEach(s => s.appendChild(gabarit.content.cloneNode(true)));
+</script>
+</body>
+</html>
