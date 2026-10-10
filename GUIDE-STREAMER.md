@@ -6,7 +6,7 @@ direct à l'écran, annonce des pubs, voiture au hasard, compteur de victoires e
 de session Valorant, suivi de session et moments forts League of Legends, soirée Clubs EA FC — avec un
 tableau de bord pour vérifier d'un coup d'œil que tout est prêt avant le live. Tout tourne **sur ton PC** :
 pas de compte à créer chez nous, et tes accès restent chez toi. Seules des statistiques d'usage anonymes
-partent à la fin de chaque live, et tu peux les couper (voir la partie 6).
+partent à l'ouverture de StreamKit et à la fin de chaque live, et tu peux les couper (voir la partie 6).
 
 Compte une vingtaine de minutes la première fois. Ensuite, StreamKit se met à
 jour tout seul.
@@ -325,8 +325,8 @@ est dans tes scènes, mais n'affiche rien.
   te le rappelle, et le bouton **Mettre à jour → x.y.z** reste en haut aussi
   longtemps que tu veux. Au redémarrage, StreamKit te montre ce qu'il vient
   d'installer.
-- **Statistiques d'usage** : à la fin de chaque live, StreamKit envoie au
-  développeur un petit relevé pour savoir quels modules servent le plus — la
+- **Statistiques d'usage** : à l'ouverture de StreamKit et à la fin de chaque
+  live, StreamKit envoie au développeur un petit relevé pour savoir quels modules servent le plus — la
   version, le nom de ta chaîne, les modules activés et leurs compteurs du jour,
   le nombre et la durée de tes lives. **Jamais** un pseudo de viewer, un titre
   de musique ou un identifiant. C'est gardé 13 mois. Pour le couper : roue

@@ -11,6 +11,14 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 1.0.1
+
+### Corrections
+
+- Les statistiques d'usage partent aussi à l'ouverture de StreamKit (la
+  version et les modules activés), en plus de la fin de chaque live. Toujours
+  coupables dans ⚙️ Réglages.
+
 ## 1.0.0
 
 StreamKit passe en version 1.0 🎉 Merci à toutes celles et ceux qui l'ont

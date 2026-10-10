@@ -1,8 +1,9 @@
 // Statistiques d'usage, pour la vue « Modérateur » du développeur (demandée le
 // 10/10/2026 : savoir quels modules ses streamers utilisent le plus).
 //
-// Ce qui part, à la FIN DE CHAQUE LIVE seulement (choix du user le 10/10/2026 :
-// un envoi horaire ne servait à rien), pour le jour du live : la version, le
+// Ce qui part, à l'OUVERTURE de StreamKit et à la FIN DE CHAQUE LIVE (choix du
+// user le 10/10/2026 : pas d'envoi horaire, mais savoir qui a ouvert StreamKit
+// et avec quelle version), pour le jour concerné : la version, le
 // nom de la chaîne, les modules actifs et leurs compteurs du jour, le nombre de
 // lives et leur durée. JAMAIS un pseudo de viewer, un titre, un jeton.
 // Un live dont la fin n'a pas pu partir (StreamKit fermé ou planté pendant le
@@ -116,10 +117,15 @@ export async function envoyerLives(registre, version) {
   }
 }
 
-// Le rattrapage du démarrage. Plus d'envoi périodique.
+// À l'ouverture : le relevé du jour et le rattrapage. Pas d'envoi périodique.
 export function demarrer(registre, version) {
   if (neutralise()) return () => {};
-  const t = setTimeout(() => envoyerLives(registre, version), RATTRAPAGE_MS);
+  // Le relevé du jour (version, modules actifs : qui a ouvert StreamKit), puis
+  // les lives restés en attente.
+  const t = setTimeout(async () => {
+    await envoyer(registre, compteurs.jourDe(new Date()), version);
+    await envoyerLives(registre, version);
+  }, RATTRAPAGE_MS);
   t.unref?.();
   return () => clearTimeout(t);
 }
