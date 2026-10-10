@@ -11,6 +11,14 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 1.0.2
+
+### Corrections
+
+- Les mises à jour de StreamKit arrivent désormais depuis une nouvelle
+  adresse. Rien à faire de ton côté : les prochaines continueront d'arriver
+  toutes seules, comme d'habitude.
+
 ## 1.0.1
 
 ### Corrections
