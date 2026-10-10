@@ -33,8 +33,16 @@ export const SUPABASE_CLE = 'sb_publishable_2xsoriUY8Fl1wA71M3y7ZA_hHYjE9lt';
 // Au démarrage, le temps que le noyau ait refermé un live interrompu.
 const RATTRAPAGE_MS = 60 * 1000;
 
-// Jamais pendant les tests, ni quand on le demande (développement).
-const neutralise = () => process.env.STREAMKIT_TELEMETRIE === '0' || !!process.env.NODE_TEST_CONTEXT;
+// Seule la version INSTALLÉE chez un streamer envoie : main.js pose
+// STREAMKIT_INSTALLE quand Electron tourne empaqueté. En développement
+// (npm run dev, lancer-dev.bat) rien ne part -- sinon chaque essai apparaissait
+// en Modérateur comme un streamer « chaîne inconnue » (constaté le 11/10/2026).
+// Jamais pendant les tests. STREAMKIT_TELEMETRIE=0 coupe tout, =1 force l'envoi
+// en développement, pour tester la télémétrie elle-même.
+const neutralise = () => {
+  if (process.env.NODE_TEST_CONTEXT || process.env.STREAMKIT_TELEMETRIE === '0') return true;
+  return process.env.STREAMKIT_INSTALLE !== '1' && process.env.STREAMKIT_TELEMETRIE !== '1';
+};
 
 export function active() {
   return store.getConfig().telemetrie?.actif !== false;

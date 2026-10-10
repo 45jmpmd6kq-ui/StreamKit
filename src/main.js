@@ -398,6 +398,9 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => creerFenetre());
 
   app.whenReady().then(async () => {
+    // L'installation d'un streamer, pas un lancement de développement : seule
+    // elle envoie les statistiques d'usage (voir core/telemetrie.js).
+    if (app.isPackaged) process.env.STREAMKIT_INSTALLE = '1';
     try {
       noyau = await demarrerNoyau({
         updater,
