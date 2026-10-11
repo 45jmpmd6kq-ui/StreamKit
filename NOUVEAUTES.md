@@ -26,6 +26,10 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   couleurs de ton choix.
 - Une source peut garder son propre thème : ajoute `?theme=neon` (ou `esport`,
   `minimal`, `arcade`) à la fin de son adresse.
+- **Un guide d'utilisation dans StreamKit.** Le bouton 📖 Guide d'utilisation,
+  en haut à côté de Signaler un bug, explique chaque écran avec des captures :
+  premiers pas, Vue d'ensemble, modules et OBS, Personnalisation, Activité et
+  Métriques, signaler un bug.
 - Après cette mise à jour, recharge une fois tes sources StreamKit dans OBS
   (clic droit ▸ Actualiser) : ensuite, les changements de thème arrivent tout
   seuls.

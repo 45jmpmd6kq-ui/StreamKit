@@ -1,0 +1,127 @@
+/* Guide d'utilisation : les chapitres, communs à la fenêtre du dashboard
+   (#modale-guide) et à la page guide.html ouverte seule.
+
+   Les captures sont régénérées par scripts/captures-guide.mjs. Les repères
+   numérotés sont placés en % de la capture (style="left:…;top:…") : après
+   avoir régénéré les captures, vérifie qu'ils tombent toujours au bon endroit. */
+
+.guide-contenu {
+  --g-texte: #e9e9f2;
+  --g-doux: #9797ab;
+  --g-bordure: #35354a;
+  --g-accent: #9146ff;
+  color: var(--g-texte);
+}
+.guide-chap {
+  max-width: 860px;
+  margin: 0 auto 46px;
+}
+.guide-chap h3 {
+  font-size: 1.25rem;
+  margin: 0 0 6px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.guide-chap h3 .n {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--g-accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  flex: none;
+}
+.guide-chap > p {
+  color: var(--g-doux);
+  margin: 0 0 14px;
+}
+.guide-capture {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--g-bordure);
+}
+.guide-capture img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.guide-repere {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background: #ffcc33;
+  color: #1a1300;
+  font-weight: 800;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 0 0 3px rgba(0, 0, 0, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.guide-legende {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.guide-legende li {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.guide-legende .guide-repere {
+  position: static;
+  margin: 0;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  box-shadow: none;
+}
+.guide-legende span {
+  color: var(--g-doux);
+}
+.guide-astuce {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #22c55e14;
+  border: 1px solid #22c55e44;
+  color: #b7f5cd;
+  font-size: 0.92rem;
+}
+.guide-astuce b {
+  color: #dcfce7;
+}
+.guide-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .guide-duo {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Page seule (guide.html), ouverte dans un navigateur --- */
+body.guide-page {
+  margin: 0;
+  background: #0d0d12;
+  font:
+    14px/1.55 "Segoe UI",
+    system-ui,
+    sans-serif;
+}
+body.guide-page .guide-contenu {
+  padding: 28px 20px 40px;
+}
+

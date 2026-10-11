@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — guide d'utilisation</title>
+    <link rel="stylesheet" href="/guide/guide.css" />
+    <!--
+      Guide d'utilisation de StreamKit. Le dashboard en reprend #guide-contenu
+      dans sa fenêtre « Guide » (bouton 📖 de la barre du haut, voir app.js :
+      ouvrirGuide). Ouverte seule, la page reste lisible.
+
+      Les captures viennent de scripts/captures-guide.mjs, qui les prend sur
+      une installation vierge : jamais l'entrée Modérateur, qui n'existe que sur
+      le PC du développeur. Les repères sont en % de chaque capture.
+    -->
+  </head>
+  <body class="guide-page">
+    <main id="guide-contenu" class="guide-contenu">
+      <article class="guide-chap" id="guide-premiers-pas" data-titre="Premiers pas">
+        <h3><span class="n">1</span>Premiers pas : brancher tes services</h3>
+        <p>
+          Avant tout, StreamKit a besoin de parler à Twitch (et à Spotify si tu utilises le Bot Musique). Ça se
+          fait une seule fois, dans <b>Connecteurs</b>.
+        </p>
+        <div class="guide-capture">
+          <img src="/guide/connecteurs.jpg" alt="L'écran Connecteurs" />
+          <span class="guide-repere" style="left: 31%; top: 3.2%">1</span>
+          <span class="guide-repere" style="left: 18.2%; top: 28%">2</span>
+          <span class="guide-repere" style="left: 50%; top: 23.6%">3</span>
+          <span class="guide-repere" style="left: 50%; top: 32%">4</span>
+        </div>
+        <ul class="guide-legende">
+          <li>
+            <span class="guide-repere">1</span>
+            <div><b>L'état de Twitch</b> <span>— rouge tant que la connexion n'est pas faite. Un clic t'emmène au bon endroit.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">2</span>
+            <div><b>Connecteurs</b> <span>— la liste de tous les services. Les modules y puisent tout seuls.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">3</span>
+            <div>
+              <b>Twitch</b>
+              <span>— déplie la carte et suis les étapes : application Twitch, adresse de retour à copier, nom de ta chaîne.</span>
+            </div>
+          </li>
+          <li>
+            <span class="guide-repere">4</span>
+            <div><b>Spotify</b> <span>— seulement pour le Bot Musique, même principe.</span></div>
+          </li>
+        </ul>
+        <div class="guide-astuce">
+          <b>Astuce :</b> l'adresse de retour se copie au caractère près — c'est la cause n°1 des refus
+          d'autorisation.
+        </div>
+      </article>
+
+      <article class="guide-chap" id="guide-vue-ensemble" data-titre="Vue d'ensemble">
+        <h3><span class="n">2</span>La Vue d'ensemble : es-tu prêt pour le live ?</h3>
+        <p>L'écran à regarder avant de lancer ton stream. Tout est vert ? Tu peux y aller.</p>
+        <div class="guide-capture">
+          <img src="/guide/accueil.jpg" alt="La Vue d'ensemble" />
+          <span class="guide-repere" style="left: 24%; top: 14%">1</span>
+          <span class="guide-repere" style="left: 76.2%; top: 13%">2</span>
+          <span class="guide-repere" style="left: 43.5%; top: 38.5%">3</span>
+          <span class="guide-repere" style="left: 67.4%; top: 70.4%">4</span>
+          <span class="guide-repere" style="left: 84%; top: 56%">5</span>
+          <span class="guide-repere" style="left: 84%; top: 92.7%">6</span>
+        </div>
+        <ul class="guide-legende">
+          <li>
+            <span class="guide-repere">1</span>
+            <div><b>La jauge</b> <span>— « Prêt pour le live », « Presque prêt » ou « Pas prêt », avec la raison juste à côté.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">2</span>
+            <div><b>Les compteurs</b> <span>— modules actifs, connexions OK, sources OBS branchées, alertes.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">3</span>
+            <div><b>Connexions</b> <span>— Twitch, OBS, Spotify… un point vert par service qui répond.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">4</span>
+            <div>
+              <b>Modules par univers</b>
+              <span>— l'état de chaque module, et son interrupteur pour l'allumer ou l'éteindre sans quitter l'écran.</span>
+            </div>
+          </li>
+          <li>
+            <span class="guide-repere">5</span>
+            <div><b>Alertes</b> <span>— ce qui cloche, expliqué, avec un bouton qui t'amène au bon réglage.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">6</span>
+            <div>
+              <b>Overlays OBS</b>
+              <span>— les sources que ton OBS affiche en ce moment. En orange : une source dont le module est éteint.</span>
+            </div>
+          </li>
+        </ul>
+      </article>
+
+      <article class="guide-chap" id="guide-modules" data-titre="Modules et OBS">
+        <h3><span class="n">3</span>Activer un module et l'ajouter dans OBS</h3>
+        <p>
+          Choisis un module dans la colonne de gauche. En haut, son interrupteur ; en dessous, ses réglages ; tout en
+          bas, ses overlays à coller dans OBS.
+        </p>
+        <div class="guide-duo">
+          <div class="guide-capture">
+            <img src="/guide/module.jpg" alt="Un module et ses réglages" />
+            <span class="guide-repere" style="left: 89.1%; top: 11.5%">1</span>
+            <span class="guide-repere" style="left: 70.3%; top: 31.2%">2</span>
+          </div>
+          <div class="guide-capture">
+            <img src="/guide/module-overlays.jpg" alt="Les overlays d'un module" />
+            <span class="guide-repere" style="left: 70.7%; top: 62.3%">3</span>
+            <span class="guide-repere" style="left: 76.5%; top: 62.3%">4</span>
+            <span class="guide-repere" style="left: 36%; top: 65.1%">5</span>
+            <span class="guide-repere" style="left: 27.7%; top: 96.1%">6</span>
+          </div>
+        </div>
+        <ul class="guide-legende">
+          <li>
+            <span class="guide-repere">1</span>
+            <div><b>L'interrupteur</b> <span>— allume le module.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">2</span>
+            <div><b>Les réglages</b> <span>— les plus utiles sont visibles, le reste est rangé dans « Avancé ».</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">3</span>
+            <div>
+              <b>Copier</b>
+              <span>— l'adresse de l'overlay. Dans OBS : Sources ▸ + ▸ Navigateur, et colle-la dans URL.</span>
+            </div>
+          </li>
+          <li>
+            <span class="guide-repere">4</span>
+            <div><b>Aperçu</b> <span>— voir l'overlay avec un exemple, sans attendre un vrai événement.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">5</span>
+            <div><b>La taille</b> <span>— à recopier dans Largeur et Hauteur de la source OBS.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">6</span>
+            <div><b>Enregistrer</b> <span>— appliqué tout de suite, même aux overlays déjà ouverts dans OBS.</span></div>
+          </li>
+        </ul>
+        <div class="guide-astuce">
+          <b>Astuce :</b> ajoute <code>?demo=1</code> à la fin de l'adresse pour placer la source tranquillement, puis
+          retire-le.
+        </div>
+      </article>
+
+      <article class="guide-chap" id="guide-personnalisation" data-titre="Personnalisation">
+        <h3><span class="n">4</span>Personnaliser le style de tes overlays</h3>
+        <p>Cinq thèmes, un par défaut et un par univers si tu veux. Ça change tout de suite dans OBS.</p>
+        <div class="guide-capture">
+          <img src="/guide/personnalisation.jpg" alt="La page Personnalisation" />
+          <span class="guide-repere" style="left: 36%; top: 32%">1</span>
+          <span class="guide-repere" style="left: 32.8%; top: 58.5%">2</span>
+          <span class="guide-repere" style="left: 68.8%; top: 54.1%">3</span>
+          <span class="guide-repere" style="left: 62.5%; top: 74.4%">4</span>
+        </div>
+        <ul class="guide-legende">
+          <li>
+            <span class="guide-repere">1</span>
+            <div><b>Thème par défaut</b> <span>— pour tous tes overlays.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">2</span>
+            <div><b>Les univers</b> <span>— Twitch, LoL, Rocket League… et le thème que chacun affiche.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">3</span>
+            <div><b>Le thème de l'univers</b> <span>— « Thème par défaut », ou un autre rien que pour lui.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">4</span>
+            <div><b>L'aperçu</b> <span>— tes vrais overlays de cet univers, avec le thème choisi.</span></div>
+          </li>
+        </ul>
+      </article>
+
+      <article class="guide-chap" id="guide-activite" data-titre="Activité et Métriques">
+        <h3><span class="n">5</span>Activité récente et Métriques</h3>
+        <p>
+          Ce qui s'est passé sur tes lives : le fil des événements jour par jour, et les chiffres sur la période de ton
+          choix.
+        </p>
+        <div class="guide-duo">
+          <div class="guide-capture">
+            <img src="/guide/activite.jpg" alt="L'activité récente" />
+            <span class="guide-repere" style="left: 30%; top: 20.7%">1</span>
+            <span class="guide-repere" style="left: 36%; top: 26.8%">2</span>
+          </div>
+          <div class="guide-capture">
+            <img src="/guide/metriques.jpg" alt="Les métriques" />
+            <span class="guide-repere" style="left: 31.3%; top: 20.2%">3</span>
+            <span class="guide-repere" style="left: 40.6%; top: 30.5%">4</span>
+          </div>
+        </div>
+        <ul class="guide-legende">
+          <li>
+            <span class="guide-repere">1</span>
+            <div><b>Le jour</b> <span>— aujourd'hui, hier, ou n'importe quelle date.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">2</span>
+            <div><b>Les filtres</b> <span>— par univers, et la recherche pour retrouver un pseudo ou un morceau.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">3</span>
+            <div><b>La période</b> <span>— ce live, 7 jours, 30 jours, depuis toujours.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">4</span>
+            <div><b>Les chiffres</b> <span>— lives, victoires, musiques demandées… et leur tendance.</span></div>
+          </li>
+        </ul>
+      </article>
+
+      <article class="guide-chap" id="guide-bug" data-titre="Signaler un bug">
+        <h3><span class="n">6</span>Un souci ? Signale-le</h3>
+        <p>
+          Le bouton <b>🐞 Signaler un bug</b>, en haut, envoie ton message avec tout ce qu'il faut pour comprendre :
+          pas besoin de chercher des fichiers.
+        </p>
+        <div class="guide-capture">
+          <img src="/guide/bug.jpg" alt="La fenêtre Signaler un bug" />
+          <span class="guide-repere" style="left: 45%; top: 30%">1</span>
+          <span class="guide-repere" style="left: 24.6%; top: 39.3%">2</span>
+          <span class="guide-repere" style="left: 50%; top: 51.2%">3</span>
+          <span class="guide-repere" style="left: 50%; top: 62%">4</span>
+          <span class="guide-repere" style="left: 76%; top: 81.2%">5</span>
+        </div>
+        <ul class="guide-legende">
+          <li>
+            <span class="guide-repere">1</span>
+            <div><b>Le module</b> <span>— ou « je ne sais pas », c'est très bien aussi.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">2</span>
+            <div><b>Quand</b> <span>— à l'instant, plus tôt aujourd'hui, hier.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">3</span>
+            <div><b>Ce qui s'est passé</b> <span>— ce que tu faisais, ce que tu attendais, ce qui s'est passé à la place.</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">4</span>
+            <div><b>Des captures</b> <span>— colle-les directement (Ctrl + V).</span></div>
+          </li>
+          <li>
+            <span class="guide-repere">5</span>
+            <div><b>Envoyer</b> <span>— le journal technique part tout seul avec.</span></div>
+          </li>
+        </ul>
+      </article>
+    </main>
+  </body>
+</html>

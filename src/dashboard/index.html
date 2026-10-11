@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>StreamKit</title>
     <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/guide/guide.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎛️</text></svg>"
@@ -23,6 +24,9 @@
       <div class="pousse"></div>
 
       <button class="btn petit" id="btn-maj" hidden></button>
+      <button class="btn petit" id="btn-guide" title="Comment fonctionne StreamKit, écran par écran">
+        📖 Guide d'utilisation
+      </button>
       <button class="btn petit" id="btn-bug" title="Envoyer un rapport à la personne qui s'occupe de StreamKit">
         🐞 Signaler un bug
       </button>
@@ -269,6 +273,21 @@
         <button class="btn" id="btn-bug-annuler">Annuler</button>
         <button class="btn" id="btn-bug-dossier" hidden>Ouvrir le dossier</button>
         <button class="btn primaire" id="btn-bug-envoyer">Envoyer</button>
+      </div>
+    </dialog>
+
+    <!-- Guide d'utilisation : le contenu vient de /guide/guide.html, chargé à
+         la première ouverture. -->
+    <dialog id="modale-guide" aria-label="Guide d'utilisation">
+      <div class="guide-tete">
+        <h2>📖 Guide d'utilisation <span class="guide-version" id="guide-version"></span></h2>
+        <button class="btn petit discret" id="btn-guide-fermer" title="Fermer">✕</button>
+      </div>
+      <div class="guide-corps">
+        <nav class="guide-sommaire" id="guide-sommaire">
+          <div class="guide-s-titre">Sommaire</div>
+        </nav>
+        <div class="guide-zone" id="guide-zone"><div class="vide">Chargement du guide…</div></div>
       </div>
     </dialog>
 

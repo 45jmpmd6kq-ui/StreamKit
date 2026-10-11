@@ -13,7 +13,8 @@
     "format": "eslint . --fix && prettier --write .",
     "icone": "node scripts/faire-icone.mjs",
     "dist": "node scripts/cible-signalement.mjs && node scripts/notes-de-version.mjs && electron-builder --win --publish never",
-    "publier": "node scripts/cible-signalement.mjs --exiger && node scripts/notes-de-version.mjs --exiger && electron-builder --win --publish always"
+    "publier": "node scripts/cible-signalement.mjs --exiger && node scripts/notes-de-version.mjs --exiger && electron-builder --win --publish always",
+    "guide": "node scripts/captures-guide.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

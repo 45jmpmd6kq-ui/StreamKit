@@ -317,6 +317,9 @@ arcade**. Tout change tout de suite dans OBS, sans recharger tes sources.
 
 ## 6. Au quotidien
 
+> 📖 Le bouton **Guide d'utilisation**, en haut de StreamKit à côté de
+> **Signaler un bug**, reprend tout ça écran par écran, avec des captures.
+
 - **Avant le live**, jette un œil à la **Vue d'ensemble** :
   - **en haut**, une jauge et une phrase : **Prêt pour le live**, **Presque
     prêt** ou **Pas prêt**, avec la raison ;

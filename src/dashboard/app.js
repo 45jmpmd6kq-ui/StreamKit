@@ -2898,6 +2898,71 @@ async function envoyerBug() {
   }
 }
 
+// ---------------------------------------------------------- guide d'utilisation
+//
+// Le contenu vit dans /guide/guide.html, à part du dashboard : on la charge à
+// la première ouverture et on en reprend #guide-contenu -- du HTML à nous, servi
+// par notre propre serveur.
+
+let guideCharge = false;
+
+async function chargerGuide() {
+  const zone = $('#guide-zone');
+  try {
+    const r = await fetch('/guide/guide.html');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const doc = new DOMParser().parseFromString(await r.text(), 'text/html');
+    const contenu = doc.getElementById('guide-contenu');
+    if (!contenu) throw new Error('guide illisible');
+    zone.replaceChildren(document.importNode(contenu, true));
+  } catch (e) {
+    zone.innerHTML = '<div class="vide">Le guide n’a pas pu s’ouvrir (' + echapper(e.message) + ').</div>';
+    return;
+  }
+  guideCharge = true;
+
+  // Le sommaire : un bouton par chapitre.
+  const sommaire = $('#guide-sommaire');
+  for (const [i, c] of $$('#guide-zone .guide-chap').entries()) {
+    const b = document.createElement('button');
+    b.dataset.chapitre = c.id;
+    const n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = String(i + 1);
+    b.append(n, c.dataset.titre);
+    sommaire.append(b);
+  }
+  marquerChapitreGuide();
+}
+
+// Le chapitre en cours de lecture, surligné dans le sommaire.
+function marquerChapitreGuide() {
+  const zone = $('#guide-zone');
+  const chapitres = $$('#guide-zone .guide-chap');
+  if (!chapitres.length) return;
+  const haut = zone.getBoundingClientRect().top;
+  let actif = chapitres[0];
+  for (const c of chapitres) if (c.getBoundingClientRect().top - haut < 120) actif = c;
+  for (const b of $$('#guide-sommaire [data-chapitre]'))
+    b.classList.toggle('on', b.dataset.chapitre === actif.id);
+}
+
+async function ouvrirGuide() {
+  $('#guide-version').textContent = etat.general?.version ? 'StreamKit ' + etat.general.version : '';
+  $('#modale-guide').showModal();
+  if (!guideCharge) await chargerGuide();
+}
+
+function brancherGuide() {
+  $('#btn-guide').addEventListener('click', ouvrirGuide);
+  $('#btn-guide-fermer').addEventListener('click', () => $('#modale-guide').close());
+  $('#guide-zone').addEventListener('scroll', marquerChapitreGuide);
+  $('#guide-sommaire').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-chapitre]');
+    if (b) document.getElementById(b.dataset.chapitre)?.scrollIntoView({ block: 'start' });
+  });
+}
+
 function brancherSignalement() {
   const modale = $('#modale-bug');
 
@@ -3023,6 +3088,7 @@ brancherMetriques();
 brancherModerateur();
 brancherModales();
 brancherSignalement();
+brancherGuide();
 
 await rafraichirEtat();
 await chargerModules();

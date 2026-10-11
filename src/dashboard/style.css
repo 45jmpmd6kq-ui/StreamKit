@@ -2250,3 +2250,101 @@ kbd {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Guide d'utilisation (fenêtre) ---------- */
+/* Les chapitres eux-mêmes sont stylés par guide/guide.css. */
+#modale-guide {
+  width: min(1180px, 94vw);
+  height: 90vh;
+  max-height: 90vh;
+}
+#modale-guide[open] {
+  display: flex;
+  flex-direction: column;
+}
+.guide-tete {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--bordure);
+}
+.guide-tete h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  flex: 1;
+}
+.guide-version {
+  color: var(--texte-faible);
+  font-size: 0.8rem;
+  font-weight: 400;
+  margin-left: 0.4rem;
+}
+.guide-corps {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+.guide-sommaire {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.9rem 0.6rem;
+  border-right: 1px solid var(--bordure);
+  overflow-y: auto;
+}
+.guide-s-titre {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texte-faible);
+  margin: 0 0.5rem 0.4rem;
+}
+.guide-sommaire button {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  color: var(--texte-doux);
+  font: inherit;
+  cursor: pointer;
+}
+.guide-sommaire button:hover {
+  background: var(--panneau-clair);
+}
+.guide-sommaire button.on {
+  background: var(--accent-doux);
+  border-color: #9146ff55;
+  color: var(--texte);
+}
+.guide-sommaire .n {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--panneau-clair);
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  flex: none;
+}
+.guide-sommaire button.on .n {
+  background: var(--accent);
+  color: #fff;
+}
+.guide-zone {
+  overflow-y: auto;
+  padding: 1.4rem 1.8rem 2.5rem;
+}
+@media (max-width: 900px) {
+  .guide-corps {
+    grid-template-columns: 1fr;
+  }
+  .guide-sommaire {
+    display: none;
+  }
+}
