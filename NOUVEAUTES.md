@@ -11,6 +11,15 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 1.0.3
+
+### Corrections
+
+- 🏁 Compteur de session (Rocket League) : une partie d'entraînement libre
+  (pendant que tu cherches une partie, par exemple) ne compte plus comme une
+  défaite quand tu la quittes. Les vraies parties classées quittées avant la
+  fin comptent toujours en défaite, comme dans le jeu.
+
 ## 1.0.2
 
 ### Corrections
