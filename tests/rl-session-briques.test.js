@@ -279,6 +279,28 @@ test('quitter avant d avoir vu son equipe ne compte pas', () => {
   assert.match(ignorees[0], /quittee/);
 });
 
+// SK-4B85 (nhs_rl, 13/10/2026) : entrainement libre en attendant une partie
+// classee. Partie trouvee -> le freeplay est detruit sans MatchEnded, et
+// Launch.log donne la file cherchee. Ce n'etait pas une defaite.
+test('entrainement libre quitte (aucun adversaire) : ne compte pas', () => {
+  const { envoyer, resultats, ignorees } = monter({ playlists: [11] });
+  const seul = { ...image({ guid: '', score: [29, 0] }), MatchGuid: '' };
+  seul.Players = seul.Players.slice(0, 1);
+  envoyer('MatchCreated', {});
+  envoyer('MatchInitialized', {});
+  envoyer('UpdateState', seul);
+  envoyer('MatchDestroyed');
+  assert.equal(resultats.length, 0);
+  assert.match(ignorees[0], /adversaire/);
+
+  // La vraie partie qui suit compte normalement.
+  envoyer('MatchCreated', { MatchGuid: 'G2' });
+  envoyer('UpdateState', image({ guid: 'G2', score: [0, 2] }));
+  envoyer('MatchEnded', { WinnerTeamNum: 1 });
+  assert.equal(resultats.length, 1);
+  assert.equal(resultats[0].victoire, false);
+});
+
 test('StreamKit lance en pleine partie : la premiere image ouvre la partie', () => {
   const { envoyer, resultats } = monter();
   envoyer('UpdateState', image({ score: [0, 1] }));
