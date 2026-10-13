@@ -19,7 +19,11 @@
 //     la partie a la volee ;
 //   - quitter avant la fin (abandon, deconnexion, jeu ferme) : pas de
 //     MatchEnded. Le jeu, lui, compte une defaite en classe : on rapporte la
-//     partie avec `abandon: true`, et le module decide (voir module.js).
+//     partie avec `abandon: true`, et le module decide (voir module.js) ;
+//   - l'entrainement libre (joue en attendant une partie) est une « partie »
+//     pour l'API, detruite sans MatchEnded quand la vraie est trouvee, et
+//     Launch.log donne alors la file cherchee : sans adversaire jamais vu, ce
+//     n'est pas une partie (SK-4B85, 13/10/2026).
 //
 // Ce fichier ne filtre pas classe / non classe : il rapporte chaque partie
 // terminee, le module decide ce qui compte.
@@ -57,6 +61,7 @@ export function creerSuiviParties({ identite, playlist, surResultat, surIgnoree 
     partie = {
       guid: data?.MatchGuid || null,
       equipe: null,
+      adversaire: false, // un joueur vu dans l'autre equipe
       taille: 0,
       scores: null,
       // Instantane pris AU DEBUT : c'est la file d'attente de CETTE partie qui
@@ -72,6 +77,10 @@ export function creerSuiviParties({ identite, playlist, surResultat, surIgnoree 
 
     if (partie.equipe == null) {
       surIgnoree('equipe du joueur inconnue (lobby annule, ou StreamKit lance apres la fin)');
+      return;
+    }
+    if (!partie.adversaire) {
+      surIgnoree('aucun adversaire (entrainement libre)');
       return;
     }
     let gagnant = equipeValide(gagnantApi) ? gagnantApi : null;
@@ -133,6 +142,12 @@ export function creerSuiviParties({ identite, playlist, surResultat, surIgnoree 
         const joueurs = Array.isArray(data?.Players) ? data.Players : [];
         const moi = trouverJoueur(joueurs, identite());
         if (moi && equipeValide(moi.TeamNum)) partie.equipe = moi.TeamNum;
+        if (
+          partie.equipe != null &&
+          joueurs.some((j) => equipeValide(j?.TeamNum) && j.TeamNum !== partie.equipe)
+        ) {
+          partie.adversaire = true;
+        }
 
         const parEquipe = [0, 0];
         for (const j of joueurs) if (equipeValide(j?.TeamNum)) parEquipe[j.TeamNum]++;
@@ -176,6 +191,10 @@ export function creerSuiviParties({ identite, playlist, surResultat, surIgnoree 
     partie.finie = true;
     if (partie.equipe == null) {
       surIgnoree('partie quittee avant la fin (equipe du joueur inconnue)');
+      return;
+    }
+    if (!partie.adversaire) {
+      surIgnoree('partie quittee sans adversaire (entrainement libre)');
       return;
     }
     if (partie.guid) {
