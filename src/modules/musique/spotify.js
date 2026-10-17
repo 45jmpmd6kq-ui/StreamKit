@@ -331,6 +331,17 @@ export class SpotifyClient {
     });
   }
 
+  // La file d'attente telle que Spotify la tient : le morceau en cours et les
+  // suivants, dans l'ordre (une vingtaine au plus). Sert a retirer de la liste
+  // « a venir » les demandes que Spotify n'a plus.
+  async fileAttente() {
+    const data = await this.api('/me/player/queue');
+    return {
+      enCours: data?.currently_playing?.uri ?? null,
+      uris: (data?.queue ?? []).map((t) => t?.uri).filter(Boolean),
+    };
+  }
+
   // Morceau en cours de lecture (ou null : rien ne joue, ou une pub -- Spotify
   // n'envoie alors pas de morceau).
   async currentlyPlaying() {

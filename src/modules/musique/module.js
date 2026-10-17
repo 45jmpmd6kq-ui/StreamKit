@@ -23,6 +23,9 @@ const VUES = ['annonces', 'liste'];
 // Rythme du suivi de lecture : c'est aussi le retard maximal avec lequel un
 // morceau annule est saute, et avec lequel l'overlay voit un changement.
 const INTERVALLE_SUIVI = 5000;
+// Rythme de la confrontation avec la vraie file de Spotify (voir
+// file.reconcilier) : une demande qu'il n'a plus quitte la liste « a venir ».
+const INTERVALLE_FILE = 30000;
 
 const points = (n) => Number(n).toLocaleString('fr-FR') + (Math.abs(n) > 1 ? ' points' : ' point');
 
@@ -297,7 +300,23 @@ export default {
         appareil = 'Spotify injoignable : ' + (e?.message || e);
       }
     }
-    return { enMarche: ctx._etatMusique?.() ?? 'module arrêté', appareilSpotify: appareil };
+    // La liste « a venir » face a la file que Spotify tient vraiment : un ecart
+    // entre les deux est exactement ce qu'un streamer voit comme « bloque ».
+    let fileSpotify = 'module arrêté';
+    if (ctx._spotify) {
+      try {
+        const f = await ctx._spotify.fileAttente();
+        fileSpotify = { enCours: f.enCours, suivants: f.uris.slice(0, 10) };
+      } catch (e) {
+        fileSpotify = 'Spotify injoignable : ' + (e?.message || e);
+      }
+    }
+    return {
+      enMarche: ctx._etatMusique?.() ?? 'module arrêté',
+      appareilSpotify: appareil,
+      aVenir: ctx._aVenir?.() ?? [],
+      fileSpotify,
+    };
   },
 
   async demarrer(ctx) {
@@ -392,6 +411,8 @@ export default {
       cout: principale.cout,
       refus: annulation && { titre: annulation.titre, cout: annulation.cout },
     });
+    ctx._aVenir = () =>
+      file.aVenir().map((i) => (i.cancelled ? '(annulé) ' : '') + i.name + ' — ' + i.artists);
 
     // --- 1) Demande de musique ----------------------------------------------
 
@@ -512,12 +533,21 @@ export default {
     let suiviEnCours = false;
     // Morceau dont la fin a deja son releve anticipe.
     let finSurveillee = null;
+    // Derniere confrontation avec la file de Spotify.
+    let fileLueA = 0;
+    // Le suivi echoue en silence tant que Spotify ne repond pas : on le dit une
+    // fois par serie, pour que le journal d'un rapport de bug le montre.
+    let suiviEnPanne = false;
 
     async function suivre() {
       if (suiviEnCours) return;
       suiviEnCours = true;
       try {
         const cur = await spotify.currentlyPlaying();
+        if (suiviEnPanne) {
+          suiviEnPanne = false;
+          ctx.log.info('Suivi de lecture Spotify rétabli.');
+        }
 
         if (cur && file.estAnnule(cur.uri)) {
           await spotify.next();
@@ -530,6 +560,26 @@ export default {
 
         let change = cur ? file.marquerEnLecture(cur.uri) : false;
 
+        // Seulement quand Spotify a un morceau charge : lecteur ferme ou sans
+        // appareil, sa file revient vide sans que les demandes soient perdues.
+        // A part : un echec ici ne doit pas priver l'overlay du morceau en cours.
+        if (cur && file.aVenir().length && Date.now() - fileLueA >= INTERVALLE_FILE) {
+          fileLueA = Date.now();
+          const avant = file.aVenir().length;
+          try {
+            const fs = await spotify.fileAttente();
+            if ((fs.enCours || fs.uris.length) && file.reconcilier(fs)) {
+              change = true;
+              const n = avant - file.aVenir().length;
+              ctx.log.info(
+                n + ' demande(s) retirée(s) de la liste « à venir » : Spotify ne les a plus dans sa file.'
+              );
+            }
+          } catch (err) {
+            ctx.log.debug('File Spotify illisible : ' + (err?.message || err));
+          }
+        }
+
         if (c.afficherEnCours) {
           const releve = etatLecture(cur, file.enCours());
           if (lectureAChange(lecture, releve)) {
@@ -540,8 +590,12 @@ export default {
         }
 
         if (change) pousserEtat();
-      } catch {
-        /* Spotify momentanement indisponible : on reessaiera au prochain tour */
+      } catch (err) {
+        // Spotify momentanement indisponible : on reessaiera au prochain tour.
+        if (!suiviEnPanne) {
+          suiviEnPanne = true;
+          ctx.log.info('Suivi de lecture Spotify en échec : ' + (err?.message || err));
+        }
       } finally {
         suiviEnCours = false;
       }
