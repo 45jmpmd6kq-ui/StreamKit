@@ -11,6 +11,14 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 1.0.4
+
+### Corrections
+
+- 🎵 Bot Musique : la liste « à venir » ne reste plus bloquée. Une musique
+  demandée que Spotify ne jouera plus (passée, ou perdue quand Spotify change
+  d'appareil) quitte la liste toute seule, au lieu d'y rester tout le live.
+
 ## 1.0.3
 
 ### Corrections
