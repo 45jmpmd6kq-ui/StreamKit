@@ -75,6 +75,10 @@ export function creerFile() {
 
     // Le morceau en cours a change : met a jour les statuts.
     // Renvoie true si quelque chose a bouge (donc si l'overlay doit etre repousse).
+    //
+    // Spotify joue sa file dans l'ordre : quand une demande passe en lecture,
+    // celles d'avant sont passees, meme si aucun releve ne les a vues jouer
+    // (passees entre deux releves, ou jouees dans une autre version).
     marquerEnLecture(uri) {
       let change = false;
       for (const i of items) {
@@ -86,6 +90,54 @@ export function creerFile() {
       const suivant = items.find((i) => i.uri === uri && i.status === 'pending');
       if (suivant) {
         suivant.status = 'playing';
+        change = true;
+        for (let k = items.length - 1; k >= 0; k--) {
+          const i = items[k];
+          if (i.id >= suivant.id) continue;
+          if (i.status === 'pending') i.status = 'done';
+          else if (i.status === 'cancelled') items.splice(k, 1);
+          else continue;
+          change = true;
+        }
+      }
+      return change;
+    },
+
+    // Confronte la liste a la vraie file de Spotify (`uris`, dans l'ordre) et
+    // au morceau en cours (`enCours`). Une demande que Spotify n'a plus, ni en
+    // file ni en lecture, est passee : sans ca elle resterait « a venir » tout
+    // le live (SK-D319, 17/10/2026 : file perdue en changeant d'appareil,
+    // morceau passe entre deux releves...).
+    //
+    // Prudences :
+    //   - Spotify ne renvoie qu'une vingtaine de morceaux. On ne conclut que si
+    //     la reponse va au-dela des demandes, c'est-a-dire contient un morceau
+    //     qui n'en est pas une (la suite de la playlist), ou est courte ;
+    //   - une demande toute fraiche peut manquer a un releve fait juste avant
+    //     son ajout : on ne touche pas aux demandes de moins de `delaiMs` ;
+    //   - il faut deux releves de suite sans elle pour la retirer.
+    // Renvoie true si la liste a change.
+    reconcilier(
+      { uris = [], enCours = null } = {},
+      { maintenant = Date.now(), delaiMs = 20000, max = 20 } = {}
+    ) {
+      const presents = new Set(uris);
+      const demandees = new Set(items.filter((i) => i.status === 'pending').map((i) => i.uri));
+      const complete = uris.length < max || uris.some((u) => !demandees.has(u));
+      if (!complete) return false;
+
+      let change = false;
+      for (let k = items.length - 1; k >= 0; k--) {
+        const i = items[k];
+        if (i.status !== 'pending' && i.status !== 'cancelled') continue;
+        if (presents.has(i.uri) || i.uri === enCours || maintenant - i.at < delaiMs) {
+          i.absences = 0;
+          continue;
+        }
+        i.absences = (i.absences ?? 0) + 1;
+        if (i.absences < 2) continue;
+        if (i.status === 'pending') i.status = 'done';
+        else items.splice(k, 1);
         change = true;
       }
       return change;

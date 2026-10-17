@@ -89,6 +89,83 @@ test('marquerEnLecture termine le precedent et ne repond que sur changement', ()
   assert.equal(f.enCours().name, 'Beta', 'Alpha doit etre termine, pas encore en lecture');
 });
 
+// SK-D319 (seigneurpercevai, 17/10/2026) : trois demandes restees « a venir »
+// 25 min, aucune vue en lecture par un releve. La liste ne doit pas dependre
+// du seul fait de voir chaque demande jouer.
+test('une demande qui joue termine celles d avant, meme jamais vues', () => {
+  const f = creerFile();
+  f.ajouter(morceau('Alpha')); // passee entre deux releves
+  const b = f.ajouter(morceau('Beta'));
+  f.annuler(b); // annulee, et Spotify l'a deja depassee
+  const c = f.ajouter(morceau('Gamma'));
+  f.ajouter(morceau('Delta'));
+
+  assert.equal(f.marquerEnLecture(c.uri), true);
+  assert.deepEqual(
+    f.aVenir().map((i) => i.name),
+    ['Delta']
+  );
+  assert.equal(f.enCours().name, 'Gamma');
+  assert.equal(f.estAnnule(b.uri), false, 'l annulee depassee ne doit plus faire sauter un morceau');
+});
+
+test('reconcilier : une demande que Spotify n a plus quitte la liste au 2e releve', () => {
+  const f = creerFile();
+  const a = f.ajouter(morceau('Alpha'));
+  const b = f.ajouter(morceau('Beta'));
+  const plus = a.at + 60000;
+  // La file perdue (changement d'appareil) : Spotify n'a plus que la playlist.
+  const spotify = { enCours: 'spotify:track:playlist-1', uris: ['spotify:track:playlist-2', b.uri] };
+
+  assert.equal(f.reconcilier(spotify, { maintenant: plus }), false, 'un seul releve ne suffit pas');
+  assert.equal(f.reconcilier(spotify, { maintenant: plus + 30000 }), true);
+  assert.deepEqual(
+    f.aVenir().map((i) => i.name),
+    ['Beta']
+  );
+});
+
+test('reconcilier : la demande en lecture et les fraiches restent', () => {
+  const f = creerFile();
+  const a = f.ajouter(morceau('Alpha'));
+  const b = f.ajouter(morceau('Beta'));
+  const spotify = { enCours: a.uri, uris: ['spotify:track:playlist-1'] };
+
+  for (const t of [1000, 2000, 3000]) f.reconcilier(spotify, { maintenant: b.at + t });
+  assert.deepEqual(
+    f.aVenir().map((i) => i.name),
+    ['Alpha', 'Beta'],
+    'Alpha joue, Beta vient d etre ajoutee (le releve a pu partir avant)'
+  );
+});
+
+test('reconcilier : une reponse remplie de demandes ne conclut rien', () => {
+  // Spotify ne renvoie qu'une vingtaine de morceaux : si ce sont toutes des
+  // demandes, la 21e est peut-etre juste derriere.
+  const f = creerFile();
+  const items = [];
+  for (let i = 1; i <= 21; i++) items.push(f.ajouter(morceau('Titre ' + i)));
+  const spotify = { enCours: 'spotify:track:autre', uris: items.slice(0, 20).map((i) => i.uri) };
+  const plus = items[0].at + 60000;
+
+  f.reconcilier(spotify, { maintenant: plus });
+  assert.equal(f.reconcilier(spotify, { maintenant: plus + 30000 }), false);
+  assert.equal(f.aVenir().length, 21);
+});
+
+test('reconcilier : une demande revue entre deux releves repart de zero', () => {
+  const f = creerFile();
+  const a = f.ajouter(morceau('Alpha'));
+  const plus = a.at + 60000;
+  const sans = { enCours: 'spotify:track:autre', uris: ['spotify:track:playlist-1'] };
+  const avec = { enCours: 'spotify:track:autre', uris: [a.uri, 'spotify:track:playlist-1'] };
+
+  f.reconcilier(sans, { maintenant: plus });
+  f.reconcilier(avec, { maintenant: plus + 30000 });
+  assert.equal(f.reconcilier(sans, { maintenant: plus + 60000 }), false);
+  assert.equal(f.aVenir().length, 1);
+});
+
 test('une annulee est retiree une fois passee, et seulement celle-la', () => {
   const f = creerFile();
   const a = f.ajouter(morceau('Alpha'));

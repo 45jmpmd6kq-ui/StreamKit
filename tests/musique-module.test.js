@@ -43,9 +43,10 @@ const joue = (piste, { position = 0, pause = false } = {}) => ({
 });
 
 // Faux Spotify : un lecteur dont le test regle l'etat, et qui compte les
-// « suivant ». La recherche trouve toujours Beautiful Things.
+// « suivant ». La recherche trouve toujours Beautiful Things. `file` : les
+// morceaux ajoutes, que renvoie la file d'attente (le test peut la vider).
 function fauxSpotify() {
-  const s = { lecture: null, suivants: 0 };
+  const s = { lecture: null, suivants: 0, file: [] };
   mock.method(globalThis, 'fetch', async (url, options = {}) => {
     const u = new URL(String(url));
     if (u.hostname === 'accounts.spotify.com') {
@@ -60,7 +61,13 @@ function fauxSpotify() {
       case 'GET /v1/search':
         return Response.json({ tracks: { items: [BEAUTIFUL] } });
       case 'POST /v1/me/player/queue':
+        s.file.push(u.searchParams.get('uri'));
         return new Response(null, { status: 204 });
+      case 'GET /v1/me/player/queue':
+        return Response.json({
+          currently_playing: s.lecture?.item ?? null,
+          queue: [...s.file, 'spotify:track:playlist-suite'].map((uri) => ({ uri })),
+        });
       case 'POST /v1/me/player/next':
         s.suivants++;
         return new Response(null, { status: 204 });
@@ -253,6 +260,53 @@ test('pause ou Spotify ferme : plus de morceau, et tout revient a la reprise', a
   spotify.lecture = null; // Spotify ferme
   await t.tour();
   assert.equal(t.liste().lecture, null);
+});
+
+// SK-D319 : Spotify a perdu les demandes (changement d'appareil), la liste les
+// gardait « a venir » tout le live.
+test('une demande que Spotify n a plus quitte la liste, une demande qu il garde reste', async () => {
+  const spotify = fauxSpotify();
+  const t = contexte();
+  let maintenant = 1_000_000;
+  mock.method(Date, 'now', () => maintenant);
+  spotify.lecture = joue(MIDNIGHT, { position: 72000 });
+  await manifeste.demarrer(t.ctx);
+
+  await t.demander('beautiful things benson boone', 'Viewer42');
+  assert.equal(t.liste().upcoming.length, 1);
+
+  // Spotify la garde : elle reste, aussi longtemps qu'il le faut.
+  for (let i = 0; i < 4; i++) {
+    maintenant += 30000;
+    await t.tour();
+  }
+  assert.equal(t.liste().upcoming.length, 1, 'encore dans la file Spotify : elle reste');
+
+  spotify.file = []; // file perdue
+  maintenant += 30000;
+  await t.tour();
+  assert.equal(t.liste().upcoming.length, 1, 'un releve sans elle ne suffit pas');
+  maintenant += 30000;
+  await t.tour();
+  assert.deepEqual(t.liste().upcoming, [], 'deux releves sans elle : elle quitte la liste');
+});
+
+test('file Spotify illisible : le morceau en cours s affiche quand meme', async () => {
+  const spotify = fauxSpotify();
+  const t = contexte({ afficherEnCours: true });
+  spotify.lecture = joue(MIDNIGHT, { position: 72000 });
+  await manifeste.demarrer(t.ctx);
+  await t.demander('beautiful things benson boone', 'Viewer42');
+
+  const fetchSpotify = globalThis.fetch;
+  mock.method(globalThis, 'fetch', async (url, options) =>
+    new URL(String(url)).pathname === '/v1/me/player/queue'
+      ? Response.json({ error: { message: 'en panne' } }, { status: 500 })
+      : fetchSpotify(url, options)
+  );
+  await t.tour();
+  assert.equal(t.liste().lecture?.name, 'Midnight City');
+  assert.equal(t.liste().upcoming.length, 1);
 });
 
 test('fin de morceau : un seul releve anticipe, qui montre le suivant', async () => {
