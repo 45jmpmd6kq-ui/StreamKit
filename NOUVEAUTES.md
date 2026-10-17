@@ -34,6 +34,23 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   (clic droit ▸ Actualiser) : ensuite, les changements de thème arrivent tout
   seuls.
 
+## 1.0.4
+
+### Corrections
+
+- 🎵 Bot Musique : la liste « à venir » ne reste plus bloquée. Une musique
+  demandée que Spotify ne jouera plus (passée, ou perdue quand Spotify change
+  d'appareil) quitte la liste toute seule, au lieu d'y rester tout le live.
+
+## 1.0.3
+
+### Corrections
+
+- 🏁 Compteur de session (Rocket League) : une partie d'entraînement libre
+  (pendant que tu cherches une partie, par exemple) ne compte plus comme une
+  défaite quand tu la quittes. Les vraies parties classées quittées avant la
+  fin comptent toujours en défaite, comme dans le jeu.
+
 ## 1.0.2
 
 ### Corrections
