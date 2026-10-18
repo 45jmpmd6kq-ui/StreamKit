@@ -117,19 +117,15 @@
          illisibles sur un jeu clair. */
       body.fond-leger #bas { color: rgb(var(--encre)); }
       body.fond-leger #carte { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.6); }
-      /* --- Style « Barre » : une capsule, la jauge en dégradé avec l'objectif
-         dedans, le compteur à droite. Pas de dernier viewer. --- */
+      /* --- Style « Barre » : le compteur dans une pastille ronde, un ruban avec
+         l'objectif, « plus que N » et une barre fine à curseur lumineux.
+         Choix du user (planche du 18/10/2026, variante C). --- */
       #capsule {
         display: none;
         align-items: center;
-        gap: 16px;
-        width: 620px;
+        width: 520px;
         margin: 24px;
-        padding: 8px 18px 8px 8px;
-        box-sizing: border-box;
-        background: var(--fond);
-        border-radius: 999px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, calc(0.45 * var(--k)));
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, calc(0.5 * var(--k))));
         opacity: 0;
         transform: translateY(8px);
         transition: opacity 0.35s ease, transform 0.35s ease;
@@ -137,50 +133,94 @@
       #capsule.visible { opacity: 1; transform: none; }
       body[data-style="barre"] #carte { display: none; }
       body[data-style="barre"] #capsule { display: flex; }
-      .piste {
+      .pastille {
         position: relative;
+        z-index: 1;
+        flex: none;
+        display: grid;
+        place-items: center;
+        width: 64px;
+        height: 64px;
+        box-sizing: border-box;
+        border-radius: 50%;
+        border: 3px solid var(--a2);
+        background: var(--fond);
+        text-align: center;
+        line-height: 1;
+        font-family: var(--chiffres);
+        transition: background 0.4s ease;
+      }
+      .pastille.pop { animation: pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
+      #b-compte { display: block; font-size: 21px; font-weight: 700; color: var(--a2); font-variant-numeric: tabular-nums; }
+      #b-cible { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+      #capsule.atteint .pastille { background: var(--a2); }
+      /* Sur la couleur secondaire, objectif atteint : texte foncé, comme un bouton. */
+      #capsule.atteint #b-compte,
+      #capsule.atteint #b-cible { color: #141414; }
+      .ruban {
         flex: 1;
-        height: 38px;
-        border-radius: 999px;
-        background: rgba(var(--encre), 0.1);
+        min-width: 0;
+        margin-left: -14px;
+        padding: 8px 16px 10px 26px;
+        background: var(--fond);
+        border-radius: 0 10px 10px 0;
+        /* Découpé en arc autour de la pastille : sous un fond transparent, le
+           ruban ne se voit pas à travers elle. Centre de la pastille à -18 px. */
+        -webkit-mask: radial-gradient(circle at -18px 50%, transparent 33px, #000 33.5px);
+        mask: radial-gradient(circle at -18px 50%, transparent 33px, #000 33.5px);
+      }
+      .ruban .l1 {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 7px;
+        font-family: var(--chiffres);
+      }
+      .ruban .gauche {
+        min-width: 0;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        white-space: nowrap;
         overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .b-ico { margin-right: 6px; font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif; }
+      #b-reste { flex: none; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+      #capsule.atteint #b-reste { color: var(--a2); }
+      .ruban .piste {
+        position: relative;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(var(--encre), 0.12);
       }
       #b-rempli {
         position: absolute;
         inset: 0 auto 0 0;
         width: 0;
-        border-radius: 999px;
-        background: linear-gradient(90deg, var(--a1), var(--a2));
-        transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        border-radius: 3px;
+        background: var(--a1);
+        transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease;
       }
-      #capsule.atteint #b-rempli { box-shadow: 0 0 14px var(--a2); }
-      .etiquette {
+      /* Le curseur lumineux au bout de la jauge. */
+      #b-rempli::after {
+        content: "";
         position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0 16px;
-        min-width: 0;
-        font-weight: 700;
-        font-size: 15px;
-        letter-spacing: 0.6px;
-        text-transform: uppercase;
-        /* Blanc ombré : lisible sur la jauge comme sur la piste vide. */
-        color: #fff;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+        right: -6px;
+        top: -3px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgb(var(--encre));
+        box-shadow: 0 0 10px var(--a1);
       }
-      .etiquette .b-ico { font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif; font-size: 17px; }
-      .etiquette .b-ico.pop { animation: pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
-      #b-objectif { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      #b-compteur {
-        flex: none;
-        font-family: var(--chiffres);
-        font-weight: 700;
-        font-size: 20px;
-        font-variant-numeric: tabular-nums;
-      }
-      #capsule.atteint #b-compteur { color: var(--a2); }
+      #capsule.atteint #b-rempli { background: var(--a2); }
+      #capsule.atteint #b-rempli::after { box-shadow: 0 0 12px var(--a2); }
+      body.fond-leger #b-reste,
+      body.fond-leger #b-cible { color: rgb(var(--encre)); }
+      body.fond-leger #capsule { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.6); }
     </style>
   </head>
   <body data-coin="bottom-right">
@@ -196,14 +236,17 @@
       </div>
     </div>
 
-    <div id="capsule" class="sk-panneau">
-      <div class="piste">
-        <div id="b-rempli" class="sk-remplissage"></div>
-        <div class="etiquette">
-          <span class="b-ico" id="b-ico">🎁</span><span id="b-objectif" class="sk-titre"></span>
-        </div>
+    <div id="capsule">
+      <div class="pastille" id="b-pastille">
+        <div><span id="b-compte"></span><span id="b-cible"></span></div>
       </div>
-      <div id="b-compteur"></div>
+      <div class="ruban sk-panneau">
+        <div class="l1">
+          <span class="gauche"><span class="b-ico" id="b-ico">🎁</span><span id="b-objectif" class="sk-titre"></span></span>
+          <span id="b-reste"></span>
+        </div>
+        <div class="piste"><div id="b-rempli" class="sk-remplissage"></div></div>
+      </div>
     </div>
 
     <script src="/commun/flux.js"></script>
@@ -273,14 +316,16 @@
         texteBas(g);
 
         $('b-objectif').textContent = g.objectif;
-        $('b-compteur').textContent = nombre.format(g.compte) + ' / ' + nombre.format(g.cible);
+        $('b-compte').textContent = nombre.format(g.compte);
+        $('b-cible').textContent = '/ ' + nombre.format(g.cible);
+        $('b-reste').textContent = g.atteint ? 'débloqué !' : 'plus que ' + nombre.format(g.reste);
         $('b-rempli').style.width = g.pourcent + '%';
         $('b-ico').textContent = g.atteint ? '🎉' : '🎁';
         capsule.classList.toggle('atteint', !!g.atteint);
 
         // Un gift qui arrive : l'icône sautille.
         if (compteAffiche !== null && g.compte > compteAffiche && !document.hidden) {
-          for (const ico of [$('ico'), $('b-ico')]) {
+          for (const ico of [$('ico'), $('b-pastille')]) {
             ico.classList.remove('pop');
             void ico.offsetWidth;
             ico.classList.add('pop');
