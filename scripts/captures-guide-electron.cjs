@@ -12,6 +12,7 @@ const { app, BrowserWindow } = require('electron');
 const { writeFileSync, mkdirSync } = require('node:fs');
 const { join } = require('node:path');
 
+// APERCUS vide : la personnalisation est en suspens, pas d'apercus a refaire.
 const { SORTIE, APERCUS, BASE } = process.env;
 const THEMES = ['standard', 'esport', 'neon', 'minimal', 'arcade'];
 
@@ -25,11 +26,6 @@ const ECRANS = [
       'document.querySelector(\'[data-module="rl-session"]\').click();' +
       "setTimeout(() => [...document.querySelectorAll('.section h3')].find((h) => /Overlays/.test(h.textContent))?.scrollIntoView(), 600)",
   },
-  {
-    nom: 'personnalisation',
-    js: "document.getElementById('entree-personnalisation').click()",
-    attente: 4500,
-  },
   { nom: 'activite', js: "document.getElementById('entree-activite').click()" },
   { nom: 'metriques', js: "document.getElementById('entree-metriques').click()" },
   { nom: 'bug', js: "document.getElementById('btn-bug').click()" },
@@ -40,13 +36,9 @@ const attendre = (ms) =>
     setTimeout(r, ms);
   });
 
-app.disableHardwareAcceleration();
-// Entre deux series de captures, aucune fenetre n'est ouverte : sans ceci,
-// Electron quitterait l'application en plein milieu.
-app.on('window-all-closed', () => {});
-app.whenReady().then(async () => {
-  // Apercus de la page Personnalisation : la scene des cinq overlays Twitch
-  // (/apercu-twitch), animations terminees -- sinon on photographie un fondu.
+// Apercus de la page Personnalisation : la scene des cinq overlays Twitch
+// (/apercu-twitch), animations terminees -- sinon on photographie un fondu.
+async function apercus() {
   mkdirSync(APERCUS, { recursive: true });
   const scene = new BrowserWindow({
     width: 1280,
@@ -71,6 +63,14 @@ app.whenReady().then(async () => {
     console.log('  apercus/twitch-' + t + '.jpg');
   }
   scene.destroy();
+}
+
+app.disableHardwareAcceleration();
+// Entre deux series de captures, aucune fenetre n'est ouverte : sans ceci,
+// Electron quitterait l'application en plein milieu.
+app.on('window-all-closed', () => {});
+app.whenReady().then(async () => {
+  if (APERCUS) await apercus();
 
   const sources = [];
   for (const chemin of ['/overlay/musique/liste', '/overlay/lol-session/bandeau']) {

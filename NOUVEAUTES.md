@@ -15,28 +15,14 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 
 ### Nouveautés
 
-- **Personnalise le style de tes overlays Twitch.** La nouvelle page
-  Personnalisation propose cinq thèmes pour le Bot Musique, les sondages, les
-  prédictions, la pub et les clips : Standard esport (le style d'origine),
-  Esport, Néon, Minimal clair et Rétro arcade. Tout change tout de suite dans
-  OBS. Les overlays de tes jeux gardent leur style.
-- Chaque thème montre tes overlays Twitch en aperçu, pour voir le rendu avant
-  de choisir.
-- **De nouveaux styles d'overlay.** Le Bot Musique peut s'afficher en vinyle
-  qui tourne, plus discret que le bloc. Les sondages peuvent s'afficher en bras
-  de fer (une barre partagée dès trois choix) ou en tuiles qui se remplissent.
-  Réglage « Style de l'overlay » dans chaque module.
-- Le Néon se met à tes couleurs : une palette prête à l'emploi, ou les deux
-  couleurs de ton choix.
-- Une source Twitch peut garder son propre thème : ajoute `?theme=neon` (ou
-  `esport`, `minimal`, `arcade`) à la fin de son adresse.
 - **Un guide d'utilisation dans StreamKit.** Le bouton 📖 Guide d'utilisation,
   en haut à côté de Signaler un bug, explique chaque écran avec des captures :
-  premiers pas, Vue d'ensemble, modules et OBS, Personnalisation, Activité et
-  Métriques, signaler un bug.
-- Après cette mise à jour, recharge une fois tes sources StreamKit dans OBS
-  (clic droit ▸ Actualiser) : ensuite, les changements de thème arrivent tout
-  seuls.
+  premiers pas, Vue d'ensemble, modules et OBS, Activité et Métriques,
+  signaler un bug.
+- **Bientôt : personnalise tes overlays Twitch.** La page Personnalisation
+  apparaît dans le menu avec la mention « à venir » : des thèmes et de
+  nouveaux styles (vinyle pour le Bot Musique, bras de fer et tuiles pour les
+  sondages) arrivent dans une prochaine version.
 
 ## 1.0.4
 

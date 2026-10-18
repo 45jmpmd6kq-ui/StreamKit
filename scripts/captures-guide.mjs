@@ -33,6 +33,9 @@ const PORT = 47455;
 const BASE = 'http://127.0.0.1:' + PORT;
 const SORTIE = join(RACINE, 'src', 'dashboard', 'guide');
 const APERCUS = join(RACINE, 'src', 'dashboard', 'apercus');
+// La personnalisation est en suspens : ses apercus ne se refont qu'avec
+// STREAMKIT_THEMES=1 (voir core/themes.js, disponible).
+const THEMES = process.env.STREAMKIT_THEMES === '1';
 // Les modules montres actifs dans la Vue d'ensemble.
 const MODULES = ['musique', 'sondages', 'rl-session', 'rl-moments', 'lol-session'];
 
@@ -56,7 +59,12 @@ if (await repond()) {
 
 const donnees = mkdtempSync(join(tmpdir(), 'streamkit-guide-'));
 const serveur = spawn(process.execPath, [join(RACINE, 'src', 'index.js')], {
-  env: { ...process.env, STREAMKIT_DATA: donnees, STREAMKIT_TELEMETRIE: '0' },
+  env: {
+    ...process.env,
+    STREAMKIT_DATA: donnees,
+    STREAMKIT_TELEMETRIE: '0',
+    STREAMKIT_THEMES: THEMES ? '1' : '',
+  },
   stdio: 'ignore',
 });
 
@@ -75,7 +83,7 @@ try {
   const electron = createRequire(import.meta.url)('electron');
   const code = await new Promise((resolve) => {
     const p = spawn(electron, [join(RACINE, 'scripts', 'captures-guide-electron.cjs')], {
-      env: { ...process.env, SORTIE, APERCUS, BASE },
+      env: { ...process.env, SORTIE, APERCUS: THEMES ? APERCUS : '', BASE },
       stdio: 'inherit',
     });
     p.on('exit', resolve);

@@ -9,6 +9,8 @@
 
 import { dossierDeDonneesJetable, nettoyer } from './aide.js';
 const DONNEES = dossierDeDonneesJetable(); // AVANT tout import du code
+// La personnalisation est en suspens dans l'application : ces tests la rouvrent.
+process.env.STREAMKIT_THEMES = '1';
 
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -206,6 +208,25 @@ test('chaque theme a son image d apercu, sauf le Neon qui est vivant', () => {
     if (id === 'neon') continue;
     const image = join(RACINE, 'src', 'dashboard', 'apercus', 'twitch-' + id + '.jpg');
     assert.ok(existsSync(image), 'apercus/twitch-' + id + '.jpg manquante : npm run captures');
+  }
+});
+
+// --- En suspens -------------------------------------------------------------------
+
+test('en suspens : aucun overlay ne recoit de theme, et le choix est refuse', async () => {
+  delete process.env.STREAMKIT_THEMES;
+  try {
+    assert.equal(themes.liste().disponible, false);
+    const r = await lire('/overlay/musique/liste');
+    assert.doesNotMatch(r.corps, /data-sk-theme|\/commun\/theme\.js|\/commun\/themes\//);
+    assert.equal((await lire('/overlay/musique/liste?theme=neon')).corps.includes('data-sk-theme'), false);
+    assert.equal((await choisir('neon')).status, 400);
+    assert.equal(
+      (await poster('/api/themes/neon', { principale: '#7dff3d', secondaire: '#f5ff3d' })).status,
+      400
+    );
+  } finally {
+    process.env.STREAMKIT_THEMES = '1';
   }
 });
 

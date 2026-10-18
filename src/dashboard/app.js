@@ -1930,6 +1930,8 @@ async function chargerThemes() {
   } catch {
     themes = null;
   }
+  // La mention « à venir » du menu tant que la personnalisation est en suspens.
+  if (themes) $('#badge-perso-a-venir').hidden = themes.disponible;
   if (etat.selection === PERSONNALISATION) dessinerPersonnalisation();
 }
 
@@ -1998,7 +2000,15 @@ function dessinerPersonnalisation() {
     redessinerDetail('<div class="vide">Lecture des thèmes…</div>');
     return;
   }
-  redessinerDetail(htmlPersonnalisation(), ajusterApercus);
+  // En suspens : la page reste visible, floutée, avec la mention « à venir ».
+  const html = themes.disponible
+    ? htmlPersonnalisation()
+    : `<div class="perso-suspendue">
+         <div class="perso-floue" inert aria-hidden="true">${htmlPersonnalisation()}</div>
+         <div class="perso-bientot"><span>🎨</span><b>Bientôt disponible</b>
+           <p>Thèmes et styles pour tes overlays Twitch arrivent dans une prochaine version.</p></div>
+       </div>`;
+  redessinerDetail(html, ajusterApercus);
 }
 
 // La scène vivante du Néon fait 1280 px de large : on la réduit à la carte.
@@ -2022,7 +2032,7 @@ async function envoyerTheme(corps, chemin = '/api/themes') {
 }
 
 document.addEventListener('click', async (e) => {
-  if (etat.selection !== PERSONNALISATION || !themes) return;
+  if (etat.selection !== PERSONNALISATION || !themes?.disponible) return;
   const b = e.target.closest('[data-theme]');
   if (b && !b.disabled) {
     if (await envoyerTheme({ theme: b.dataset.theme })) {
@@ -2041,7 +2051,7 @@ document.addEventListener('click', async (e) => {
 // Couleurs libres : envoyées quand le sélecteur se referme (change), pas à
 // chaque pas de la souris -- chaque envoi réécrit config.json.
 document.addEventListener('change', (e) => {
-  if (etat.selection !== PERSONNALISATION || !themes) return;
+  if (etat.selection !== PERSONNALISATION || !themes?.disponible) return;
   if (e.target.id !== 'neon-principale' && e.target.id !== 'neon-secondaire') return;
   envoyerTheme(
     { principale: $('#neon-principale').value, secondaire: $('#neon-secondaire').value },
@@ -2412,9 +2422,13 @@ function dessinerChamp(c, valeur) {
   }
 
   const large = c.type === 'liste' || c.type === 'texteLong';
+  // Champ pas encore disponible : montré, mais flou et impossible à changer.
+  if (c.aVenir) saisie = `<div class="a-venir-saisie" aria-disabled="true" inert>${saisie}</div>`;
 
-  return `<div class="champ ${large ? 'large' : ''}">
-      <label for="${id}">${echapper(c.label ?? c.cle)}${c.requis ? ' <span style="color:var(--erreur)">*</span>' : ''}</label>
+  return `<div class="champ ${large ? 'large' : ''} ${c.aVenir ? 'a-venir' : ''}">
+      <label for="${id}">${echapper(c.label ?? c.cle)}${c.requis ? ' <span style="color:var(--erreur)">*</span>' : ''}${
+        c.aVenir ? ' <span class="badge-a-venir">à venir</span>' : ''
+      }</label>
       ${c.aide ? `<div class="aide">${echapper(c.aide)}</div>` : ''}
       <div class="saisie">${saisie}</div>
     </div>`;
@@ -2423,6 +2437,7 @@ function dessinerChamp(c, valeur) {
 function lireFormulaire(m) {
   const out = {};
   for (const c of m.champs) {
+    if (c.aVenir) continue; // pas encore sélectionnable : le socle garde son défaut
     const el = document.querySelector(`[data-cle="${c.cle}"]`);
     if (!el) continue;
     if (c.type === 'bool') out[c.cle] = el.getAttribute('aria-checked') === 'true';
@@ -3000,6 +3015,7 @@ brancherModerateur();
 brancherModales();
 brancherSignalement();
 brancherGuide();
+chargerThemes(); // pour la mention « à venir » du menu
 
 await rafraichirEtat();
 await chargerModules();

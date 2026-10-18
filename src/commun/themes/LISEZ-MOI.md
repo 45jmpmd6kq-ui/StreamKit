@@ -1,5 +1,12 @@
 # Thèmes d'overlay
 
+> **En suspens depuis le 18/10/2026** (choix du développeur) : `disponible()` dans
+> `src/core/themes.js` renvoie faux, la page Personnalisation est floutée avec la
+> mention « à venir », et le serveur ne pose aucun thème. `STREAMKIT_THEMES=1` la rouvre
+> en développement (c'est ce que font les tests) ; pour la rouvrir à tous, faire renvoyer
+> `true` à `disponible()`. Les styles d'overlay des modules (`style`, `aVenir: true`) sont
+> suspendus de la même façon.
+
 Un thème habille les overlays **Twitch** du streamer (modules de `categorie: 'twitch'` :
 Bot Musique, Sondages, Prédictions, Pub, Clips). Il se choisit dans le dashboard, page
 **Personnalisation**. Les overlays des jeux ne se personnalisent pas : le serveur ne leur

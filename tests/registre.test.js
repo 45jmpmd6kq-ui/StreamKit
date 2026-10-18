@@ -127,6 +127,16 @@ test('une action mise en bouton existe vraiment', () => {
   }
 });
 
+test('un reglage « a venir » garde sa valeur par defaut, meme enregistre autrement', () => {
+  // Le style des overlays Twitch est en suspens : montre dans le dashboard, mais
+  // un « vinyle » enregistre pendant des essais ne doit pas s'appliquer.
+  const r = registre.definirReglages('musique', { style: 'vinyle' });
+  assert.equal(r.ok, true);
+  assert.equal(r.reglages.style, 'bloc');
+  assert.equal(registre.reglagesDe('musique').style, 'bloc');
+  assert.equal(registre.vue('musique').champs.find((c) => c.cle === 'style').aVenir, true);
+});
+
 test('la vue envoyee au dashboard ne contient aucun secret en clair', () => {
   for (const m of registre.liste()) {
     const v = registre.vue(m.id);

@@ -30,6 +30,15 @@ import * as journal from './journal.js';
 const log = journal.pour('themes');
 
 export const CANAL = 'themes';
+
+// En suspens (choix du user le 18/10/2026) : la page Personnalisation est
+// floutee avec la mention « à venir », et aucun overlay ne recoit de theme --
+// exactement le rendu d'avant les themes, quel que soit le reglage enregistre.
+// STREAMKIT_THEMES=1 la rouvre (developpement, tests). Pour la rouvrir a tous,
+// renvoyer true ici.
+export function disponible() {
+  return process.env.STREAMKIT_THEMES === '1';
+}
 export const THEME_PAR_DEFAUT = 'standard';
 
 export const THEMES = [
@@ -100,7 +109,7 @@ export function actuel() {
 
 // Seuls les modules Twitch se personnalisent.
 export function personnalisable(manifeste) {
-  return resoudre(manifeste?.categorie).id === 'twitch';
+  return disponible() && resoudre(manifeste?.categorie).id === 'twitch';
 }
 
 export function neon() {
@@ -146,10 +155,17 @@ export function styleNeon() {
 // --- Lecture et reglage --------------------------------------------------------
 
 export function liste() {
-  return { actuel: actuel(), neon: neon(), themes: THEMES, palettesNeon: PALETTES_NEON };
+  return {
+    disponible: disponible(),
+    actuel: actuel(),
+    neon: neon(),
+    themes: THEMES,
+    palettesNeon: PALETTES_NEON,
+  };
 }
 
 export function choisir(theme) {
+  if (!disponible()) return { ok: false, erreur: 'personnalisation à venir' };
   if (!existe(theme)) return { ok: false, erreur: 'thème inconnu' };
   const c = getConfig();
   if (c.apparence?.theme !== theme) {
@@ -162,6 +178,7 @@ export function choisir(theme) {
 }
 
 export function choisirNeon({ principale, secondaire }) {
+  if (!disponible()) return { ok: false, erreur: 'personnalisation à venir' };
   if (!COULEUR.test(principale) || !COULEUR.test(secondaire))
     return { ok: false, erreur: 'couleur invalide' };
   const c = getConfig();

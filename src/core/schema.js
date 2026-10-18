@@ -6,7 +6,10 @@
 // ligne dans son schema, rien d'autre.
 //
 // Un champ :
-//   { cle, type, label, aide?, defaut?, groupe?, ...contraintes }
+//   { cle, type, label, aide?, defaut?, groupe?, aVenir?, ...contraintes }
+//
+// aVenir : le champ est montre, flou et grise, avec la mention « à venir » ; le
+// module recoit toujours sa valeur par defaut (voir registre.reglagesDe).
 //
 // Types reconnus (le dashboard sait dessiner chacun) :
 //   texte       une ligne                      (max?)

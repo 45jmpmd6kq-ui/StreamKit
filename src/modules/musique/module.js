@@ -178,6 +178,8 @@ export default {
         aide: 'Bloc : pochette, titre, avancement et file d’attente. Vinyle : un disque qui tourne avec le morceau en cours et la file sur une ligne, plus discret. Le vinyle montre toujours le morceau en cours.',
         // Bloc par defaut : une mise a jour ne change pas l'ecran d'un streamer.
         defaut: 'bloc',
+        // En suspens (choix du user le 18/10/2026) : visible, pas selectionnable.
+        aVenir: true,
         options: [
           { valeur: 'bloc', label: 'Bloc' },
           { valeur: 'vinyle', label: 'Vinyle' },

@@ -290,32 +290,13 @@ connectées, et la liste **Overlays OBS** (à droite) dit lesquelles, avec leur
 jeu. Une source qui pointe vers un module désactivé y apparaît en orange : elle
 est dans tes scènes, mais n'affiche rien.
 
-### Changer le style de tes overlays Twitch
+### Bientôt : le style de tes overlays Twitch
 
-Dans le menu de gauche, **Personnalisation** propose cinq thèmes pour tes
-overlays Twitch (Bot Musique, Sondages, Prédictions, Annonce de pub, Clips) :
-**Standard esport** (le style d'origine), **Esport**, **Néon**, **Minimal
-clair** et **Rétro arcade**. Chaque carte montre tes overlays Twitch habillés
-par le thème ; clique **Choisir ce thème** et ils changent tout de suite dans
-OBS, sans recharger tes sources.
-
-- Les overlays de tes jeux (LoL, Rocket League, Valorant, EA FC) gardent leur
-  style d'origine.
-- **Néon** : choisis ses deux couleurs, juste sous les cartes, dans une palette
-  ou librement avec les deux sélecteurs.
-- Le thème change l'habillage (fond, couleurs, police, cadres), pas la place de
-  tes overlays. Les couleurs qui ont un sens restent les mêmes (équipes d'une
-  prédiction, choix d'un sondage).
-- Les couleurs réglées dans un module (Bot Musique, Clips) ne s'appliquent
-  qu'avec **Standard esport**.
-- La **forme** de certains overlays se choisit dans leur module, réglage
-  **Style de l'overlay** : Bot Musique en **Bloc** ou en **Vinyle** (un disque
-  qui tourne, plus discret) ; Sondages en **Scoreboard**, **Bras de fer** (deux
-  camps, ou une barre partagée dès trois choix) ou **Tuiles**. Le thème
-  s'applique par-dessus.
-- Pour qu'**une seule** source garde un autre thème, ajoute `?theme=neon` à la
-  fin de son adresse (ou `esport`, `minimal`, `arcade`, `standard`). Elle ne
-  suivra plus les thèmes choisis dans Personnalisation.
+Dans le menu de gauche, **Personnalisation** porte la mention **à venir** : des
+thèmes pour tes overlays Twitch, et de nouvelles formes (Bot Musique en vinyle,
+sondages en bras de fer ou en tuiles) arrivent dans une prochaine version. En
+attendant, la page est floutée et le réglage **Style de l'overlay** des modules
+est grisé : tes overlays gardent leur style habituel.
 
 ---
 

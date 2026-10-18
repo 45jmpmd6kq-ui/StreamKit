@@ -140,7 +140,16 @@ export function reglagesDe(id) {
   const m = modules.get(id);
   if (!m) return {};
   const entree = store.entreeModule(id);
-  return { ...schema.valeursParDefaut(m.champs), ...entree.reglages };
+  return avecAVenir(m.champs, { ...schema.valeursParDefaut(m.champs), ...entree.reglages });
+}
+
+// Un champ `aVenir: true` est montre dans le dashboard mais pas encore
+// selectionnable : le module recoit toujours sa valeur par defaut, meme si une
+// autre a ete enregistree (essais sur une version de test, config.json retouche).
+function avecAVenir(champs, reglages) {
+  const out = { ...reglages };
+  for (const c of champs) if (c.aVenir) out[c.cle] = c.defaut;
+  return out;
 }
 
 // Champs marques `requis: true` et encore vides : le module ne peut pas demarrer.
@@ -157,7 +166,7 @@ export function definirReglages(id, brut) {
   const { valeurs, erreurs } = schema.normaliser(m.champs, brut);
   if (erreurs.length) return { ok: false, erreurs };
 
-  const finales = schema.reinjecterSecrets(m.champs, valeurs, anciennes);
+  const finales = avecAVenir(m.champs, schema.reinjecterSecrets(m.champs, valeurs, anciennes));
   store.sauverModule(id, { reglages: finales });
   return { ok: true, reglages: schema.masquerSecrets(m.champs, finales) };
 }

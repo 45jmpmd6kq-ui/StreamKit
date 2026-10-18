@@ -33,6 +33,8 @@ export default {
         aide: 'Scoreboard : une ligne par choix. Bras de fer : deux camps face à face, et une barre partagée entre les choix quand il y en a trois ou plus. Tuiles : une tuile par choix, qui se remplit avec ses votes.',
         // Scoreboard par defaut : une mise a jour ne change pas l'ecran d'un streamer.
         defaut: 'scoreboard',
+        // En suspens (choix du user le 18/10/2026) : visible, pas selectionnable.
+        aVenir: true,
         options: [
           { valeur: 'scoreboard', label: 'Scoreboard' },
           { valeur: 'bras-de-fer', label: 'Bras de fer' },
