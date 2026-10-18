@@ -21,8 +21,8 @@ veux utiliser.
 | Pour…                              | Il te faut                                                                 |
 | ---------------------------------- | -------------------------------------------------------------------------- |
 | Tous les modules                   | Windows 10 ou 11, et OBS Studio pour afficher les overlays                 |
-| Clips, Bot Musique, Random Car, Prédictions, Sondages, Annonce de pub | Ton compte Twitch, avec la **double authentification activée** (Twitch l'exige pour créer une application) |
-| Bot Musique, Random Car, Prédictions, Sondages, Annonce de pub | Le statut **Affilié ou Partenaire** Twitch (points de chaîne, prédictions, sondages et pubs leur sont réservés) |
+| Clips, Bot Musique, Random Car, Prédictions, Sondages, Annonce de pub, Sub Goal | Ton compte Twitch, avec la **double authentification activée** (Twitch l'exige pour créer une application) |
+| Bot Musique, Random Car, Prédictions, Sondages, Annonce de pub, Sub Goal | Le statut **Affilié ou Partenaire** Twitch (points de chaîne, prédictions, sondages, pubs et subs leur sont réservés) |
 | Bot Musique                        | **Spotify Premium**, et Spotify ouvert sur un appareil pendant le live     |
 | Clips                              | Rien de plus — mais on ne peut clipper que **pendant un live**             |
 | Overlay W/L (Valorant)             | Valorant installé sur le même PC                                           |
@@ -170,6 +170,17 @@ seule si tu y as déjà changé quelque chose.
   du chat a son interrupteur pour le couper. **Si ta chaîne était déjà connectée avant**, reconnecte-la :
   ce module demande un droit de plus. **Simuler une pub** joue un exemple complet
   dans l'overlay, sans rien écrire dans le chat.
+- **Sub Goal** : écris ton objectif (« Arc Qiyana », « Arc 1v1 »…) et le
+  nombre de subs offerts à atteindre. Seuls les **subs offerts** font avancer
+  la barre — un sub classique ou un resub ne compte pas — et chaque sub offert
+  compte 1, quel que soit son palier. Le compteur est gardé d'un live à l'autre
+  et continue au-delà de l'objectif : change d'objectif puis clique **Remettre
+  à zéro** quand tu passes au suivant. **➕ / ➖** corrigent le compteur à la
+  main (un gift offert pendant que StreamKit était fermé). Les deux couleurs
+  et l'opacité du fond se règlent dans le module, comme pour la musique.
+  **Si ta chaîne était déjà connectée avant**, reconnecte-la : ce module
+  demande un droit de plus. **Simuler un subgift** montre +5 pendant 8
+  secondes sans toucher au vrai compteur.
 - **Overlay W/L** : rien à connecter. Lance Valorant, le bandeau se remplit tout
   seul.
 - **Compteur de session** (Rocket League) : l'API de stats du jeu est livrée

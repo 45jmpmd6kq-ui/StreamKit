@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — objectif de subs offerts</title>
+    <style>
+      /* Fond transparent obligatoire : OBS incruste la page telle quelle. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      /* Couleurs du module (réglages), puis thème d'overlay (src/commun/themes) :
+         chaque valeur retombe sur l'habillage d'origine. */
+      :root {
+        --accent1: #9146ff; /* barre, liseré */
+        --accent2: #ffb400; /* compteur, objectif atteint */
+        --opacite: 0.92;
+        --k: 1;
+        --a1: var(--sk-accent, var(--accent1));
+        --a2: var(--sk-or, var(--accent2));
+        --encre: var(--sk-encre, 255, 255, 255);
+        --fond: rgba(var(--sk-fond-rvb, 16, 16, 20), var(--opacite));
+        --muted: var(--sk-attenue, #b9b9c6);
+        --typo: var(--sk-typo, "Segoe UI", Inter, system-ui, sans-serif);
+        --chiffres: var(--sk-typo-titre, Bahnschrift, "Segoe UI", system-ui, sans-serif);
+      }
+
+      body { display: flex; font-family: var(--typo); color: rgb(var(--encre)); }
+      body[data-coin="top-left"] { align-items: flex-start; justify-content: flex-start; }
+      body[data-coin="top-center"] { align-items: flex-start; justify-content: center; }
+      body[data-coin="top-right"] { align-items: flex-start; justify-content: flex-end; }
+      body[data-coin="bottom-left"] { align-items: flex-end; justify-content: flex-start; }
+      body[data-coin="bottom-center"] { align-items: flex-end; justify-content: center; }
+      body[data-coin="bottom-right"] { align-items: flex-end; justify-content: flex-end; }
+
+      #carte {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        width: 340px;
+        margin: 24px;
+        padding: 11px 14px;
+        box-sizing: border-box;
+        background: var(--fond);
+        border-left: 5px solid var(--a1);
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, calc(0.45 * var(--k)));
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.35s ease, transform 0.35s ease, border-color 0.4s ease;
+      }
+      #carte.visible { opacity: 1; transform: none; }
+      #carte.atteint { border-left-color: var(--a2); }
+
+      .ico {
+        position: relative;
+        font-size: 30px;
+        line-height: 1;
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+        filter: drop-shadow(0 0 6px rgba(255, 180, 0, 0.55));
+      }
+      .ico.pop { animation: pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
+      @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.35) rotate(-8deg); } 100% { transform: scale(1); } }
+
+      .corps { flex: 1; min-width: 0; }
+      .l1 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+      #objectif {
+        font-weight: 700;
+        font-size: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #compteur {
+        flex: none;
+        font-family: var(--chiffres);
+        font-weight: 700;
+        font-size: 17px;
+        color: var(--a2);
+        font-variant-numeric: tabular-nums;
+      }
+      #compteur .sur { opacity: 0.75; font-size: 14px; }
+
+      .barre {
+        position: relative;
+        height: 8px;
+        margin: 7px 0 5px;
+        border-radius: 4px;
+        background: rgba(var(--encre), 0.12);
+        overflow: hidden;
+      }
+      #rempli {
+        height: 100%;
+        width: 0;
+        border-radius: 4px;
+        background: var(--a1);
+        transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease, box-shadow 0.4s ease;
+      }
+      #carte.atteint #rempli { background: var(--a2); box-shadow: 0 0 12px var(--a2); }
+
+      #bas {
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #bas b { color: rgb(var(--encre)); font-weight: 700; }
+      #carte.atteint #bas { color: var(--a2); font-weight: 700; }
+
+      /* Fond très transparent : textes secondaires éclaircis et ombrés, sinon
+         illisibles sur un jeu clair. */
+      body.fond-leger #bas { color: rgb(var(--encre)); }
+      body.fond-leger #carte { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.6); }
+    </style>
+  </head>
+  <body data-coin="bottom-right">
+    <div id="carte" class="sk-panneau">
+      <div class="ico" id="ico">🎁</div>
+      <div class="corps">
+        <div class="l1">
+          <div id="objectif" class="sk-titre"></div>
+          <div id="compteur"></div>
+        </div>
+        <div class="barre"><div id="rempli" class="sk-remplissage"></div></div>
+        <div id="bas"></div>
+      </div>
+    </div>
+
+    <script src="/commun/flux.js"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const carte = $('carte');
+      const accord = (n, un, plusieurs) => (n >= 2 ? plusieurs : un);
+      const nombre = new Intl.NumberFormat('fr-FR');
+
+      function appliquerTheme(t) {
+        if (!t) return;
+        const r = document.documentElement.style;
+        if (t.accent1) r.setProperty('--accent1', t.accent1);
+        if (t.accent2) r.setProperty('--accent2', t.accent2);
+        // Opacité du fond en % : 92 = le fond d'origine ; liseré et ombre s'effacent avec lui.
+        const o = Number.isFinite(t.opacite) ? Math.min(100, Math.max(0, t.opacite)) / 100 : 0.92;
+        r.setProperty('--opacite', String(o));
+        r.setProperty('--k', Math.min(1, o / 0.92).toFixed(3));
+        document.body.classList.toggle('fond-leger', o < 0.6);
+        if (t.coin) document.body.dataset.coin = t.coin;
+      }
+
+      let compteAffiche = null;
+
+      function texteBas(g) {
+        const bas = $('bas');
+        bas.replaceChildren();
+        if (g.atteint) {
+          bas.textContent = '🎉 Objectif atteint !';
+          return;
+        }
+        const d = g.dernier;
+        if (d && d.nombre) {
+          if (d.gifteur) {
+            const b = document.createElement('b');
+            b.textContent = d.gifteur;
+            bas.append(b, ' vient d’offrir ' + d.nombre + ' ' + accord(d.nombre, 'sub', 'subs'));
+          } else {
+            bas.textContent = 'Un viewer anonyme a offert ' + d.nombre + ' ' + accord(d.nombre, 'sub', 'subs');
+          }
+          return;
+        }
+        bas.textContent = 'Plus que ' + nombre.format(g.reste) + ' ' + accord(g.reste, 'sub offert', 'subs offerts');
+      }
+
+      function appliquer(etat) {
+        appliquerTheme(etat?.theme);
+        const g = etat?.goal;
+        if (!g || !g.objectif) {
+          carte.classList.remove('visible');
+          compteAffiche = null;
+          return;
+        }
+        $('objectif').textContent = g.objectif;
+        const sur = document.createElement('span');
+        sur.className = 'sur';
+        sur.textContent = '/' + nombre.format(g.cible);
+        $('compteur').replaceChildren(nombre.format(g.compte), sur);
+        $('rempli').style.width = g.pourcent + '%';
+        carte.classList.toggle('atteint', !!g.atteint);
+        $('ico').textContent = g.atteint ? '🎉' : '🎁';
+        texteBas(g);
+
+        // Un gift qui arrive : l'icône sautille.
+        if (compteAffiche !== null && g.compte > compteAffiche && !document.hidden) {
+          const ico = $('ico');
+          ico.classList.remove('pop');
+          void ico.offsetWidth;
+          ico.classList.add('pop');
+        }
+        compteAffiche = g.compte;
+        carte.classList.add('visible');
+      }
+
+      // ?demo=1 : une carte d'exemple, le temps de placer la source dans OBS.
+      // ?demo=atteint montre l'objectif atteint.
+      const demo = new URLSearchParams(location.search).get('demo');
+      const exemple = (atteint) => ({
+        goal: atteint
+          ? { objectif: 'Arc Qiyana', cible: 50, compte: 52, pourcent: 100, atteint: true, reste: 0, dernier: null }
+          : {
+              objectif: 'Arc Qiyana',
+              cible: 50,
+              compte: 37,
+              pourcent: 74,
+              atteint: false,
+              reste: 13,
+              dernier: { gifteur: 'Kaykay_RL', nombre: 5 },
+            },
+      });
+
+      // Chemin construit depuis location.pathname : un relatif remplacerait le
+      // dernier segment de l'URL et taperait /overlay/subgoal/flux.
+      const BASE = location.pathname.replace(/\/$/, '');
+      const flux = new FluxStreamKit(BASE + '/flux');
+
+      if (demo !== null) {
+        const ex = exemple(demo === 'atteint');
+        flux.addEventListener('etat', (m) => appliquer({ ...ex, theme: JSON.parse(m.data).theme }));
+        appliquer(ex);
+      } else {
+        flux.addEventListener('etat', (m) => appliquer(JSON.parse(m.data)));
+      }
+    </script>
+  </body>
+</html>

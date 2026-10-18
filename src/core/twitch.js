@@ -15,6 +15,7 @@
 //   surPredictions({...})  predictions : debut, progression, verrou, fin
 //   surSondages({...})     sondages : debut, progression, fin
 //   surPub(fn)             debut d'une coupure pub (duree, automatique ou non)
+//   surSubgifts(fn)        subs offerts (un evenement par lot, pas par receveur)
 //   statutRedemption(e, s) valider (FULFILLED) / rembourser (CANCELED)
 //   aLeDroit(scope)        savoir si l'autorisation courante couvre un droit
 //
@@ -464,6 +465,22 @@ export function contextePour(moduleId, logModule) {
         'pubs',
         'la pub',
         (recevoir) => listener.onChannelAdBreakBegin(etat.broadcasterId, recevoir),
+        fn
+      );
+    },
+
+    // Subs offerts : UN evenement par lot (« X offre 5 subs »), avec le nombre
+    // dans `amount`. Les subs classiques et les resubs n'arrivent jamais ici ;
+    // les receveurs d'un lot, eux, declenchent channel.subscribe, qu'on
+    // n'ecoute pas -- sinon chaque gift compterait deux fois. Droit requis :
+    // channel:read:subscriptions.
+    surSubgifts(fn) {
+      exige();
+      return brancher(
+        'subgift',
+        'subs offerts',
+        'le sub offert',
+        (recevoir) => listener.onChannelSubscriptionGift(etat.broadcasterId, recevoir),
         fn
       );
     },
