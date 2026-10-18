@@ -15,17 +15,17 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 
 ### Nouveautés
 
-- **Personnalise le style de tes overlays.** La nouvelle page Personnalisation
-  propose cinq thèmes : Standard esport (le style d'origine), Esport, Néon,
-  Minimal clair et Rétro arcade. Tout change tout de suite dans OBS.
-- Un thème par défaut pour tous tes overlays, et si tu veux un thème différent
-  par univers : Esport sur LoL, Arcade sur Rocket League…
-- Tes vrais overlays s'affichent en aperçu dans la page, pour voir le rendu
-  avant de choisir.
+- **Personnalise le style de tes overlays Twitch.** La nouvelle page
+  Personnalisation propose cinq thèmes pour le Bot Musique, les sondages, les
+  prédictions, la pub et les clips : Standard esport (le style d'origine),
+  Esport, Néon, Minimal clair et Rétro arcade. Tout change tout de suite dans
+  OBS. Les overlays de tes jeux gardent leur style.
+- Chaque thème montre tes overlays Twitch en aperçu, pour voir le rendu avant
+  de choisir.
 - Le Néon se met à tes couleurs : une palette prête à l'emploi, ou les deux
   couleurs de ton choix.
-- Une source peut garder son propre thème : ajoute `?theme=neon` (ou `esport`,
-  `minimal`, `arcade`) à la fin de son adresse.
+- Une source Twitch peut garder son propre thème : ajoute `?theme=neon` (ou
+  `esport`, `minimal`, `arcade`) à la fin de son adresse.
 - **Un guide d'utilisation dans StreamKit.** Le bouton 📖 Guide d'utilisation,
   en haut à côté de Signaler un bug, explique chaque écran avec des captures :
   premiers pas, Vue d'ensemble, modules et OBS, Personnalisation, Activité et

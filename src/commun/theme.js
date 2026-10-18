@@ -1,8 +1,8 @@
 // Theme d'overlay : suit en direct les reglages de « Personnalisation ».
 //
-// Pose par le serveur sur chaque overlay (voir poserTheme dans
-// src/core/serveur.js), avec la feuille du theme de son univers :
-//   <html data-sk-theme="neon" data-sk-univers="lol" style="--sk-neon-1: ...">
+// Pose par le serveur sur chaque overlay Twitch (voir poserTheme dans
+// src/core/serveur.js), avec la feuille du theme :
+//   <html data-sk-theme="neon" style="--sk-neon-1: ...">
 //   ...  <link id="sk-theme" href="/commun/themes/neon.css">
 //
 // Quand le streamer change un theme ou les couleurs du Neon, StreamKit pousse
@@ -22,7 +22,6 @@
 
   const racine = document.documentElement;
   const fige = racine.hasAttribute('data-sk-fige');
-  const univers = racine.getAttribute('data-sk-univers') || '';
   const RECONNEXION = 2000;
 
   function poserNeon(variables) {
@@ -57,7 +56,7 @@
       try {
         const etat = JSON.parse(texte.slice(i + 1));
         poserNeon(etat.neon);
-        if (!fige) appliquer(String(etat.univers?.[univers] || etat.defaut || ''));
+        if (!fige) appliquer(String(etat.theme || ''));
       } catch {
         /* message illisible : on garde le theme en place */
       }

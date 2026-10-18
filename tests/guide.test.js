@@ -41,7 +41,7 @@ after(() => {
 test('chaque capture citee par le guide existe', () => {
   const images = [...html.matchAll(/src="\/guide\/([^"]+)"/g)].map((m) => m[1]);
   assert.ok(images.length >= 8);
-  for (const f of images) assert.ok(existsSync(join(GUIDE, f)), f + ' manquante : npm run guide');
+  for (const f of images) assert.ok(existsSync(join(GUIDE, f)), f + ' manquante : npm run captures');
 });
 
 test('le guide ne parle jamais de l entree Moderateur', () => {

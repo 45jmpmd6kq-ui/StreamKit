@@ -1,8 +1,11 @@
-// Regenere les captures du guide d'utilisation : src/dashboard/guide/*.jpg.
+// Regenere les images du dashboard :
+//   - les apercus des themes Twitch de la page Personnalisation
+//     (src/dashboard/apercus/twitch-<theme>.jpg) ;
+//   - les captures du guide d'utilisation (src/dashboard/guide/*.jpg).
 //
-//   npm run guide
+//   npm run captures
 //
-// A relancer quand un ecran du dashboard change. Une installation VIERGE,
+// A relancer quand un ecran du dashboard ou un overlay Twitch change. Une installation VIERGE,
 // lancee pour l'occasion : dossier de donnees temporaire, aucun compte, donc
 // jamais l'entree « Moderateur » (elle n'existe que la ou se trouve
 // moderateur.json, c'est-a-dire sur le PC du developpeur) et aucune
@@ -10,8 +13,9 @@
 //
 // Deroulement : StreamKit demarre sur le port habituel (47455, celui qu'on lit
 // dans les adresses d'overlay des captures), quelques modules sont actives pour
-// que la Vue d'ensemble ait de quoi montrer, puis Electron ouvre chaque ecran
-// et le photographie (scripts/captures-guide-electron.cjs).
+// que la Vue d'ensemble ait de quoi montrer, puis Electron photographie les
+// apercus, puis chaque ecran (scripts/captures-guide-electron.cjs). Les apercus
+// d'abord : la page Personnalisation du guide les montre.
 //
 // Apres coup : les reperes numerotes du guide sont places en % de chaque
 // capture (src/dashboard/guide/guide.html). Verifie qu'ils tombent toujours
@@ -28,6 +32,7 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 47455;
 const BASE = 'http://127.0.0.1:' + PORT;
 const SORTIE = join(RACINE, 'src', 'dashboard', 'guide');
+const APERCUS = join(RACINE, 'src', 'dashboard', 'apercus');
 // Les modules montres actifs dans la Vue d'ensemble.
 const MODULES = ['musique', 'sondages', 'rl-session', 'rl-moments', 'lol-session'];
 
@@ -70,13 +75,13 @@ try {
   const electron = createRequire(import.meta.url)('electron');
   const code = await new Promise((resolve) => {
     const p = spawn(electron, [join(RACINE, 'scripts', 'captures-guide-electron.cjs')], {
-      env: { ...process.env, SORTIE, BASE },
+      env: { ...process.env, SORTIE, APERCUS, BASE },
       stdio: 'inherit',
     });
     p.on('exit', resolve);
   });
   if (code !== 0) throw new Error('captures interrompues (code ' + code + ')');
-  console.log('Captures du guide a jour dans ' + SORTIE);
+  console.log('Apercus et captures du guide a jour.');
 } finally {
   serveur.kill();
   await attendre(500);

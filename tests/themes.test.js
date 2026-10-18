@@ -3,8 +3,9 @@
 // La promesse a tenir : « Standard esport » rend chaque overlay EXACTEMENT
 // comme avant les themes. Elle repose sur deux choses que ces tests gardent :
 // standard.css ne definit aucun jeton, et chaque overlay lit les jetons --sk-*
-// avec sa valeur d'origine en repli. Le reste : le serveur pose le theme de
-// l'univers de chaque overlay, le change a chaud, et les couleurs du Neon.
+// avec sa valeur d'origine en repli. Le reste : le serveur pose le theme sur
+// les overlays Twitch -- et sur eux seuls --, le change a chaud, et les
+// couleurs du Neon.
 
 import { dossierDeDonneesJetable, nettoyer } from './aide.js';
 const DONNEES = dossierDeDonneesJetable(); // AVANT tout import du code
@@ -29,7 +30,7 @@ const MODULES = join(RACINE, 'src', 'modules');
 const app = {
   port: PORT,
   registre: {
-    // Deux univers : Rocket League (la roue) et Twitch (la musique).
+    // Un overlay de jeu (la roue, Rocket League) et un overlay Twitch (la musique).
     get: (id) => {
       if (id === 'roue-rl') {
         return {
@@ -75,76 +76,67 @@ const poster = (chemin, corps) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(corps),
   });
-const choisir = (cible, theme) => poster('/api/themes', { cible, theme });
-const themeDe = async (chemin) => (await lire(chemin)).corps.match(/data-sk-theme="([^"]+)"/)[1];
+const choisir = (theme) => poster('/api/themes', { theme });
+const themeDe = async (chemin) => (await lire(chemin)).corps.match(/data-sk-theme="([^"]+)"/)?.[1] ?? null;
 
-// --- Le serveur pose le theme ------------------------------------------------
+// --- Le serveur pose le theme, sur les overlays Twitch seulement ---------------
 
-test('un overlay recoit le theme Standard par defaut, feuille et script compris', async () => {
-  const r = await lire('/overlay/roue-rl/roue');
+test('un overlay Twitch recoit le theme Standard par defaut, feuille et script compris', async () => {
+  const r = await lire('/overlay/musique/liste');
   assert.equal(r.code, 200);
-  assert.match(r.corps, /<html[^>]* data-sk-theme="standard" data-sk-univers="rocket-league"/);
+  assert.match(r.corps, /<html[^>]* data-sk-theme="standard"/);
   assert.ok(r.corps.includes('href="/commun/themes/standard.css"'));
   // Le script de changement a chaud passe la CSP : il recoit le nonce.
   const nonce = r.csp.match(/'nonce-([^']+)'/)[1];
   assert.ok(r.corps.includes('<script nonce="' + nonce + '" src="/commun/theme.js"></script>'));
   // La feuille arrive APRES le <style> de l'overlay, dont elle remplace les jetons.
   assert.ok(r.corps.indexOf('id="sk-theme"') > r.corps.indexOf('</style>'));
-  assert.ok(!r.corps.includes('data-sk-fige'), 'un overlay normal suit les reglages');
-  // Un overlay, hors apercu, ne s'encadre nulle part.
+  assert.ok(!r.corps.includes('data-sk-fige'), 'un overlay normal suit le reglage');
   assert.match(r.csp, /frame-ancestors 'none'/);
 });
 
-test('?theme= force le theme d une source, et la fige', async () => {
-  const r = await lire('/overlay/roue-rl/roue?theme=neon');
-  assert.match(r.corps, /data-sk-theme="neon" data-sk-univers="rocket-league" data-sk-fige/);
+test('un overlay de jeu ne recoit aucun theme, meme force par ?theme=', async () => {
+  for (const chemin of ['/overlay/roue-rl/roue', '/overlay/roue-rl/roue?theme=neon']) {
+    const r = await lire(chemin);
+    assert.equal(r.code, 200);
+    assert.doesNotMatch(r.corps, /data-sk-theme|\/commun\/theme\.js|\/commun\/themes\//, chemin);
+  }
+});
+
+test('?theme= force le theme d une source Twitch, et la fige', async () => {
+  const r = await lire('/overlay/musique/liste?theme=neon');
+  assert.match(r.corps, /data-sk-theme="neon" data-sk-fige/);
   assert.ok(r.corps.includes('/commun/themes/neon.css'));
 
   // Un theme inconnu ne casse rien : on retombe sur celui du streamer.
-  assert.equal(await themeDe('/overlay/roue-rl/roue?theme=%3Cscript%3E'), 'standard');
+  assert.equal(await themeDe('/overlay/musique/liste?theme=%3Cscript%3E'), 'standard');
 });
 
-test('le theme par defaut s applique aux univers qui le suivent', async () => {
-  const r = await choisir('defaut', 'arcade');
+test('choisir un theme l enregistre, et les overlays Twitch charges ensuite le recoivent', async () => {
+  const r = await choisir('arcade');
   assert.equal(r.status, 200);
-  assert.equal((await r.json()).defaut, 'arcade');
+  assert.equal((await r.json()).actuel, 'arcade');
   assert.equal(getConfig().apparence.theme, 'arcade');
-  assert.equal(await themeDe('/overlay/roue-rl/roue'), 'arcade');
   assert.equal(await themeDe('/overlay/musique/liste'), 'arcade');
-  await choisir('defaut', 'standard');
+  assert.equal(await themeDe('/overlay/roue-rl/roue'), null, 'les jeux restent sans theme');
+  await choisir('standard');
 });
 
-test('un univers peut avoir son theme, et revenir au theme par defaut', async () => {
-  await choisir('rocket-league', 'esport');
-  assert.equal(await themeDe('/overlay/roue-rl/roue'), 'esport');
-  assert.equal(await themeDe('/overlay/musique/liste'), 'standard', 'Twitch suit toujours le defaut');
-
-  await choisir('rocket-league', 'defaut');
-  assert.equal(await themeDe('/overlay/roue-rl/roue'), 'standard');
-  assert.equal(themes.reglagesUnivers()['rocket-league'], 'defaut');
-});
-
-test('un theme ou un univers inconnu est refuse sans rien changer', async () => {
-  assert.equal((await choisir('defaut', '../../secret')).status, 400);
-  assert.equal((await choisir('defaut', 'defaut')).status, 400, 'le defaut ne peut pas suivre le defaut');
-  assert.equal((await choisir('outils', 'neon')).status, 400);
-  assert.equal((await choisir('inconnu', 'neon')).status, 400);
-  assert.equal(themes.parDefaut(), 'standard');
+test('un theme inconnu est refuse sans rien changer', async () => {
+  assert.equal((await choisir('../../secret')).status, 400);
+  assert.equal(themes.actuel(), 'standard');
 });
 
 test('un config.json retouche a la main retombe sur Standard', () => {
   const c = getConfig();
   c.apparence.theme = 'disparu';
-  c.apparence.univers = { lol: 'disparu' };
-  assert.equal(themes.parDefaut(), 'standard');
-  assert.equal(themes.pourUnivers('lol'), 'standard');
+  assert.equal(themes.actuel(), 'standard');
   c.apparence.theme = 'standard';
-  c.apparence.univers = {};
 });
 
 // --- Couleurs du Neon -----------------------------------------------------------
 
-test('les couleurs du Neon s enregistrent et arrivent sur chaque overlay', async () => {
+test('les couleurs du Neon s enregistrent et arrivent sur chaque overlay Twitch', async () => {
   const r = await poster('/api/themes/neon', { principale: '#7DFF3D', secondaire: '#f5ff3d' });
   assert.equal(r.status, 200);
   assert.deepEqual((await r.json()).neon, { principale: '#7dff3d', secondaire: '#f5ff3d' });
@@ -162,51 +154,44 @@ test('les couleurs du Neon s enregistrent et arrivent sur chaque overlay', async
 
 // --- Changement a chaud -------------------------------------------------------
 
-test(
-  'le flux des themes donne les reglages en cours, puis chaque changement',
-  { timeout: 5000 },
-  async () => {
-    const ws = new WebSocket('ws://127.0.0.1:' + PORT + '/commun/theme/flux');
-    const recus = [];
-    ws.onmessage = (m) => recus.push(JSON.parse(String(m.data).split('\n')[1]));
-    await new Promise((resolve, reject) => {
-      ws.onopen = resolve;
-      ws.onerror = reject;
-    });
-    const attendre = async (n) => {
-      while (recus.length < n) {
-        await new Promise((r) => {
-          setTimeout(r, 10);
-        });
-      }
-    };
+test('le flux des themes donne le reglage en cours, puis chaque changement', { timeout: 5000 }, async () => {
+  const ws = new WebSocket('ws://127.0.0.1:' + PORT + '/commun/theme/flux');
+  const recus = [];
+  ws.onmessage = (m) => recus.push(JSON.parse(String(m.data).split('\n')[1]));
+  await new Promise((resolve, reject) => {
+    ws.onopen = resolve;
+    ws.onerror = reject;
+  });
+  const attendre = async (n) => {
+    while (recus.length < n) {
+      await new Promise((r) => {
+        setTimeout(r, 10);
+      });
+    }
+  };
 
-    await attendre(1);
-    assert.equal(
-      recus[0].defaut,
-      'standard',
-      'une source qui se connecte connait tout de suite les reglages'
-    );
-    assert.equal(recus[0].univers.lol, 'standard');
-    assert.equal(recus[0].neon['--sk-neon-1'], '#ff3df2');
+  await attendre(1);
+  assert.equal(recus[0].theme, 'standard', 'une source qui se connecte connait tout de suite le theme');
+  assert.equal(recus[0].neon['--sk-neon-1'], '#ff3df2');
 
-    await choisir('lol', 'minimal');
-    await attendre(2);
-    assert.equal(recus[1].univers.lol, 'minimal');
-    assert.equal(recus[1].univers.twitch, 'standard');
+  await choisir('minimal');
+  await attendre(2);
+  assert.equal(recus[1].theme, 'minimal');
 
-    ws.close();
-    await choisir('lol', 'defaut');
-  }
-);
+  ws.close();
+  await choisir('standard');
+});
 
-// --- Apercu du dashboard -------------------------------------------------------
+// --- Apercus de la page Personnalisation -------------------------------------------
 
-test('un overlay en apercu se laisse encadrer par le dashboard, et lui seul', async () => {
-  const r = await lire('/overlay/roue-rl/roue?demo=1&apercu=1&theme=neon');
-  assert.equal(r.code, 200);
-  assert.match(r.csp, /frame-ancestors 'self'/);
-  assert.match(r.corps, /data-sk-fige/);
+test('la scene d apercu et les overlays en apercu se laissent encadrer par le dashboard', async () => {
+  const scene = await lire('/apercu-twitch?theme=neon');
+  assert.equal(scene.code, 200);
+  assert.match(scene.csp, /frame-ancestors 'self'/);
+
+  const overlay = await lire('/overlay/musique/liste?demo=1&apercu=1&theme=neon');
+  assert.match(overlay.csp, /frame-ancestors 'self'/);
+  assert.match(overlay.corps, /data-sk-fige/);
 });
 
 test('un overlay en apercu ne se branche pas au flux', () => {
@@ -214,6 +199,14 @@ test('un overlay en apercu ne se branche pas au flux', () => {
   const flux = readFileSync(join(RACINE, 'src', 'commun', 'flux.js'), 'utf8');
   assert.match(flux, /has\('apercu'\)/);
   assert.match(flux, /if \(APERCU\) return;/);
+});
+
+test('chaque theme a son image d apercu, sauf le Neon qui est vivant', () => {
+  for (const { id } of themes.THEMES) {
+    if (id === 'neon') continue;
+    const image = join(RACINE, 'src', 'dashboard', 'apercus', 'twitch-' + id + '.jpg');
+    assert.ok(existsSync(image), 'apercus/twitch-' + id + '.jpg manquante : npm run captures');
+  }
 });
 
 // --- Catalogue et fichiers ----------------------------------------------------

@@ -1,5 +1,6 @@
-// Photographie les ecrans du dashboard pour le guide (lance par
-// scripts/captures-guide.mjs, qui a demarre une installation vierge).
+// Photographie les apercus des themes Twitch puis les ecrans du dashboard
+// pour le guide (lance par scripts/captures-guide.mjs, qui a demarre une
+// installation vierge).
 //
 // Fenetre 1280 x 820 rendue hors ecran. Deux overlays sont ouverts dans des
 // fenetres cachees : ils comptent comme des sources OBS, et la Vue d'ensemble
@@ -8,10 +9,11 @@
 /* global process, setTimeout, console */
 
 const { app, BrowserWindow } = require('electron');
-const { writeFileSync } = require('node:fs');
+const { writeFileSync, mkdirSync } = require('node:fs');
 const { join } = require('node:path');
 
-const { SORTIE, BASE } = process.env;
+const { SORTIE, APERCUS, BASE } = process.env;
+const THEMES = ['standard', 'esport', 'neon', 'minimal', 'arcade'];
 
 const ECRANS = [
   { nom: 'accueil', js: "document.getElementById('entree-accueil').click()" },
@@ -39,7 +41,37 @@ const attendre = (ms) =>
   });
 
 app.disableHardwareAcceleration();
+// Entre deux series de captures, aucune fenetre n'est ouverte : sans ceci,
+// Electron quitterait l'application en plein milieu.
+app.on('window-all-closed', () => {});
 app.whenReady().then(async () => {
+  // Apercus de la page Personnalisation : la scene des cinq overlays Twitch
+  // (/apercu-twitch), animations terminees -- sinon on photographie un fondu.
+  mkdirSync(APERCUS, { recursive: true });
+  const scene = new BrowserWindow({
+    width: 1280,
+    height: 720,
+    show: false,
+    webPreferences: { offscreen: true },
+  });
+  scene.webContents.setFrameRate(30);
+  for (const t of THEMES) {
+    await scene.loadURL(BASE + '/apercu-twitch?theme=' + t);
+    await attendre(3000);
+    await scene.webContents.executeJavaScript(`(() => {
+      for (const f of document.querySelectorAll('iframe')) {
+        for (const a of f.contentDocument?.getAnimations() ?? []) {
+          if (/sortie/.test(a.animationName || '')) a.cancel();
+          else { try { a.finish(); } catch { a.pause(); } }
+        }
+      }
+    })(); 1`);
+    await attendre(300);
+    writeFileSync(join(APERCUS, 'twitch-' + t + '.jpg'), (await scene.webContents.capturePage()).toJPEG(86));
+    console.log('  apercus/twitch-' + t + '.jpg');
+  }
+  scene.destroy();
+
   const sources = [];
   for (const chemin of ['/overlay/musique/liste', '/overlay/lol-session/bandeau']) {
     const s = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });

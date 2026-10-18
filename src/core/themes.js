@@ -1,20 +1,20 @@
-// Themes d'overlay : l'habillage des overlays du streamer.
+// Themes d'overlay : l'habillage des overlays TWITCH du streamer.
+//
+// Seuls les overlays des modules Twitch (categorie « twitch » : Bot Musique,
+// Sondages, Predictions, Pub, Clips) se personnalisent -- choix du user le
+// 18/10/2026. Les overlays des jeux (LoL, Rocket League, Valorant, EA FC)
+// gardent leur style d'origine : le serveur ne leur pose aucun theme.
 //
 // Un theme ne change QUE l'habillage -- fond, couleurs d'accent, polices,
-// arrondis, ombres et lueurs. La disposition des overlays reste la leur.
-// Les couleurs qui portent un sens restent celles du module : victoire et
-// defaite, couleurs de rang, couleur du club FC, equipes bleu et rose des
-// predictions, temperatures de Rocket League.
-//
-// Le streamer choisit un theme PAR DEFAUT, et peut en donner un autre a un
-// univers (Twitch, LoL, Rocket League...) : celui de la categorie du module,
-// voir core/categories.js. Le Neon a en plus sa palette, commune a tous les
-// univers qui l'utilisent.
+// arrondis, ombres et lueurs. La disposition des overlays reste la leur, et
+// les couleurs qui portent un sens restent celles du module (equipes bleu et
+// rose des predictions, couleurs des choix d'un sondage). Le Neon a en plus sa
+// palette, choisie par le streamer.
 //
 // Mecanique (detail dans src/commun/themes/LISEZ-MOI.md) :
-//   - le serveur pose sur chaque overlay la feuille du theme de son univers
-//     (/commun/themes/<id>.css), data-sk-theme et data-sk-univers sur <html>,
-//     et les couleurs du Neon en variables (--sk-neon-*) ;
+//   - le serveur pose sur chaque overlay Twitch la feuille du theme
+//     (/commun/themes/<id>.css), data-sk-theme sur <html>, et les couleurs du
+//     Neon en variables (--sk-neon-*) ;
 //   - cette feuille definit des jetons --sk-* ; chaque overlay les lit avec SES
 //     valeurs d'origine en repli : var(--sk-encre, 242, 244, 247) ;
 //   - « Standard esport » ne definit aucun jeton : chaque overlay garde
@@ -23,7 +23,7 @@
 //     OBS changent de feuille sur-le-champ (src/commun/theme.js).
 
 import { getConfig, sauverConfig } from './store.js';
-import { CATEGORIES, resoudre } from './categories.js';
+import { resoudre } from './categories.js';
 import * as diffusion from './diffusion.js';
 import * as journal from './journal.js';
 
@@ -31,10 +31,7 @@ const log = journal.pour('themes');
 
 export const CANAL = 'themes';
 export const THEME_PAR_DEFAUT = 'standard';
-// Valeur d'un univers qui suit le theme par defaut.
-export const DEFAUT = 'defaut';
 
-// L'ordre est celui de la page Personnalisation.
 export const THEMES = [
   {
     id: 'standard',
@@ -68,14 +65,6 @@ export const THEMES = [
   },
 ];
 
-// Les univers reglables : les categories de modules, sauf « Outils » (module
-// de demonstration, utilitaires sans overlay), qui suit le theme par defaut.
-export const UNIVERS = CATEGORIES.filter((c) => c.id !== 'outils').map(({ id, label, icone }) => ({
-  id,
-  label,
-  icone,
-}));
-
 // Couples de couleurs proposes pour le Neon : la principale (contours,
 // lueurs), la secondaire (pseudos, chiffres forts, fin du degrade).
 export const PALETTES_NEON = [
@@ -91,7 +80,6 @@ export const PALETTES_NEON = [
 const NEON_PAR_DEFAUT = { principale: PALETTES_NEON[0].principale, secondaire: PALETTES_NEON[0].secondaire };
 
 const IDS = new Set(THEMES.map((t) => t.id));
-const IDS_UNIVERS = new Set(UNIVERS.map((u) => u.id));
 const COULEUR = /^#[0-9a-f]{6}$/i;
 
 export function existe(id) {
@@ -102,29 +90,17 @@ function apparence() {
   return getConfig().apparence ?? {};
 }
 
-// Le theme par defaut. Un identifiant inconnu (config.json retouche a la main,
-// theme retire dans une version future) retombe sur Standard plutot que de
-// laisser les overlays sans feuille.
-export function parDefaut() {
+// Le theme des overlays Twitch. Un identifiant inconnu (config.json retouche a
+// la main, theme retire dans une version future) retombe sur Standard plutot
+// que de laisser les overlays sans feuille.
+export function actuel() {
   const id = apparence().theme;
   return existe(id) ? id : THEME_PAR_DEFAUT;
 }
 
-// Ce que le streamer a regle pour chaque univers : un theme, ou « defaut ».
-export function reglagesUnivers() {
-  const enregistre = apparence().univers ?? {};
-  return Object.fromEntries(UNIVERS.map((u) => [u.id, existe(enregistre[u.id]) ? enregistre[u.id] : DEFAUT]));
-}
-
-// Le theme qu'un overlay de cet univers affiche.
-export function pourUnivers(univers) {
-  const choix = reglagesUnivers()[univers];
-  return choix && choix !== DEFAUT ? choix : parDefaut();
-}
-
-// Le theme d'un module, d'apres sa categorie.
-export function pourModule(manifeste) {
-  return pourUnivers(resoudre(manifeste?.categorie).id);
+// Seuls les modules Twitch se personnalisent.
+export function personnalisable(manifeste) {
+  return resoudre(manifeste?.categorie).id === 'twitch';
 }
 
 export function neon() {
@@ -170,33 +146,17 @@ export function styleNeon() {
 // --- Lecture et reglage --------------------------------------------------------
 
 export function liste() {
-  return {
-    defaut: parDefaut(),
-    univers: reglagesUnivers(),
-    neon: neon(),
-    themes: THEMES,
-    listeUnivers: UNIVERS,
-    palettesNeon: PALETTES_NEON,
-  };
+  return { actuel: actuel(), neon: neon(), themes: THEMES, palettesNeon: PALETTES_NEON };
 }
 
-// cible : « defaut », ou l'identifiant d'un univers. theme : un theme, ou
-// « defaut » pour qu'un univers revienne au theme par defaut.
-export function choisir({ cible, theme }) {
+export function choisir(theme) {
+  if (!existe(theme)) return { ok: false, erreur: 'thème inconnu' };
   const c = getConfig();
-  const app = { ...c.apparence };
-  if (cible === DEFAUT) {
-    if (!existe(theme)) return { ok: false, erreur: 'thème inconnu' };
-    app.theme = theme;
-  } else if (IDS_UNIVERS.has(cible)) {
-    if (theme !== DEFAUT && !existe(theme)) return { ok: false, erreur: 'thème inconnu' };
-    app.univers = { ...app.univers, [cible]: theme };
-  } else {
-    return { ok: false, erreur: 'univers inconnu' };
+  if (c.apparence?.theme !== theme) {
+    c.apparence = { ...c.apparence, theme };
+    sauverConfig(c);
+    log.info('Thème des overlays Twitch : ' + theme);
   }
-  c.apparence = app;
-  sauverConfig(c);
-  log.info('Thème des overlays : ' + cible + ' → ' + theme);
   annoncer();
   return { ok: true, ...liste() };
 }
@@ -216,14 +176,9 @@ export function choisirNeon({ principale, secondaire }) {
 
 // Pousse les reglages aux overlays ouverts. Envoye en « etat » : c'est ce que
 // le canal memorise, et ce qu'une source OBS qui se reconnecte recoit d'emblee
-// -- y compris apres un changement fait pendant qu'elle etait coupee. Chaque
-// overlay y retrouve le theme de son univers (src/commun/theme.js).
+// -- y compris apres un changement fait pendant qu'elle etait coupee.
 export function annoncer() {
-  diffusion.diffuser(CANAL, 'etat', {
-    defaut: parDefaut(),
-    univers: Object.fromEntries(UNIVERS.map((u) => [u.id, pourUnivers(u.id)])),
-    neon: variablesNeon(),
-  });
+  diffusion.diffuser(CANAL, 'etat', { theme: actuel(), neon: variablesNeon() });
 }
 
 // Le canal ne connait les themes qu'apres une premiere annonce : sans elle, le

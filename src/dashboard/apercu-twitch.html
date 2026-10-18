@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>StreamKit — aperçu des overlays Twitch</title>
+    <!--
+      Scène d'aperçu de la page Personnalisation : les cinq overlays Twitch, en
+      démo, habillés par le thème de ?theme=. Servie par /apercu-twitch (voir
+      core/serveur.js), seule page avec les overlays à pouvoir être encadrée
+      par le dashboard.
+
+      Deux usages, une seule composition :
+        - la carte du Néon l'affiche en direct (elle suit les couleurs choisies) ;
+        - scripts/captures-guide-electron.cjs la photographie pour les autres
+          cartes (src/dashboard/apercus/twitch-<theme>.jpg).
+
+      Chaque overlay est une page de 1280 x 720 qui se place seule dans son coin ;
+      --x/--y décalent les sources qui partageraient un coin.
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+      }
+      body {
+        position: relative;
+        /* Fausse image de jeu, pour juger la lisibilité par-dessus. */
+        background:
+          radial-gradient(60% 70% at 72% 40%, rgba(90, 160, 120, 0.55), transparent 60%),
+          radial-gradient(40% 50% at 25% 70%, rgba(170, 120, 70, 0.45), transparent 65%),
+          radial-gradient(30% 35% at 50% 20%, rgba(120, 150, 210, 0.4), transparent 70%),
+          linear-gradient(160deg, #2b3a35 0%, #3b4a3f 40%, #4a4433 70%, #2a2f2c 100%);
+      }
+      iframe {
+        position: absolute;
+        left: calc(var(--x, 0) * 1px);
+        top: calc(var(--y, 0) * 1px);
+        width: 1280px;
+        height: 720px;
+        border: 0;
+        pointer-events: none;
+        /* Même schéma que l'overlay (clair, par défaut) : sinon le navigateur
+           peint un fond opaque derrière la page transparente. */
+        color-scheme: light;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const SOURCES = [
+        { chemin: '/overlay/musique/liste', extra: '&bloc=1' },
+        { chemin: '/overlay/clips/annonce', y: 260 },
+        { chemin: '/overlay/sondages/carte' },
+        { chemin: '/overlay/predictions/carte', y: 330 },
+        { chemin: '/overlay/pub/bandeau' },
+      ];
+      const theme = new URLSearchParams(location.search).get('theme') || 'standard';
+      if (/^[a-z]+$/.test(theme)) {
+        for (const s of SOURCES) {
+          const f = document.createElement('iframe');
+          f.src = s.chemin + '?demo=1&apercu=1&theme=' + theme + (s.extra || '');
+          f.tabIndex = -1;
+          f.style.setProperty('--x', String(s.x || 0));
+          f.style.setProperty('--y', String(s.y || 0));
+          document.body.append(f);
+        }
+      }
+    </script>
+  </body>
+</html>

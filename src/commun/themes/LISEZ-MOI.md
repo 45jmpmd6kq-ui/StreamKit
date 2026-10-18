@@ -1,24 +1,32 @@
 # Thèmes d'overlay
 
-Un thème habille les overlays du streamer. Il se choisit dans le dashboard, page
-**Personnalisation** : un thème **par défaut**, et un thème facultatif **par univers**
-(Twitch, LoL, Rocket League, Valorant, EA FC — la `categorie` du module, voir
-`src/core/categories.js`). Le catalogue et les réglages sont dans `src/core/themes.js`.
+Un thème habille les overlays **Twitch** du streamer (modules de `categorie: 'twitch'` :
+Bot Musique, Sondages, Prédictions, Pub, Clips). Il se choisit dans le dashboard, page
+**Personnalisation**. Les overlays des jeux ne se personnalisent pas : le serveur ne leur
+pose rien. Le catalogue et le réglage sont dans `src/core/themes.js`.
 
 ## Mécanique
 
-Le serveur pose sur chaque overlay (voir `poserTheme` dans `src/core/serveur.js`) :
+Le serveur pose sur chaque overlay Twitch (voir `poserTheme` dans `src/core/serveur.js`) :
 
-- sur `<html>` : `data-sk-theme="<id>"` (le thème de son univers), `data-sk-univers="<id>"`,
-  et les couleurs du Néon en variables (`style="--sk-neon-1: …"`) ;
+- sur `<html>` : `data-sk-theme="<id>"` et les couleurs du Néon en variables
+  (`style="--sk-neon-1: …"`) ;
 - la feuille `/commun/themes/<id>.css`, en fin de `<head>`, après le `<style>` de l'overlay ;
 - `/commun/theme.js`, qui suit les réglages à chaud (canal `themes`) : il remplace la feuille
-  quand le thème de son univers change, et les couleurs quand le Néon change.
+  quand le thème change, et les couleurs quand le Néon change.
 
 `?theme=<id>` fige une source sur un thème (`data-sk-fige`) ; elle suit encore les couleurs
 du Néon. `?apercu=1` : la vignette de la page Personnalisation — l'overlay peut alors être
 encadré par le dashboard, et `flux.js` ne se branche pas (la vignette ne compte pas comme
 une source OBS).
+
+## Aperçus de la page Personnalisation
+
+`src/dashboard/apercu-twitch.html` (route `/apercu-twitch?theme=<id>`) assemble les cinq
+overlays Twitch en démo. La carte du Néon l'affiche en direct (elle suit les couleurs
+choisies) ; les autres cartes montrent une image, `src/dashboard/apercus/twitch-<id>.jpg`,
+refaite par `npm run captures` — cinq scènes vivantes feraient vingt-cinq overlays ouverts
+à la fois.
 
 Une feuille de thème définit des **jetons** `--sk-*` sur `:root`. Chaque overlay les
 lit en gardant **ses** valeurs d'origine en repli :
@@ -83,11 +91,11 @@ sur tous les overlays.
 ## Polices
 
 Dans `polices/`, sous-ensemble latin (Google Fonts, licence SIL Open Font License 1.1) :
-Inter, Oxanium, Exo 2, Press Start 2P, VT323. Rien n'est chargé depuis internet en live.
+Inter, Oxanium, Exo 2, VT323. Rien n'est chargé depuis internet en live.
 
 ## Ajouter un thème
 
 1. `src/commun/themes/<id>.css` : les jetons, puis les trois classes ;
 2. une entrée dans `THEMES` de `src/core/themes.js` ;
-3. vérifier la page Personnalisation (vrais overlays en aperçu) et quelques overlays en
-   `?demo=1&theme=<id>`.
+3. `npm run captures` pour son image d'aperçu, puis vérifier la page Personnalisation et
+   quelques overlays Twitch en `?demo=1&theme=<id>`.

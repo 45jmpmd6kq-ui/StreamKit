@@ -22,7 +22,6 @@ import * as journal from './journal.js';
 import * as activite from './activite.js';
 import * as diffusion from './diffusion.js';
 import * as themes from './themes.js';
-import { resoudre as resoudreCategorie } from './categories.js';
 
 const log = journal.pour('serveur');
 
@@ -164,20 +163,12 @@ export const ENTETES_PAGE_OAUTH = {
 
 // Pose le theme d'overlay sur une page (voir core/themes.js) : sa feuille en
 // fin de <head> -- APRES le <style> de l'overlay, dont elle remplace les jetons
-// -- et le script qui en change a chaud. Sur <html> : le theme, l'univers (pour
-// suivre son theme a chaud) et les couleurs du Neon. data-sk-fige : une source
-// figee sur un theme (?theme=), qui ne suit plus les reglages.
-function poserTheme(html, theme, { fige = false, univers = '' } = {}) {
+// -- et le script qui en change a chaud. Sur <html> : le theme et les couleurs
+// du Neon. data-sk-fige : une source figee sur un theme (?theme=), qui ne suit
+// plus les reglages.
+function poserTheme(html, theme, { fige = false } = {}) {
   const attributs =
-    ' data-sk-theme="' +
-    theme +
-    '" data-sk-univers="' +
-    univers +
-    '"' +
-    (fige ? ' data-sk-fige' : '') +
-    ' style="' +
-    themes.styleNeon() +
-    '"';
+    ' data-sk-theme="' + theme + '"' + (fige ? ' data-sk-fige' : '') + ' style="' + themes.styleNeon() + '"';
   html = html.replace(/<html(?=[\s>])/i, '<html' + attributs);
   const balises =
     '<link rel="stylesheet" id="sk-theme" href="/commun/themes/' +
@@ -192,15 +183,15 @@ function poserTheme(html, theme, { fige = false, univers = '' } = {}) {
 // sont quelques kilo-octets, et ces pages ne sont de toute facon jamais mises
 // en cache -- contrairement a leurs images, qui passent par servirFichier.
 //
-// theme : les overlays recoivent le theme d'overlay de leur univers.
-async function servirHtml(res, chemin, { theme = null, fige = false, univers = '', cadre = false } = {}) {
+// theme : les overlays Twitch recoivent le theme d'overlay.
+async function servirHtml(res, chemin, { theme = null, fige = false, cadre = false } = {}) {
   let html;
   try {
     html = await readFile(chemin, 'utf8');
   } catch {
     return texte(res, 404, 'Introuvable');
   }
-  if (theme) html = poserTheme(html, theme, { fige, univers });
+  if (theme) html = poserTheme(html, theme, { fige });
 
   const nonce = randomBytes(16).toString('base64');
   // « <script> » et « <script src=... > », jamais « </script> » : le lookahead
@@ -453,15 +444,24 @@ export function creerServeur(app) {
         if (!def) return texte(res, 404, 'Overlay inconnu');
         const page = cheminSous(dossierOverlay, def.fichier);
         if (!page) return texte(res, 403, 'Interdit');
+        // ?apercu=1 : la vignette de la page Personnalisation, seule a pouvoir
+        // encadrer un overlay. Les overlays des jeux ne se personnalisent pas :
+        // ni theme, ni ?theme=.
+        const cadre = url.searchParams.has('apercu');
+        if (!themes.personnalisable(m.manifeste)) return servirHtml(res, page, { cadre });
         // ?theme=<id> : cette source garde ce theme, quel que soit celui choisi
         // dans Personnalisation (un overlay a part, ou la verification d'un
-        // theme sans changer celui du live). ?apercu=1 : la vignette de la page
-        // Personnalisation, seule a pouvoir encadrer un overlay.
-        const univers = resoudreCategorie(m.manifeste.categorie).id;
+        // theme sans changer celui du live).
         const force = url.searchParams.get('theme');
-        const cadre = url.searchParams.has('apercu');
-        if (themes.existe(force)) return servirHtml(res, page, { theme: force, fige: true, univers, cadre });
-        return servirHtml(res, page, { theme: themes.pourUnivers(univers), univers, cadre });
+        if (themes.existe(force)) return servirHtml(res, page, { theme: force, fige: true, cadre });
+        return servirHtml(res, page, { theme: themes.actuel(), cadre });
+      }
+
+      // --- Apercu des overlays Twitch (page Personnalisation) -------------------
+      // Les cinq overlays Twitch en demo, pour le theme de ?theme= : encadrable
+      // par le dashboard seul (voir dashboard/apercu-twitch.html).
+      if (chemin === '/apercu-twitch') {
+        return servirHtml(res, join(DASHBOARD_DIR, 'apercu-twitch.html'), { cadre: true });
       }
 
       // --- Pages d'un module -----------------------------------------------
@@ -691,7 +691,7 @@ export function creerServeur(app) {
         }
         if (chemin === '/api/themes' && methode === 'POST') {
           const body = await corpsJson(req);
-          const r = themes.choisir({ cible: String(body.cible ?? ''), theme: String(body.theme ?? '') });
+          const r = themes.choisir(String(body.theme ?? ''));
           return json(res, r.ok ? 200 : 400, r);
         }
         if (chemin === '/api/themes/neon' && methode === 'POST') {

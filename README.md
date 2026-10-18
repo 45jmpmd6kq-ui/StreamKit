@@ -115,19 +115,22 @@ Le manifeste décrit les réglages ; **le dashboard fabrique le formulaire**. On
 n'écrit jamais d'écran de réglages à la main — c'est ce qui rend le 7ᵉ module
 aussi bon marché que le 2ᵉ.
 
-## Le guide d'utilisation
+## Le guide d'utilisation et les aperçus des thèmes
 
 Le bouton 📖 du dashboard ouvre `src/dashboard/guide/guide.html` dans une fenêtre :
-six chapitres, chacun avec une capture et des repères numérotés. Quand un écran
-change, on régénère les captures :
+six chapitres, chacun avec une capture et des repères numérotés. La page
+Personnalisation montre, pour chaque thème, une image des overlays Twitch
+(`src/dashboard/apercus/`). Quand un écran ou un overlay Twitch change, on
+régénère le tout :
 
 ```
-npm run guide      # installation vierge sur le port 47455 : ferme StreamKit avant
+npm run captures   # installation vierge sur le port 47455 : ferme StreamKit avant
 ```
 
 Le script (`scripts/captures-guide.mjs`) lance un StreamKit avec un dossier de
 données temporaire — donc jamais l'entrée « Modérateur », et aucune statistique
-envoyée — active quelques modules, puis Electron photographie chaque écran. Les
+envoyée — active quelques modules, puis Electron photographie les aperçus, puis
+chaque écran. Les
 repères sont placés en % de la capture : après une régénération, vérifier qu'ils
 tombent toujours au bon endroit. Un test refuse toute mention du Modérateur dans
 ce que le guide affiche.

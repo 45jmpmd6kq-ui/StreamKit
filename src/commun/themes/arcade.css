@@ -1,31 +1,16 @@
 /* Thème « Rétro arcade » : borne 8 bits.
- * Cadres pixel blanc sur noir, VT323 pour le texte, Press Start 2P pour les
- * gros titres, barres en segments. Contrat des jetons : LISEZ-MOI.md.
+ * Cadres pixel blanc sur noir, VT323 partout, barres en segments. Contrat des
+ * jetons : LISEZ-MOI.md.
  *
- * Press Start 2P est très large (chaque lettre fait 1 em de côté) et n'a pas
- * les capitales accentuées : elle ne sert qu'aux gros titres, et seulement là
- * où font-size-adjust la ramène à la taille des autres polices (OBS 31 et
- * plus). Ailleurs, les titres restent en VT323. */
+ * Plus de Press Start 2P pour les titres (18/10/2026) : elle n'a pas les
+ * lettres accentuées, et sous Electron (le moteur d'OBS et de StreamKit) le
+ * repli sur une autre police donnait des « DéFAITE » minuscules au milieu des
+ * capitales. VT323 a tous les accents. */
 
 @font-face {
   font-family: "SK VT323";
   src: url(/commun/themes/polices/vt323.woff2) format("woff2");
   font-display: block;
-}
-@font-face {
-  font-family: "SK Press Start";
-  src: url(/commun/themes/polices/press-start-2p.woff2) format("woff2");
-  font-display: block;
-  unicode-range: U+0000-00BF;
-}
-/* Press Start 2P n'a pas les lettres accentuées (É, À, Ç...) : on les prend
-   dans VT323, agrandie pour tenir la hauteur des capitales pixel. */
-@font-face {
-  font-family: "SK Press Start";
-  src: url(/commun/themes/polices/vt323.woff2) format("woff2");
-  font-display: block;
-  unicode-range: U+00C0-024F;
-  size-adjust: 175%;
 }
 
 :root {
@@ -61,16 +46,8 @@
 .sk-titre {
   font-family: var(--sk-typo-titre) !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.02em !important;
+  letter-spacing: 0.06em !important;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7) !important;
-}
-@supports (font-size-adjust: 0.5) {
-  .sk-titre {
-    font-family: "SK Press Start", "SK VT323", monospace !important;
-    font-size-adjust: 0.42;
-    letter-spacing: 0 !important;
-    line-height: 1.35 !important;
-  }
 }
 
 .sk-remplissage {

@@ -1912,42 +1912,17 @@ async function chargerConnecteurs() {
   }
 }
 
-// --- Personnalisation : le thème des overlays --------------------------------
+// --- Personnalisation : le thème des overlays Twitch ---------------------------
 //
-// Un thème par défaut, et un thème facultatif par univers (voir
-// src/core/themes.js). À gauche, les univers et le thème qu'ils affichent ; à
-// droite, l'univers choisi avec ses VRAIS overlays en aperçu : chaque vignette
-// est l'overlay lui-même en démo (?demo=1&apercu=1&theme=…), qui ne se branche
-// pas au flux et ne compte donc pas comme une source OBS. Tout s'applique sur
-// le champ, overlays ouverts dans OBS compris : pas de bouton Enregistrer.
+// Seuls les overlays Twitch se personnalisent (src/core/themes.js) ; ceux des
+// jeux gardent leur style. Une carte par thème, avec les cinq overlays Twitch
+// en aperçu. Les aperçus sont des images (src/dashboard/apercus/, refaites par
+// npm run captures) : cinq scènes vivantes feraient vingt-cinq overlays ouverts
+// à la fois sur un PC qui streame. Seule la carte du Néon est vivante
+// (/apercu-twitch), pour suivre les couleurs choisies. Tout s'applique sur le
+// champ, overlays ouverts dans OBS compris : pas de bouton Enregistrer.
 
 let themes = null; // réponse de GET /api/themes
-let universAffiche = 'twitch';
-
-// Les overlays montrés pour chaque univers, dans une scène de 1280 x 720 (un
-// écran 1920 vu de plus près, pour qu'ils se lisent). x, y : décalage de la
-// source ; les overlays « taille de la scène » se placent seuls dans leur coin.
-const APERCUS = {
-  twitch: [
-    { module: 'musique', vue: 'liste', extra: '&bloc=1' },
-    { module: 'sondages', vue: 'carte' },
-    { module: 'pub', vue: 'bandeau' },
-  ],
-  lol: [
-    { module: 'lol-session', vue: 'bandeau' },
-    { module: 'lol-moments', vue: 'moments' },
-  ],
-  'rocket-league': [
-    { module: 'rl-session', vue: 'session' },
-    { module: 'rl-moments', vue: 'moments' },
-    { module: 'roue-rl', vue: 'roue' },
-  ],
-  valorant: [{ module: 'valorant', vue: 'bandeau', x: 24, y: 24 }],
-  'ea-fc': [
-    { module: 'fc-clubs', vue: 'bandeau' },
-    { module: 'fc-clubs', vue: 'carte', x: 760, y: 0 },
-  ],
-};
 
 async function chargerThemes() {
   try {
@@ -1959,33 +1934,20 @@ async function chargerThemes() {
 }
 
 const nomTheme = (id) => themes.themes.find((t) => t.id === id)?.nom ?? id;
-const themeEffectif = (u) =>
-  themes.univers[u] && themes.univers[u] !== 'defaut' ? themes.univers[u] : themes.defaut;
 
-// La pastille du Néon prend les couleurs choisies.
-function pastilleTheme(id) {
+function apercuTheme(id) {
   if (id === 'neon') {
-    return `<i class="sw" style="background:linear-gradient(135deg,${themes.neon.principale} 50%,${themes.neon.secondaire} 50%)"></i>`;
+    return `<div class="theme-apercu" data-scene-apercu>
+      <iframe src="/apercu-twitch?theme=neon" title="Aperçu du thème Néon" tabindex="-1" loading="lazy"></iframe>
+    </div>`;
   }
-  return `<i class="sw sw-${id}"></i>`;
-}
-
-function choixThemes(cible, valeur) {
-  const items = (cible === 'defaut' ? [] : [{ id: 'defaut', nom: 'Thème par défaut' }]).concat(themes.themes);
-  return `<div class="themes-choix">${items
-    .map(
-      (t) =>
-        `<button class="pastille-theme ${t.id === valeur ? 'on' : ''}" data-cible="${cible}" data-theme="${t.id}">${
-          t.id === 'defaut' ? '<i class="sw sw-defaut"></i>' : pastilleTheme(t.id)
-        }${echapper(t.nom)}</button>`
-    )
-    .join('')}</div>`;
+  return `<div class="theme-apercu"><img src="/apercus/twitch-${id}.jpg" alt="Aperçu du thème ${echapper(nomTheme(id))}" loading="lazy" /></div>`;
 }
 
 function blocNeon() {
   const n = themes.neon;
-  return `<div class="neon-palette">
-    <div class="neon-titre"><b>Couleurs du Néon</b><span>Communes à tous les univers en Néon</span></div>
+  return `<section class="neon-palette">
+    <div class="neon-titre"><b>Couleurs du Néon</b><span>Les deux couleurs de tes overlays en Néon</span></div>
     <div class="neon-presets">${themes.palettesNeon
       .map(
         (p) =>
@@ -1999,74 +1961,35 @@ function blocNeon() {
       <label>Principale <input type="color" id="neon-principale" value="${n.principale}" /></label>
       <label>Secondaire <input type="color" id="neon-secondaire" value="${n.secondaire}" /></label>
     </div>
-  </div>`;
-}
-
-function sceneApercu(u, theme) {
-  const installes = new Set(etat.modules.map((m) => m.id));
-  const sources = (APERCUS[u] ?? []).filter((s) => installes.has(s.module));
-  if (!sources.length) return '<div class="vide">Aucun overlay à montrer pour cet univers.</div>';
-  return `<div class="scene-apercu" data-scene-apercu>${sources
-    .map(
-      (s) =>
-        `<iframe src="/overlay/${s.module}/${s.vue}?demo=1&apercu=1&theme=${theme}${s.extra ?? ''}"
-           style="--x:${s.x ?? 0};--y:${s.y ?? 0}" tabindex="-1" title="Aperçu ${echapper(s.module)}"></iframe>`
-    )
-    .join('')}<span class="scene-etiquette">${echapper(nomTheme(theme))}</span></div>`;
+  </section>`;
 }
 
 function htmlPersonnalisation() {
-  const liste = themes.listeUnivers
-    .map((u) => {
-      const choix = themes.univers[u.id];
-      return `<button class="univers-ligne ${u.id === universAffiche ? 'on' : ''}" data-univers="${u.id}">
-          <span class="univers-icone">${u.icone}</span>
-          <span class="univers-nom"><b>${echapper(u.label)}</b><span>${
-            choix === 'defaut' ? 'Thème par défaut' : echapper(nomTheme(choix))
-          }</span></span>
-          ${pastilleTheme(themeEffectif(u.id))}
-        </button>`;
+  const cartes = themes.themes
+    .map((t) => {
+      const actif = t.id === themes.actuel;
+      return `<div class="theme-carte ${actif ? 'actif' : ''}" data-carte-theme="${t.id}">
+          ${apercuTheme(t.id)}
+          <div class="theme-infos">
+            <div class="theme-nom"><h3>${echapper(t.nom)}</h3><span class="theme-badge">Actif</span></div>
+            <p>${echapper(t.description)}</p>
+            <button class="btn ${actif ? '' : 'primaire'}" data-theme="${t.id}" ${actif ? 'disabled' : ''}>
+              ${actif ? '✓ Thème actif' : 'Choisir ce thème'}
+            </button>
+          </div>
+        </div>`;
     })
     .join('');
-
-  const u = themes.listeUnivers.find((x) => x.id === universAffiche) ?? themes.listeUnivers[0];
-  const choix = themes.univers[u.id];
-  const effectif = themeEffectif(u.id);
-  const modules = etat.modules.filter(
-    (m) => m.categorie?.id === u.id && m.overlays.length && !m.developpement
-  );
-  const badge =
-    choix === 'defaut'
-      ? `<span class="badge-theme">Thème par défaut · ${echapper(nomTheme(themes.defaut))}</span>`
-      : `<span class="badge-theme perso">${echapper(nomTheme(choix))}</span>`;
-
   return `
     <div class="titre-module"><span style="font-size:1.6rem">🎨</span><h1>Personnalisation</h1></div>
-    <p class="resume-accueil">Choisis le style de tes overlays. Le thème par défaut s’applique partout ; chaque univers
-      peut avoir le sien. Ça change tout de suite dans OBS, sans recharger tes sources.</p>
-
-    <section class="perso-defaut">
-      <div class="perso-defaut-tete"><h3>Thème par défaut</h3><span>Pour tous les univers réglés sur « Thème par défaut »</span></div>
-      ${choixThemes('defaut', themes.defaut)}
-      ${themes.defaut === 'neon' ? blocNeon() : ''}
-    </section>
-
-    <div class="perso-corps">
-      <div class="univers-liste">${liste}</div>
-      <section class="univers-detail">
-        <div class="univers-tete"><span class="univers-icone">${u.icone}</span><h3>${echapper(u.label)}</h3>${badge}</div>
-        <div class="univers-modules">${
-          modules.length ? modules.map((m) => echapper(m.nom)).join(', ') : 'Aucun module avec overlay'
-        }</div>
-        ${choixThemes(u.id, choix)}
-        ${effectif === 'neon' && themes.defaut !== 'neon' ? blocNeon() : ''}
-        ${sceneApercu(u.id, effectif)}
-      </section>
-    </div>
-
+    <p class="resume-accueil">Choisis le style de tes overlays Twitch : musique, sondages, prédictions, pub et clips.
+      Ça change tout de suite dans OBS, sans recharger tes sources.</p>
+    <div class="perso-info">🎮 Les overlays de tes jeux (LoL, Rocket League, Valorant, EA FC) gardent leur style d’origine.</div>
+    <div class="themes-grille">${cartes}</div>
+    ${themes.actuel === 'neon' ? blocNeon() : ''}
     <p class="themes-note">Le thème change l’habillage : fond, couleurs, police, cadres. La disposition de tes overlays ne
-      bouge pas, et les couleurs qui ont un sens restent les mêmes (victoire, défaite, rangs, couleur de ton club). Les
-      couleurs réglées dans un module (musique, Random Car) ne s’appliquent qu’avec <b>Standard esport</b>.</p>`;
+      bouge pas, et les couleurs qui ont un sens restent les mêmes (équipes d’une prédiction, choix d’un sondage). Les
+      couleurs réglées dans un module (Bot Musique, Clips) ne s’appliquent qu’avec <b>Standard esport</b>.</p>`;
 }
 
 function dessinerPersonnalisation() {
@@ -2078,8 +2001,7 @@ function dessinerPersonnalisation() {
   redessinerDetail(htmlPersonnalisation(), ajusterApercus);
 }
 
-// Les overlays sont rendus dans une scène de 1280 px de large : on la réduit à
-// la place disponible.
+// La scène vivante du Néon fait 1280 px de large : on la réduit à la carte.
 const observateurApercus = new ResizeObserver((entrees) => {
   for (const e of entrees) e.target.style.setProperty('--k', e.contentRect.width / 1280);
 });
@@ -2101,21 +2023,10 @@ async function envoyerTheme(corps, chemin = '/api/themes') {
 
 document.addEventListener('click', async (e) => {
   if (etat.selection !== PERSONNALISATION || !themes) return;
-  const u = e.target.closest('[data-univers]');
-  if (u) {
-    universAffiche = u.dataset.univers;
-    dessinerPersonnalisation();
-    return;
-  }
   const b = e.target.closest('[data-theme]');
-  if (b && !b.classList.contains('on')) {
-    if (await envoyerTheme({ cible: b.dataset.cible, theme: b.dataset.theme })) {
-      const univers = themes.listeUnivers.find((x) => x.id === b.dataset.cible)?.label;
-      toast(
-        b.dataset.theme === 'defaut'
-          ? univers + ' suit le thème par défaut'
-          : 'Thème « ' + nomTheme(b.dataset.theme) + ' » ' + (univers ? 'pour ' + univers : 'par défaut')
-      );
+  if (b && !b.disabled) {
+    if (await envoyerTheme({ theme: b.dataset.theme })) {
+      toast('Thème « ' + nomTheme(b.dataset.theme) + ' » appliqué à tes overlays Twitch');
     }
     return;
   }

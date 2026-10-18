@@ -315,7 +315,8 @@ plus :
 ### Le thème d'overlay
 
 Le streamer choisit un thème dans **Personnalisation** ; StreamKit le pose sur
-**chaque** overlay (une feuille `/commun/themes/<id>.css` après ton `<style>`). Ton
+**chaque overlay d'un module Twitch** (`categorie: 'twitch'` — les overlays des jeux ne
+se personnalisent pas) (une feuille `/commun/themes/<id>.css` après ton `<style>`). Ton
 overlay n'a rien à charger, mais il doit lire les jetons du thème, **toujours avec
 ta valeur d'origine en repli** — c'est ce qui garde le thème « Standard esport »
 identique à ton dessin :
@@ -336,10 +337,11 @@ disparaîtrait. Les couleurs qui ont un sens (victoire, défaite, rang, équipe)
 restent les tiennes. Contrat complet : `src/commun/themes/LISEZ-MOI.md` ; un test
 refuse un `var(--sk-…)` sans repli.
 
-Le thème suit la `categorie` de ton module : c'est elle qui range ses overlays dans un
-univers de la page Personnalisation. Pour qu'ils y apparaissent en aperçu, ajoute-les à
-`APERCUS` dans `src/dashboard/app.js` : l'aperçu charge ton overlay avec `?demo=1&apercu=1`,
-ta démo doit donc se suffire à elle-même (le flux ne s'y branche pas).
+Pour un module Twitch, ajoute son overlay à la scène d'aperçu des cartes
+(`SOURCES` dans `src/dashboard/apercu-twitch.html`), puis `npm run captures`. L'aperçu
+charge ton overlay avec `?demo=1&apercu=1` : ta démo doit se suffire à elle-même (le flux
+ne s'y branche pas). Un overlay de jeu peut garder les jetons `--sk-*` avec repli : sans
+thème posé, il s'affiche tel que dessiné.
 
 ## Les actions, et lesquelles deviennent des boutons
 
