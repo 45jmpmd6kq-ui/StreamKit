@@ -171,6 +171,32 @@ test('la taille et l opacite partent a l overlay avec le theme', async () => {
   assert.equal(regle.liste().theme.opacite, 40);
 });
 
+test('style : le bloc par defaut, le vinyle en option', () => {
+  const style = manifeste.config.champs.find((c) => c.cle === 'style');
+  assert.equal(style.type, 'choix');
+  // Bloc par defaut : la mise a jour ne change pas l'ecran d'un streamer.
+  assert.equal(style.defaut, 'bloc');
+  assert.deepEqual(
+    style.options.map((o) => o.valeur),
+    ['bloc', 'vinyle']
+  );
+});
+
+test('style vinyle : il part a l overlay et suit le morceau en cours, meme reglage coupe', async () => {
+  const spotify = fauxSpotify();
+  const t = contexte({ style: 'vinyle', afficherEnCours: false });
+  spotify.lecture = joue(MIDNIGHT, { position: 72000 });
+
+  await manifeste.demarrer(t.ctx);
+  const immediat = t.delais.find((d) => d.ms === 0);
+  assert.ok(immediat, 'le vinyle EST le morceau en cours : il doit etre releve');
+  await immediat.fn();
+
+  assert.equal(t.liste().theme.style, 'vinyle');
+  assert.equal(t.liste().afficherEnCours, true);
+  assert.equal(t.liste().lecture.name, 'Midnight City');
+});
+
 test('reglage coupe : la liste d avant, sans morceau en cours ni releve anticipe', async () => {
   const spotify = fauxSpotify();
   const t = contexte();

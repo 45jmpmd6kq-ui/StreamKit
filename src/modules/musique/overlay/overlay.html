@@ -250,6 +250,39 @@
       .bc-item.cancelled .bc-num { opacity: 0.4; }
       .bc-plus { padding-top: 2px; font-size: 11px; color: var(--muted); }
 
+      /* ---- Style Vinyle (réglage « Style de l'overlay ») ----
+         Le disque qui tourne, la pochette en étiquette ; à côté, le titre, qui
+         l'a demandé et l'avancement, puis la file sur une ligne. Deux fois moins
+         haut que le bloc. */
+      .vin { position: relative; width: 340px; padding-left: 64px; }
+      .vin-disque {
+        position: absolute; left: 0; top: 50%; width: 112px; height: 112px; margin-top: -56px; border-radius: 50%; z-index: 1;
+        background: repeating-radial-gradient(circle, #111 0 2px, #1c1c1c 2px 4px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, calc(0.5 * var(--k))), inset 0 0 0 2px #2a2a2a;
+        animation: tourne 3.2s linear infinite;
+      }
+      .vin-disque::before {
+        content: ""; position: absolute; inset: 0; border-radius: 50%;
+        background: conic-gradient(from 30deg, transparent 0 20%, rgba(255, 255, 255, 0.08) 25%, transparent 30% 70%, rgba(255, 255, 255, 0.06) 75%, transparent 80%);
+      }
+      .vin-etiq { position: absolute; left: 35px; top: 35px; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px #0b0b0b; }
+      .vin-etiq .vin-pochette { display: block; width: 100%; height: 100%; object-fit: cover; }
+      .vin-etiq .vin-pochette.sans-image { font-size: 16px; }
+      .vin-etiq::after { content: ""; position: absolute; left: 18px; top: 18px; width: 6px; height: 6px; border-radius: 50%; background: #0b0b0b; }
+      @keyframes tourne { to { transform: rotate(360deg); } }
+      .vin-boite { min-height: 96px; padding: 9px 12px 9px 60px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; color: var(--texte); display: flex; flex-direction: column; justify-content: center; }
+      .vin-t { font-size: 15px; font-weight: 700; line-height: 1.25; }
+      .vin-a { font-size: 12px; color: var(--muted); }
+      .vin-a b { color: var(--a2); font-weight: 600; }
+      .vin-t, .vin-a, .vin-suite { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .vin-barre { margin-top: 6px; height: 3px; border-radius: 2px; background: rgba(var(--encre), 0.14); overflow: hidden; }
+      .vin-barre i { display: block; width: 0; height: 100%; background: var(--a1); transition: width 1s linear; }
+      .vin-suite { margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+      .vin-suite .n { color: var(--a2); font-weight: 700; }
+      .vin-suite b { color: var(--texte); font-weight: 600; }
+      .vin-suite s { opacity: 0.6; }
+      @media (prefers-reduced-motion: reduce) { .vin-disque { animation: none; } }
+
       /* Fond très transparent : textes secondaires éclaircis et double ombre,
          pour qu'ils restent lisibles par-dessus un jeu clair (testé sur un
          dégradé orange-bleu : le gris et le violet disparaissaient). */
@@ -374,6 +407,7 @@
       // morceau qui tourne sur Spotify. Coupé, la page reste celle d'avant.
       let modeBloc = false;
       let compacte = false; // réglage « Taille du bloc »
+      let vinyle = false; // réglage « Style de l'overlay »
       let lecture = null; // { uri, name, artists, image, durationMs, progressMs, at, requester }
       let liste = [];
       let dernierHtml = null;
@@ -436,6 +470,7 @@
         // finit par ne plus rien renvoyer du tout, et la liste réapparaîtrait
         // alors qu'il est toujours en pause.
         if (!lecture) return "";
+        if (vinyle) return rendreVinyle();
         if (compacte) return rendreBlocCompact();
         let h =
           '<div class="b-carte sk-panneau">' +
@@ -503,6 +538,28 @@
             "</div>";
         }
         return h + "</div>";
+      }
+
+      // Style Vinyle : la file tient sur une ligne, les demandes refusées barrées.
+      function rendreVinyle() {
+        const suite = liste
+          .slice(0, 3)
+          .map((it) => (it.cancelled ? "<s>" + esc(it.name) + "</s>" : "<b>" + esc(it.name) + "</b>"))
+          .join(" · ");
+        const reste = liste.length - 3;
+        return (
+          '<div class="vin" data-cle="' + esc("lecture " + lecture.uri) + '">' +
+          '<div class="vin-disque"><div class="vin-etiq">' + pochette(lecture.image, "vin-pochette", lecture.name) + "</div></div>" +
+          '<div class="vin-boite sk-panneau">' +
+          '<div class="vin-t sk-titre">' + esc(lecture.name) + "</div>" +
+          '<div class="vin-a">' + esc(lecture.artists) +
+          (lecture.requester ? " · demandé par <b>" + esc(lecture.requester) + "</b>" : "") + "</div>" +
+          '<div class="vin-barre"><i class="sk-remplissage" data-prog></i></div>' +
+          (liste.length
+            ? '<div class="vin-suite"><span class="n">À venir</span> · ' + suite + (reste > 0 ? " · +" + reste : "") + "</div>"
+            : "") +
+          "</div></div>"
+        );
       }
 
       function majProgression(immediat) {
@@ -599,6 +656,7 @@
           r.setProperty("--accent2-texte", texteSur(t.accent2));
         }
         compacte = t.taille === "compacte";
+        vinyle = t.style === "vinyle";
 
         // Opacité du fond, en % : 92 est le fond d'origine, et rend donc
         // exactement les couleurs d'avant le réglage. Le liseré et l'ombre des
@@ -677,10 +735,12 @@
           // ?bloc=1 (ou ?bloc=normale) : le bloc « en cours + à venir » sans
           // attendre le réglage du flux. C'est ce que montre l'aperçu de la page
           // Personnalisation, qui ne se branche pas au flux.
+          // ?bloc=vinyle : le style Vinyle.
           const bloc = new URLSearchParams(location.search).get("bloc");
           if (bloc !== null) {
             modeBloc = true;
             compacte = bloc !== "normale";
+            vinyle = bloc === "vinyle";
           }
           afficherPanneau();
         }

@@ -22,6 +22,10 @@ ici, et un test le vérifie aussi à chaque `npm test`.
   OBS. Les overlays de tes jeux gardent leur style.
 - Chaque thème montre tes overlays Twitch en aperçu, pour voir le rendu avant
   de choisir.
+- **De nouveaux styles d'overlay.** Le Bot Musique peut s'afficher en vinyle
+  qui tourne, plus discret que le bloc. Les sondages peuvent s'afficher en bras
+  de fer (une barre partagée dès trois choix) ou en tuiles qui se remplissent.
+  Réglage « Style de l'overlay » dans chaque module.
 - Le Néon se met à tes couleurs : une palette prête à l'emploi, ou les deux
   couleurs de ton choix.
 - Une source Twitch peut garder son propre thème : ajoute `?theme=neon` (ou

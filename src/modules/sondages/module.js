@@ -27,6 +27,19 @@ export default {
     version: 1,
     champs: [
       {
+        cle: 'style',
+        type: 'choix',
+        label: 'Style de l’overlay',
+        aide: 'Scoreboard : une ligne par choix. Bras de fer : deux camps face à face, et une barre partagée entre les choix quand il y en a trois ou plus. Tuiles : une tuile par choix, qui se remplit avec ses votes.',
+        // Scoreboard par defaut : une mise a jour ne change pas l'ecran d'un streamer.
+        defaut: 'scoreboard',
+        options: [
+          { valeur: 'scoreboard', label: 'Scoreboard' },
+          { valeur: 'bras-de-fer', label: 'Bras de fer' },
+          { valeur: 'tuiles', label: 'Tuiles' },
+        ],
+      },
+      {
         cle: 'dureeResultatSec',
         type: 'nombre',
         label: 'Durée d’affichage du résultat (secondes)',
@@ -130,7 +143,7 @@ export default {
 
   async demarrer(ctx) {
     const c = ctx.config;
-    const theme = { coin: c.coin };
+    const theme = { coin: c.coin, style: c.style };
     const publier = (sondage) => ctx.overlay.etat('carte', { theme, sondage });
 
     const suivi = creerSuivi({

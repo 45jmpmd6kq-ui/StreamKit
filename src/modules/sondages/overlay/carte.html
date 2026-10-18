@@ -98,10 +98,11 @@
         height: 40px;
       }
       /* Une couleur par choix : lisible d'un coup d'œil, même quand deux scores sont proches. */
-      .rang[data-rang="1"] { --c: #22c3e6; --c-rvb: 34, 195, 230; }
-      .rang[data-rang="2"] { --c: #ff8a3d; --c-rvb: 255, 138, 61; }
-      .rang[data-rang="3"] { --c: #f0509a; --c-rvb: 240, 80, 154; }
-      .rang[data-rang="4"] { --c: #3ddc84; --c-rvb: 61, 220, 132; }
+      .camp, .seg, .tuile { --c: #9146ff; --c-rvb: 145, 70, 255; }
+      [data-rang="1"] { --c: #22c3e6; --c-rvb: 34, 195, 230; }
+      [data-rang="2"] { --c: #ff8a3d; --c-rvb: 255, 138, 61; }
+      [data-rang="3"] { --c: #f0509a; --c-rvb: 240, 80, 154; }
+      [data-rang="4"] { --c: #3ddc84; --c-rvb: 61, 220, 132; }
 
       .rang .pc {
         display: grid;
@@ -191,6 +192,113 @@
       .sep { width: 2px; height: 12px; background: var(--violet); opacity: 0.7; transform: skewX(-20deg); }
       .chrono { font-weight: 700; color: var(--or); }
       .chrono.urgent { color: #ff5d5d; }
+
+      /* --- Styles « Bras de fer » et « Tuiles » (réglage « Style de l'overlay ») ---
+         Même en-tête et même pied que le scoreboard ; seul le milieu change.
+         Les couleurs des choix restent les mêmes dans les trois styles. */
+      .corde, .tuiles { display: none; }
+      #sb[data-style="duel"] .liste,
+      #sb[data-style="partage"] .liste,
+      #sb[data-style="tuiles"] .liste { display: none; }
+      #sb[data-style="duel"] .corde,
+      #sb[data-style="partage"] .corde { display: flex; }
+      #sb[data-style="tuiles"] .tuiles { display: grid; }
+
+      .corde { position: relative; height: 76px; margin: 4px 0; }
+      .camp, .seg {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+        min-width: 0;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        transition: flex-basis 0.8s cubic-bezier(0.22, 1, 0.36, 1), filter 0.5s ease;
+      }
+      .camp { flex: 1 1 50%; padding: 0 20px; min-width: 130px; }
+      .camp.g {
+        background: linear-gradient(100deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.1)), var(--c);
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0);
+      }
+      .camp.d {
+        align-items: flex-end;
+        text-align: right;
+        background: linear-gradient(260deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.1)), var(--c);
+      }
+      .camp .pc, .seg .pc { font-size: 36px; font-weight: 700; line-height: 1; }
+      .camp .nom, .seg .nom {
+        max-width: 100%;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .noeud {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 50px;
+        height: 50px;
+        margin: -25px 0 0 -25px;
+        border-radius: 50%;
+        background: var(--fond);
+        border: 3px solid rgb(var(--encre));
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+        transition: left 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        z-index: 1;
+      }
+      #sb[data-style="partage"] .noeud { display: none; }
+      .seg { flex: 1 1 0; padding: 0 12px; border-right: 3px solid var(--fond); background: linear-gradient(100deg, rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.08)), var(--c); }
+      .seg:last-of-type { border-right: 0; }
+      .seg .pc { font-size: 28px; }
+      .seg .nom { font-size: 11px; }
+
+      .tuiles { grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; padding: 4px 0; }
+      .tuile {
+        position: relative;
+        height: 120px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 8px 10px;
+        background: var(--fond);
+        transition: filter 0.5s ease;
+      }
+      .tuile .rempl {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 0;
+        background: linear-gradient(0deg, rgba(var(--c-rvb), 0.75), rgba(var(--c-rvb), 0.4));
+        transition: height 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .tuile > div:not(.rempl) { position: relative; }
+      .tuile .pc { font-size: 32px; font-weight: 700; line-height: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+      .tuile .nom { font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tuile .det { font-size: 11px; color: var(--sk-attenue, #d4d4e4); }
+      .tuile.mene { box-shadow: inset 0 0 0 3px var(--or); }
+      .tuile.mene::after { content: "👑"; position: absolute; top: 6px; right: 8px; font-size: 18px; font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif; }
+
+      /* Résultat : le perdant s'éteint, le gagnant garde sa couleur et sa couronne. */
+      .camp.perdant, .seg.perdant, .tuile.perdant { filter: grayscale(0.85) brightness(0.55); }
+      .seg.mene::after, .camp.gagnant::after {
+        content: "👑";
+        position: absolute;
+        top: 5px;
+        right: 8px;
+        font-size: 16px;
+        font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+      }
+      .camp.d.gagnant::after { right: auto; left: 8px; }
     </style>
   </head>
   <body data-coin="top-right">
@@ -200,6 +308,8 @@
         <span class="titre sk-titre"><span class="ico" aria-hidden="true">🗳️</span><span id="titre"></span></span>
       </div>
       <div class="liste" id="liste"></div>
+      <div class="corde" id="corde"></div>
+      <div class="tuiles" id="tuiles"></div>
       <div class="pied nb">
         <span><b id="total">0</b> <span id="lib-votes">vote</span></span>
         <i class="sep" aria-hidden="true"></i>
@@ -216,8 +326,19 @@
       const accord = (n, singulier, plurielle) => (n >= 2 ? plurielle : singulier);
       const nombre = new Intl.NumberFormat('fr-FR');
 
+      // Réglage « Style de l'overlay » : scoreboard, bras de fer ou tuiles.
+      let style = 'scoreboard';
       function appliquerTheme(t) {
         if (t?.coin) document.body.dataset.coin = t.coin;
+        if (t?.style) style = t.style;
+      }
+
+      // Le bras de fer oppose deux camps ; à trois choix ou plus, il devient une
+      // barre partagée, un segment par choix.
+      function styleAffiche(s) {
+        if (style === 'tuiles') return 'tuiles';
+        if (style === 'bras-de-fer') return s.choix.length === 2 ? 'duel' : 'partage';
+        return 'scoreboard';
       }
 
       // Les chiffres défilent jusqu'à leur nouvelle valeur au lieu de sauter.
@@ -268,6 +389,31 @@
           const det = element('div', 'det nb', piste);
           lignes.set(c.id, { el, pc, nom, det, jauge });
         });
+
+        // Bras de fer : deux camps et le noeud de la corde, ou un segment par choix.
+        const corde = $('corde');
+        corde.replaceChildren();
+        s.choix.forEach((c, i) => {
+          const el = element('div', s.choix.length === 2 ? 'camp ' + (i === 0 ? 'g' : 'd') : 'seg', corde);
+          el.dataset.rang = String(i);
+          const pc = element('div', 'pc nb', el);
+          const nom = element('div', 'nom', el);
+          Object.assign(lignes.get(c.id), { corde: el, cordePc: pc, cordeNom: nom });
+        });
+        element('div', 'noeud', corde).textContent = '💪';
+
+        // Tuiles : une par choix, qui se remplit par le bas.
+        const tuiles = $('tuiles');
+        tuiles.replaceChildren();
+        s.choix.forEach((c, i) => {
+          const el = element('div', 'tuile', tuiles);
+          el.dataset.rang = String(i);
+          const rempl = element('div', 'rempl', el);
+          const pc = element('div', 'pc nb', el);
+          const nom = element('div', 'nom', el);
+          const det = element('div', 'det nb', el);
+          Object.assign(lignes.get(c.id), { tuile: el, tuileRempl: rempl, tuilePc: pc, tuileNom: nom, tuileDet: det });
+        });
         void zone.offsetWidth; // les jauges partent de zéro et glissent
       }
 
@@ -288,12 +434,38 @@
         }
 
         sb.dataset.statut = s.statut;
+        sb.dataset.style = styleAffiche(s);
         sb.classList.toggle('compacte', s.choix.length > 4);
         $('etiquette').textContent =
           s.statut === 'termine' ? (s.cloture ? 'Sondage clos · résultat' : 'Résultat du sondage') : 'Sondage en direct';
         $('titre').textContent = s.titre;
 
         const termine = s.statut === 'termine' && s.gagnants.length;
+        const tete = Math.max(...s.choix.map((c) => c.votes));
+        // Personne n'a encore voté : la corde reste au milieu.
+        const parts = s.totalVotes ? s.choix.map((c) => c.pourcent) : s.choix.map(() => 100 / s.choix.length);
+        s.choix.forEach((c, i) => {
+          const l = lignes.get(c.id);
+          if (!l) return;
+          const gagne = !!termine && s.gagnants.includes(c.id);
+          const perd = !!termine && !s.gagnants.includes(c.id);
+          l.cordeNom.textContent = c.titre;
+          animer(l.cordePc, c.pourcent, (v) => v + '%');
+          // Un segment garde de quoi lire son pourcentage, même à 0 %.
+          l.corde.style.flexBasis = (s.choix.length === 2 ? parts[i] : Math.max(parts[i], 9)) + '%';
+          l.corde.classList.toggle('gagnant', gagne);
+          l.corde.classList.toggle('perdant', perd);
+          l.corde.classList.toggle('mene', !termine && s.totalVotes > 0 && c.votes === tete);
+          l.tuileNom.textContent = c.titre;
+          animer(l.tuilePc, c.pourcent, (v) => v + '%');
+          animer(l.tuileDet, c.votes, (v) => nombre.format(v) + ' ' + accord(v, 'vote', 'votes'));
+          l.tuileRempl.style.height = c.pourcent + '%';
+          l.tuile.classList.toggle('mene', termine ? gagne : s.totalVotes > 0 && c.votes === tete);
+          l.tuile.classList.toggle('perdant', perd);
+        });
+        // La corde penche vers le camp qui mène.
+        if (s.choix.length === 2) $('corde').querySelector('.noeud').style.left = parts[0] + '%';
+
         for (const c of s.choix) {
           const l = lignes.get(c.id);
           if (!l) continue;
@@ -329,12 +501,15 @@
       setInterval(majTemps, 250);
 
       // ?demo=1 : un sondage d'exemple qui ne disparaît pas, le temps de placer la
-      // source dans OBS. ?demo=resultat et ?demo=5 (cinq choix) montrent les autres cas.
+      // source dans OBS. ?demo=resultat, ?demo=5 (cinq choix) et ?demo=2 (deux
+      // choix, pour le bras de fer) montrent les autres cas. ?style= force un style
+      // (scoreboard, bras-de-fer, tuiles) sans attendre le réglage du flux.
       const demo = new URLSearchParams(location.search).get('demo');
 
       function exemple(type) {
-        const noms = type === '5' ? ['Octane', 'Fennec', 'Dominus', 'Breakout', 'Merc'] : ['Octane', 'Fennec', 'Dominus'];
-        const votes = type === '5' ? [44, 31, 22, 15, 12] : [60, 43, 21];
+        const noms =
+          type === '5' ? ['Octane', 'Fennec', 'Dominus', 'Breakout', 'Merc'] : type === '2' ? ['Octane', 'Fennec'] : ['Octane', 'Fennec', 'Dominus'];
+        const votes = type === '5' ? [44, 31, 22, 15, 12] : type === '2' ? [56, 40] : [60, 43, 21];
         const total = votes.reduce((a, b) => a + b, 0);
         let reste = 100;
         const choix = noms.map((n, i) => {
@@ -346,7 +521,7 @@
         return {
           sondage: {
             id: 'demo-' + type,
-            titre: 'Quelle voiture pour la suite ?',
+            titre: type === '2' ? 'Octane ou Fennec ?' : 'Quelle voiture pour la suite ?',
             statut: termine ? 'termine' : 'actif',
             finA: termine ? null : Date.now() + 42000,
             cloture: false,
@@ -363,8 +538,14 @@
       const flux = new FluxStreamKit(BASE + '/flux');
 
       if (demo !== null) {
-        flux.addEventListener('etat', (m) => appliquerTheme(JSON.parse(m.data).theme));
-        appliquer(exemple(['resultat', '5'].includes(demo) ? demo : '1'));
+        const force = new URLSearchParams(location.search).get('style');
+        if (force) style = force;
+        flux.addEventListener('etat', (m) => {
+          const t = JSON.parse(m.data).theme;
+          appliquerTheme(force ? { ...t, style: force } : t);
+          if (courant) appliquer({ sondage: courant });
+        });
+        appliquer(exemple(['resultat', '5', '2'].includes(demo) ? demo : '1'));
         setInterval(() => {
           if (courant?.statut === 'actif' && courant.finA < Date.now()) courant.finA = Date.now() + 42000;
         }, 1000);

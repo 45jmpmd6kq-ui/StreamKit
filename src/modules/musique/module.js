@@ -172,6 +172,18 @@ export default {
 
       // --- Habillage ---
       {
+        cle: 'style',
+        type: 'choix',
+        label: 'Style de l’overlay',
+        aide: 'Bloc : pochette, titre, avancement et file d’attente. Vinyle : un disque qui tourne avec le morceau en cours et la file sur une ligne, plus discret. Le vinyle montre toujours le morceau en cours.',
+        // Bloc par defaut : une mise a jour ne change pas l'ecran d'un streamer.
+        defaut: 'bloc',
+        options: [
+          { valeur: 'bloc', label: 'Bloc' },
+          { valeur: 'vinyle', label: 'Vinyle' },
+        ],
+      },
+      {
         cle: 'afficherEnCours',
         type: 'bool',
         label: 'Afficher le morceau en cours',
@@ -184,7 +196,7 @@ export default {
         cle: 'tailleBloc',
         type: 'choix',
         label: 'Taille du bloc',
-        aide: 'Compacte : petite pochette, 3 demandes affichées au plus. Normale : grande pochette, temps écoulé et vignettes. Sert seulement si le morceau en cours est affiché.',
+        aide: 'Compacte : petite pochette, 3 demandes affichées au plus. Normale : grande pochette, temps écoulé et vignettes. Pour le style Bloc, quand le morceau en cours est affiché.',
         // Compacte par defaut : la normale a ete jugee trop envahissante a
         // l'ecran, et le bloc etait sorti depuis quelques heures seulement.
         defaut: 'compacte',
@@ -350,7 +362,10 @@ export default {
 
     // --- Overlays : deux vues, le meme etat ---
     const diffuser = (type, data) => VUES.forEach((v) => ctx.overlay.diffuser(v, type, data));
+    // Le vinyle EST le morceau en cours : ce style le suit, reglage coupe ou non.
+    const enCours = !!c.afficherEnCours || c.style === 'vinyle';
     const theme = {
+      style: c.style,
       accent1: c.accent1,
       accent2: c.accent2,
       corner: c.corner,
@@ -368,7 +383,7 @@ export default {
       VUES.forEach((v) =>
         ctx.overlay.etat(v, {
           theme,
-          afficherEnCours: !!c.afficherEnCours,
+          afficherEnCours: enCours,
           lecture,
           upcoming: file.aVenir(),
         })
@@ -580,7 +595,7 @@ export default {
           }
         }
 
-        if (c.afficherEnCours) {
+        if (enCours) {
           const releve = etatLecture(cur, file.enCours());
           if (lectureAChange(lecture, releve)) {
             lecture = releve;
@@ -614,13 +629,13 @@ export default {
     // Apres un « suivant » : l'overlay montre le nouveau morceau sans attendre
     // le prochain tour.
     function rafraichirBientot() {
-      if (c.afficherEnCours) ctx.minuteur.delai(suivre, 1200);
+      if (enCours) ctx.minuteur.delai(suivre, 1200);
     }
 
     ctx.minuteur.intervalle(suivre, INTERVALLE_SUIVI);
     // Premier releve tout de suite : apres un changement de reglages, le module
     // redemarre, et l'overlay resterait sinon 5 s sans son morceau en cours.
-    if (c.afficherEnCours) ctx.minuteur.delai(suivre, 0);
+    if (enCours) ctx.minuteur.delai(suivre, 0);
 
     // --- 4) Commandes de chat -------------------------------------------------
 

@@ -308,6 +308,11 @@ OBS, sans recharger tes sources.
   prédiction, choix d'un sondage).
 - Les couleurs réglées dans un module (Bot Musique, Clips) ne s'appliquent
   qu'avec **Standard esport**.
+- La **forme** de certains overlays se choisit dans leur module, réglage
+  **Style de l'overlay** : Bot Musique en **Bloc** ou en **Vinyle** (un disque
+  qui tourne, plus discret) ; Sondages en **Scoreboard**, **Bras de fer** (deux
+  camps, ou une barre partagée dès trois choix) ou **Tuiles**. Le thème
+  s'applique par-dessus.
 - Pour qu'**une seule** source garde un autre thème, ajoute `?theme=neon` à la
   fin de son adresse (ou `esport`, `minimal`, `arcade`, `standard`). Elle ne
   suivra plus les thèmes choisis dans Personnalisation.

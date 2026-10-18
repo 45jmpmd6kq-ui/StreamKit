@@ -362,6 +362,22 @@ test('module : un vrai sondage s affiche et compte ses votes une fois', async ()
   assert.deepEqual(t.compteurs, { sondages: 1, votes: 9 });
 });
 
+test('style : scoreboard par defaut, bras de fer et tuiles en option, transmis a l overlay', async () => {
+  const style = manifeste.config.champs.find((c) => c.cle === 'style');
+  assert.equal(style.type, 'choix');
+  // Scoreboard par defaut : la mise a jour ne change pas l'ecran d'un streamer.
+  assert.equal(style.defaut, 'scoreboard');
+  assert.deepEqual(
+    style.options.map((o) => o.valeur),
+    ['scoreboard', 'bras-de-fer', 'tuiles']
+  );
+
+  const t = contexte();
+  t.ctx.config.style = 'tuiles';
+  await manifeste.demarrer(t.ctx);
+  assert.equal(t.etats[0].theme.style, 'tuiles');
+});
+
 test('module : sondage retire du chat Twitch, le scoreboard part et ses votes comptent', async () => {
   const t = contexte();
   await manifeste.demarrer(t.ctx);
