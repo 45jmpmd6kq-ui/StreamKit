@@ -17,7 +17,8 @@ ici, et un test le vérifie aussi à chaque `npm test`.
 
 - 🎁 **Nouveau module Sub Goal.** Une barre de progression dans OBS vers
   l'objectif de ton choix (« Arc Qiyana »…) : seuls les subs offerts la font
-  avancer, pas les subs classiques. Couleurs réglables, compteur gardé d'un
+  avancer, pas les subs classiques. En carte ou en barre, couleurs
+  réglables, compteur gardé d'un
   live à l'autre. Pense à reconnecter ta chaîne Twitch pour l'activer.
 - **Un guide d'utilisation dans StreamKit.** Le bouton 📖 Guide d'utilisation,
   en haut à côté de Signaler un bug, explique chaque écran avec des captures :

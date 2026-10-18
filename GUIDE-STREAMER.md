@@ -176,7 +176,9 @@ seule si tu y as déjà changé quelque chose.
   compte 1, quel que soit son palier. Le compteur est gardé d'un live à l'autre
   et continue au-delà de l'objectif : change d'objectif puis clique **Remettre
   à zéro** quand tu passes au suivant. **➕ / ➖** corrigent le compteur à la
-  main (un gift offert pendant que StreamKit était fermé). Les deux couleurs
+  main (un gift offert pendant que StreamKit était fermé). Deux styles au choix :
+  **Carte** (compacte, avec le dernier viewer qui a offert) ou **Barre** (une
+  seule ligne, l'objectif dans la jauge). Les deux couleurs
   et l'opacité du fond se règlent dans le module, comme pour la musique.
   **Si ta chaîne était déjà connectée avant**, reconnecte-la : ce module
   demande un droit de plus. **Simuler un subgift** montre +5 pendant 8

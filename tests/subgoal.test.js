@@ -127,3 +127,18 @@ test('reglages : objectif requis, couleurs reglables', () => {
   assert.equal(champs.accent2.type, 'couleur');
   assert.deepEqual(manifeste.scopes, ['channel:read:subscriptions']);
 });
+
+test('style : carte par defaut, barre en option, transmis a l overlay', async () => {
+  const style = manifeste.config.champs.find((c) => c.cle === 'style');
+  assert.equal(style.defaut, 'carte');
+  assert.equal(style.aVenir, undefined, 'le choix est ouvert');
+  assert.deepEqual(
+    style.options.map((o) => o.valeur),
+    ['carte', 'barre']
+  );
+  const t = contexte();
+  t.ctx.config.style = 'barre';
+  const arret = await manifeste.demarrer(t.ctx);
+  assert.equal(t.etats[0].theme.style, 'barre');
+  await arret.arreter();
+});

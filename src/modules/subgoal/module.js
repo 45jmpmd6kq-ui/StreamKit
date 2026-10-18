@@ -58,9 +58,20 @@ export default {
         max: 10000,
       },
       {
+        cle: 'style',
+        type: 'choix',
+        label: 'Style de l’overlay',
+        aide: 'Carte : compacte, avec le dernier viewer qui a offert. Barre : une seule ligne, l’objectif dans la jauge et le compteur à droite.',
+        defaut: 'carte',
+        options: [
+          { valeur: 'carte', label: 'Carte' },
+          { valeur: 'barre', label: 'Barre' },
+        ],
+      },
+      {
         cle: 'afficherDernier',
         type: 'bool',
-        label: 'Afficher le dernier viewer qui a offert',
+        label: 'Afficher le dernier viewer qui a offert (style Carte)',
         aide: 'Sous la barre : « Pseudo vient d’offrir 5 subs ». Coupé : « Plus que N subs offerts ».',
         defaut: true,
       },
@@ -179,7 +190,13 @@ export default {
 
   async demarrer(ctx) {
     const c = ctx.config;
-    const theme = { coin: c.coin, accent1: c.accent1, accent2: c.accent2, opacite: c.opaciteFond };
+    const theme = {
+      style: c.style,
+      coin: c.coin,
+      accent1: c.accent1,
+      accent2: c.accent2,
+      opacite: c.opaciteFond,
+    };
     const lire = () => ({ ...MEMOIRE, ...ctx.etat.lire(MEMOIRE) });
 
     // `simulation` : un etat d'apercu, jamais sauve.
