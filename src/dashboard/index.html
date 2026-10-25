@@ -25,12 +25,14 @@
 
       <button class="btn petit" id="btn-maj" hidden></button>
       <button class="btn petit" id="btn-guide" title="Comment fonctionne StreamKit, écran par écran">
-        📖 Guide d'utilisation
+        <span data-icone="livre"></span>Guide d'utilisation
       </button>
       <button class="btn petit" id="btn-bug" title="Envoyer un rapport à la personne qui s'occupe de StreamKit">
-        🐞 Signaler un bug
+        <span data-icone="bug"></span>Signaler un bug
       </button>
-      <button class="btn petit discret" id="btn-reglages" title="Réglages de StreamKit">⚙️</button>
+      <button class="btn petit discret" id="btn-reglages" title="Réglages de StreamKit" aria-label="Réglages de StreamKit">
+        <span class="seule" data-icone="reglages"></span>
+      </button>
     </header>
 
     <!-- Rail des modules + détail -->
@@ -39,21 +41,21 @@
         <!-- Ce qu'on regarde avant de partir en live : tout vert, on y va. -->
         <button class="entree entree-accueil" id="entree-accueil">
           <span class="point" id="point-accueil"></span>
-          <span class="icone">📡</span>
+          <span class="icone" data-icone="jauge"></span>
           <span class="nom">Vue d'ensemble</span>
         </button>
 
         <!-- Ce qui s'est passe sur le live, jour par jour. -->
         <button class="entree entree-accueil" id="entree-activite">
           <span class="point"></span>
-          <span class="icone">🕒</span>
+          <span class="icone" data-icone="historique"></span>
           <span class="nom">Activité récente</span>
         </button>
 
         <!-- Les chiffres de tes lives, par période. -->
         <button class="entree entree-accueil" id="entree-metriques">
           <span class="point"></span>
-          <span class="icone">📊</span>
+          <span class="icone" data-icone="graphe"></span>
           <span class="nom">Métriques</span>
         </button>
 
@@ -61,21 +63,21 @@
              du developpeur (fichier moderateur.json). -->
         <button class="entree entree-accueil entree-moderateur" id="entree-moderateur" hidden>
           <span class="point"></span>
-          <span class="icone">🛡️</span>
+          <span class="icone" data-icone="bouclier"></span>
           <span class="nom">Modérateur</span>
           <span class="badge-toi">toi seul</span>
         </button>
 
         <button class="entree entree-accueil" id="entree-connecteurs">
           <span class="point" id="point-connecteurs"></span>
-          <span class="icone">🔌</span>
+          <span class="icone" data-icone="prise"></span>
           <span class="nom">Connecteurs</span>
         </button>
 
         <!-- Le thème des overlays, commun à tous les modules. -->
         <button class="entree entree-accueil" id="entree-personnalisation">
           <span class="point"></span>
-          <span class="icone">🎨</span>
+          <span class="icone" data-icone="pinceau"></span>
           <span class="nom">Personnalisation</span>
           <span class="badge-a-venir" id="badge-perso-a-venir">à venir</span>
         </button>
@@ -150,7 +152,7 @@
             échoué, ou si on te le demande :
           </p>
           <button class="btn petit" id="btn-dossier-journaux" style="margin-top: 0.5rem">
-            📂 Ouvrir le dossier des journaux
+            <span data-icone="dossier"></span>Ouvrir le dossier des journaux
           </button>
         </div>
       </div>
@@ -183,7 +185,7 @@
         </p>
 
         <div class="bandeau avert" id="maj-en-live" hidden>
-          <span>🔴</span>
+          <span data-icone="live"></span>
           <div>
             <b>Tu es en train de streamer ?</b>
             <p>Tes modules s'arrêteront quelques secondes. Mieux vaut attendre la fin du live.</p>
@@ -202,11 +204,11 @@
          toujours de lui qu'on parle. Le journal, l'état du module et de
          StreamKit partent avec, sans rien demander au streamer. -->
     <dialog id="modale-bug">
-      <div class="modale-entete"><h2>🐞 Signaler un bug</h2></div>
+      <div class="modale-entete"><h2><span data-icone="bug"></span>Signaler un bug</h2></div>
 
       <div class="modale-corps" id="bug-formulaire">
         <div class="bandeau info" id="bug-hors-ligne" hidden>
-          <span>💾</span>
+          <span data-icone="disquette"></span>
           <div>
             <b>Cette version n'envoie pas les rapports</b>
             <p>Ton rapport sera enregistré sur ce PC, et tu pourras l'envoyer à la main.</p>
@@ -258,7 +260,7 @@
         </div>
 
         <details class="bug-joint">
-          <summary>📎 Joint automatiquement : <span id="bug-joint-resume">…</span></summary>
+          <summary><span data-icone="trombone"></span>Joint automatiquement : <span id="bug-joint-resume">…</span></summary>
           <ul id="bug-joint-liste"></ul>
           <p class="bug-note">Jamais tes mots de passe ni tes jetons de connexion : ils sont masqués.</p>
           <details>
@@ -281,8 +283,10 @@
          la première ouverture. -->
     <dialog id="modale-guide" aria-label="Guide d'utilisation">
       <div class="guide-tete">
-        <h2>📖 Guide d'utilisation <span class="guide-version" id="guide-version"></span></h2>
-        <button class="btn petit discret" id="btn-guide-fermer" title="Fermer">✕</button>
+        <h2><span data-icone="livre"></span>Guide d'utilisation <span class="guide-version" id="guide-version"></span></h2>
+        <button class="btn petit discret" id="btn-guide-fermer" title="Fermer" aria-label="Fermer">
+          <span class="seule" data-icone="fermer"></span>
+        </button>
       </div>
       <div class="guide-corps">
         <nav class="guide-sommaire" id="guide-sommaire">

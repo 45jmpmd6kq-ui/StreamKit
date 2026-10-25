@@ -2349,3 +2349,137 @@ kbd {
   color: var(--texte-doux);
   font-size: 0.9rem;
 }
+
+/* ---------- Icônes au trait (icones.js) ----------
+   Piste C : des dessins d'une couleur à la place des emojis. Gris par défaut,
+   violet quand l'entrée est choisie, et la couleur de l'univers (--univers)
+   ou de la marque (--marque) là où on cherche son jeu ou son service. */
+
+.i {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-icone],
+.icone,
+.ic,
+.titre-icone {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+/* Un bouton fait d'une icône seule (Réglages, Fermer) n'a pas de marge : elle
+   le décentrerait. :only-child ne suffit pas, il ignore le texte voisin. */
+.btn > [data-icone]:not(.seule),
+h2 > [data-icone],
+summary > [data-icone] {
+  margin-right: 0.45rem;
+  vertical-align: -0.2em;
+}
+.btn > [data-icone],
+.btn .i {
+  vertical-align: -0.2em;
+}
+.i-accent {
+  color: var(--accent);
+  margin-right: 0.35rem;
+}
+
+/* Menu */
+.entree .icone {
+  color: var(--texte-doux);
+}
+.entree .icone .i {
+  width: 18px;
+  height: 18px;
+}
+.entree.actif .icone {
+  color: var(--accent);
+}
+.groupe .entete-groupe .icone {
+  color: var(--univers);
+}
+.groupe .entree .icone {
+  color: color-mix(in srgb, var(--univers) 70%, var(--texte-doux));
+}
+.groupe .sous-entree .icone {
+  color: var(--texte-faible);
+}
+
+/* Vue d'ensemble */
+.ck-cx .ic {
+  color: var(--texte-doux);
+}
+.ck-cx .ic .i,
+.ck-uh .ic .i {
+  width: 18px;
+  height: 18px;
+}
+.ck-cx[style*="--marque"] .ic {
+  background: color-mix(in srgb, var(--marque) 18%, var(--panneau));
+  color: var(--marque);
+}
+.ck-u {
+  border-left: 3px solid var(--univers);
+}
+.ck-uh .ic {
+  color: var(--univers);
+}
+.ck-m .n,
+.ck-obs .nom,
+.act-txt b,
+.md-ligne > span {
+  display: inline-flex;
+  align-items: center;
+}
+.ck-m .n .ic,
+.ck-obs .nom .ic,
+.act-txt .ic,
+.md-ligne .ic {
+  margin-right: 0.45rem;
+  color: var(--texte-doux);
+}
+.ck-u .ck-m .n .ic {
+  color: color-mix(in srgb, var(--univers) 70%, var(--texte-doux));
+}
+.ck-u .ck-m.off .n .ic {
+  color: var(--texte-faible);
+}
+
+/* Titres de page */
+.titre-icone {
+  color: var(--univers, var(--accent));
+}
+.titre-icone .i {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+/* Connecteurs */
+.conn-icone {
+  color: var(--marque, var(--texte-doux));
+}
+
+/* Bandeaux : l'icône prend la couleur de l'état */
+.bandeau > span:first-child {
+  display: inline-flex;
+  padding-top: 0.1rem;
+  font-size: 1.1rem;
+}
+.bandeau.erreur > span:first-child {
+  color: var(--erreur);
+}
+.bandeau.avert > span:first-child {
+  color: var(--avert);
+}
+.bandeau.info > span:first-child {
+  color: var(--info);
+}
+.bandeau.succes > span:first-child {
+  color: var(--succes);
+}

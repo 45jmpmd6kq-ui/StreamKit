@@ -4,6 +4,8 @@
 // n'installe rien, et une mise à jour ne demande pas de recompiler quoi que ce
 // soit.
 
+import { icone, iconeModule, iconeCategorie, connexion, libelleBouton, poserIcones } from './icones.js';
+
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
@@ -517,10 +519,10 @@ function dessinerRail() {
       const point = ['ko', 'attente', 'ok'].find((p) => points.includes(p)) ?? '';
 
       return `
-        <div class="groupe ${replie ? 'replie' : ''}">
+        <div class="groupe ${replie ? 'replie' : ''}" style="--univers:${echapper(categorie.couleur || '#8b93a7')}">
           <button class="entete-groupe" data-categorie="${categorie.id}">
             <span class="fleche">${replie ? '▸' : '▾'}</span>
-            <span class="icone">${categorie.icone}</span>
+            <span class="icone">${iconeCategorie(categorie)}</span>
             <span class="nom">${echapper(categorie.label)}</span>
             <span class="point ${point}"></span>
             <span class="compte">${actifs.length}/${modules.length}</span>
@@ -531,7 +533,7 @@ function dessinerRail() {
                 (m) => `
               <button class="entree ${m.id === etat.selection ? 'actif' : ''}" data-module="${m.id}">
                 ${pointDeModule(m)}
-                <span class="icone">${m.icone}</span>
+                <span class="icone">${iconeModule(m)}</span>
                 <span class="nom">${echapper(m.nom)}</span>
               </button>${(m.pages ?? [])
                 .filter((p) => p.raccourci)
@@ -541,9 +543,8 @@ function dessinerRail() {
                   (p) => `
               <a class="entree sous-entree" href="${p.url}" target="_blank" rel="noreferrer"
                  title="${echapper(p.description)}">
-                <span class="icone">${echapper(p.icone || '↗')}</span>
+                <span class="icone">${icone('lien')}</span>
                 <span class="nom">${echapper(p.nom)}</span>
-                <span class="ouvre">↗</span>
               </a>`
                 )
                 .join('')}`
@@ -824,10 +825,12 @@ function dessinerHero(h) {
 
 function dessinerConnexion(l) {
   const e = l.etat === 'inactif' ? 'off' : l.etat;
+  const c = connexion(l);
   return `
     <button class="ck-cx ${e}" data-ck-connexion="${echapper(l.id)}"
-      title="${echapper([l.detail, l.aide].filter(Boolean).join('\n'))}">
-      <span class="ic">${echapper(l.icone || '🔌')}</span>
+      title="${echapper([l.detail, l.aide].filter(Boolean).join('\n'))}"
+      ${c.couleur ? `style="--marque:${c.couleur}"` : ''}>
+      <span class="ic">${c.html}</span>
       <span class="n">${echapper(l.nom)}</span>
       <span class="d ${PASTILLE[e]}"></span>
       <span class="s">${echapper(l.detail || '')}</span>
@@ -844,7 +847,7 @@ function dessinerUniversCockpit({ categorie, modules }) {
   return `
     <div class="ck-u" style="--univers:${echapper(categorie.couleur || '#8b93a7')}">
       <div class="ck-uh">
-        <span class="ic">${echapper(categorie.icone)}</span>
+        <span class="ic">${iconeCategorie(categorie)}</span>
         <span class="n">${echapper(categorie.label)}</span>
         <span class="ck-ratio">${actifs.length}/${n}</span>
         <div class="ck-seg">${segments}</div>
@@ -866,7 +869,7 @@ function dessinerLigneModule(x) {
   return `
     <div class="ck-m ${x.etat}" data-ck-module="${m.id}" title="${echapper(x.aide || '')}">
       <span class="d ${PASTILLE[x.etat]}"></span>
-      <span class="n">${echapper(m.icone)} ${echapper(m.nom)}</span>
+      <span class="n"><span class="ic">${iconeModule(m)}</span>${echapper(m.nom)}</span>
       <button class="ck-sw ${m.actif ? 'on' : ''}" data-ck-basculer="${m.id}" role="switch"
         aria-checked="${m.actif}" aria-label="${m.actif ? 'Désactiver' : 'Activer'} ${echapper(m.nom)}"></button>
       <span class="e">${echapper(x.detail)}</span>
@@ -924,7 +927,7 @@ function dessinerOverlays(tous, s) {
         .map((o) => {
           const coupe = !o.module.actif;
           return `<button class="ck-obs ${coupe ? 'coupe' : ''}" data-ck-module="${o.module.id}"
-            title="${coupe ? 'Cette source est dans OBS mais n’affiche rien : son module est désactivé.' : ''}">${etiquetteUnivers(o.module.categorie)}<span class="nom">${echapper(o.module.icone)} ${echapper(o.module.nom)}${
+            title="${coupe ? 'Cette source est dans OBS mais n’affiche rien : son module est désactivé.' : ''}">${etiquetteUnivers(o.module.categorie)}<span class="nom"><span class="ic">${iconeModule(o.module)}</span>${echapper(o.module.nom)}${
               o.nom === o.module.nom ? '' : ' · ' + echapper(o.nom)
             }${coupe ? '<small>module désactivé</small>' : ''}</span>${
               o.sources > 1 ? `<span class="fois">×${o.sources}</span>` : ''
@@ -956,9 +959,10 @@ const SOURCE_SOCLE = { id: 'streamkit', court: 'StreamKit', label: 'StreamKit', 
 
 function origineEvenement(e) {
   const m = etat.modules.find((x) => x.id === e.source);
-  if (m) return { categorie: m.categorie, icone: m.icone, nom: m.nom };
-  if (e.source === 'live') return { categorie: SOURCE_LIVE, icone: '🔴', nom: 'Live' };
-  return { categorie: SOURCE_SOCLE, icone: '⚙️', nom: e.source };
+  // `icone` est du HTML (un SVG), pas un texte a echapper.
+  if (m) return { categorie: m.categorie, icone: iconeModule(m), nom: m.nom };
+  if (e.source === 'live') return { categorie: SOURCE_LIVE, icone: icone('live'), nom: 'Live' };
+  return { categorie: SOURCE_SOCLE, icone: icone('reglages'), nom: e.source };
 }
 
 async function chargerActivite() {
@@ -1054,7 +1058,7 @@ function dessinerActivitePage() {
 
   redessinerDetail(`
     <div class="activite">
-      <div class="titre-module"><span style="font-size:1.6rem">🕒</span><h1>Activité récente</h1></div>
+      <div class="titre-module"><span class="titre-icone">${icone('historique')}</span><h1>Activité récente</h1></div>
       <p class="act-sous">Ce qui s’est passé sur ton live, du plus récent au plus ancien.</p>
 
       <div class="act-barre">
@@ -1095,7 +1099,7 @@ function dessinerEvenement(e) {
       <time>${echapper(String(e.h).slice(0, 5))}</time>
       <span class="act-d ${PASTILLE_NIVEAU[e.niveau] || 'in'}"></span>
       ${etiquetteUnivers(e.categorie)}
-      <span class="act-txt"><b>${echapper(e.icone || '')} ${echapper(e.nom)}</b> <span>${echapper(e.message)}</span></span>
+      <span class="act-txt"><b><span class="ic">${e.icone || ''}</span>${echapper(e.nom)}</b> <span>${echapper(e.message)}</span></span>
     </div>`;
 }
 
@@ -1347,7 +1351,7 @@ function dessinerMetriques() {
 
   redessinerDetail(`
     <div class="metriques">
-      <div class="titre-module"><span style="font-size:1.6rem">📊</span><h1>Métriques</h1></div>
+      <div class="titre-module"><span class="titre-icone">${icone('graphe')}</span><h1>Métriques</h1></div>
       <p class="act-sous">L’évolution de tes lives sur la période choisie.</p>
       <div class="act-filtres">
         ${PERIODES.map(([v, t]) => chip('data-mt-periode', v, t, vueMetriques.periode === v)).join('')}
@@ -1572,7 +1576,7 @@ function dessinerModerateur() {
   const chip = (attr, valeur, texte, actif) =>
     `<button class="act-chip ${actif ? 'on' : ''}" ${attr}="${echapper(valeur)}">${texte}</button>`;
   const entete = `
-    <div class="titre-module"><span style="font-size:1.6rem">🛡️</span><h1>Modérateur</h1>
+    <div class="titre-module"><span class="titre-icone">${icone('bouclier')}</span><h1>Modérateur</h1>
       <span class="badge-toi grand">visible par toi seul</span></div>
     <p class="act-sous">Qui utilise quoi, et combien. Clique sur un streamer pour son détail.</p>
     <div class="act-filtres">${PERIODES_MOD.map(([v, t]) => chip('data-md-periode', v, t, vueModerateur.periode === v)).join('')}</div>`;
@@ -1604,11 +1608,7 @@ function dessinerModerateur() {
     ['Streamers', String(liste.length), 'relevé reçu sur la période'],
     ['Lives', String(lives), Math.round(minutes / 60) + ' h en direct'],
     ['À jour', aJour + ' / ' + liste.length, 'sur ' + d.version],
-    [
-      'Le plus adopté',
-      top?.n ? top.m.icone + ' ' + top.m.nom : '—',
-      top?.n ? top.n + ' streamer' + (top.n > 1 ? 's' : '') : '',
-    ],
+    ['Le plus adopté', top?.n ? top.m.nom : '—', top?.n ? top.n + ' streamer' + (top.n > 1 ? 's' : '') : ''],
   ];
 
   const carte = liste.length
@@ -1616,7 +1616,7 @@ function dessinerModerateur() {
         <span></span>${modules
           .map(
             (m) =>
-              `<span class="md-col" title="${echapper(m.nom)}">${echapper(m.icone)}<small>${echapper(m.nom)}</small></span>`
+              `<span class="md-col" title="${echapper(m.nom)}">${iconeModule(m)}<small>${echapper(m.nom)}</small></span>`
           )
           .join('')}
         ${liste
@@ -1679,14 +1679,14 @@ function dessinerStreamer(s, modules, d) {
         <div><span>Modules actifs</span><b>${
           modules
             .filter((m) => s.actifs[m.id])
-            .map((m) => echapper(m.icone))
+            .map((m) => `<span title="${echapper(m.nom)}">${iconeModule(m)}</span>`)
             .join(' ') || '—'
         }</b></div>
       </div>
       <div class="md-lignes">${utilises
         .map(
           ({ m, u }) => `
-        <div class="md-ligne">${etiquetteUnivers(m.categorie)}<span>${echapper(m.icone)} ${echapper(m.nom)}${
+        <div class="md-ligne">${etiquetteUnivers(m.categorie)}<span><span class="ic">${iconeModule(m)}</span>${echapper(m.nom)}${
           s.actifs[m.id] ? '' : ' <small>désactivé</small>'
         }</span><span class="md-detail-c">${
           Object.entries(s.c[m.id] ?? {})
@@ -1767,7 +1767,9 @@ function dessinerConnecteurs() {
   // Ce panneau se redessine tout seul pendant que le streamer y colle ses
   // identifiants : redessinerDetail garde ce qu'il a tapé.
   redessinerDetail(
-    '<div class="titre-module"><span style="font-size:1.6rem">🔌</span><h1>Connecteurs</h1></div>' +
+    '<div class="titre-module"><span class="titre-icone">' +
+      icone('prise') +
+      '</span><h1>Connecteurs</h1></div>' +
       '<p class="resume-accueil">Chaque service se configure ici, une seule fois. ' +
       'Les modules qui en ont besoin y puisent tout seuls.</p>' +
       liste.map(carteConnecteur).join('')
@@ -1852,7 +1854,7 @@ function carteConnecteur(c) {
     <div class="conn ${c.etat}">
       <button class="conn-entete" data-conn="${c.id}">
         <span class="point ${pastille}"></span>
-        <span class="conn-icone">${c.icone}</span>
+        <span class="conn-icone" ${connexion(c).couleur ? `style="--marque:${connexion(c).couleur}"` : ''}>${connexion(c).html}</span>
         <span class="conn-nom">${echapper(c.nom)}</span>
         <span class="conn-detail">${echapper(c.compte || c.detail)}</span>
         <span class="fleche">${ouvert ? '▾' : '▸'}</span>
@@ -2005,7 +2007,7 @@ function htmlPersonnalisation() {
     })
     .join('');
   return `
-    <div class="titre-module"><span style="font-size:1.6rem">🎨</span><h1>Personnalisation</h1></div>
+    <div class="titre-module"><span class="titre-icone">${icone('pinceau')}</span><h1>Personnalisation</h1></div>
     <p class="resume-accueil">Choisis le style de tes overlays Twitch : musique, sondages, prédictions, pub et clips.
       Ça change tout de suite dans OBS, sans recharger tes sources.</p>
     <div class="perso-info">🎮 Les overlays de tes jeux (LoL, Rocket League, Valorant, EA FC) gardent leur style d’origine.</div>
@@ -2083,7 +2085,8 @@ document.addEventListener('change', (e) => {
 
 // --- Détail d'un module -----------------------------------------------------
 
-const boutonAction = (a) => `<button class="btn petit" data-action="${a.nom}">${echapper(a.label)}</button>`;
+const boutonAction = (a) =>
+  `<button class="btn petit" data-action="${a.nom}">${libelleBouton(a.label)}</button>`;
 
 function dessinerDetail() {
   if (etat.selection === ACCUEIL) return dessinerAccueil();
@@ -2105,8 +2108,8 @@ function dessinerDetail() {
   const droitsManquants = (m.scopes || []).filter((s) => !(etat.general?.twitch?.scopes || []).includes(s));
 
   const memeVue = redessinerDetail(`
-    <div class="titre-module">
-      <span style="font-size:1.6rem">${m.icone}</span>
+    <div class="titre-module" style="--univers:${echapper(m.categorie?.couleur || '#8b93a7')}">
+      <span class="titre-icone">${iconeModule(m)}</span>
       <h1>${echapper(m.nom)}</h1>
       <button class="bascule" id="bascule-module" role="switch" aria-checked="${m.actif}"></button>
     </div>
@@ -2114,22 +2117,22 @@ function dessinerDetail() {
 
     ${
       m.etat === 'erreur' && m.erreur
-        ? `<div class="bandeau erreur"><span>❌</span><div><b>Ce module n'a pas démarré</b><p>${echapper(m.erreur)}</p></div></div>`
+        ? `<div class="bandeau erreur"><span>${icone('alerte')}</span><div><b>Ce module n'a pas démarré</b><p>${echapper(m.erreur)}</p></div></div>`
         : ''
     }
     ${
       m.etat === 'incomplet'
-        ? `<div class="bandeau avert"><span>⚠️</span><div><b>Réglages à compléter</b><p>${echapper(m.manque.join(', '))}</p></div></div>`
+        ? `<div class="bandeau avert"><span>${icone('alerte')}</span><div><b>Réglages à compléter</b><p>${echapper(m.manque.join(', '))}</p></div></div>`
         : ''
     }
     ${
       twitchKo
-        ? `<div class="bandeau avert"><span>🔌</span><div><b>Twitch n'est pas connecté</b><p>Ce module en a besoin. Clique sur l'indicateur Twitch en haut de la fenêtre.</p></div></div>`
+        ? `<div class="bandeau avert"><span>${icone('prise')}</span><div><b>Twitch n'est pas connecté</b><p>Ce module en a besoin. Clique sur l'indicateur Twitch en haut de la fenêtre.</p></div></div>`
         : ''
     }
     ${
       !twitchKo && m.actif && droitsManquants.length
-        ? `<div class="bandeau avert"><span>🔑</span><div><b>Autorisation à renouveler</b><p>Ce module a besoin de droits que ton autorisation actuelle ne couvre pas (${echapper(
+        ? `<div class="bandeau avert"><span>${icone('alerte')}</span><div><b>Autorisation à renouveler</b><p>Ce module a besoin de droits que ton autorisation actuelle ne couvre pas (${echapper(
             droitsManquants.join(', ')
           )}). Reconnecte ta chaîne depuis l'indicateur Twitch.</p></div></div>`
         : ''
@@ -2640,7 +2643,7 @@ function remplirModulesBug() {
       .map(
         (g) =>
           `<optgroup label="${echapper(g.categorie.label)}">${g.modules
-            .map((m) => `<option value="${echapper(m.id)}">${echapper(m.icone + ' ' + m.nom)}</option>`)
+            .map((m) => `<option value="${echapper(m.id)}">${echapper(m.nom)}</option>`)
             .join('')}</optgroup>`
       )
       .join('');
@@ -2805,11 +2808,11 @@ function afficherResultatBug(r) {
   zone.hidden = false;
 
   if (r.ok && !r.partiel) {
-    zone.innerHTML = `<div class="bandeau succes"><span>✅</span><div><b>Rapport envoyé</b>
+    zone.innerHTML = `<div class="bandeau succes"><span>${icone('valide')}</span><div><b>Rapport envoyé</b>
       <p>Référence <code>${echapper(r.reference)}</code> : donne-la si on t'en reparle. Merci !</p></div></div>`;
   } else {
     const raison = String(r.partiel || r.raison || 'raison inconnue');
-    zone.innerHTML = `<div class="bandeau avert"><span>⚠️</span><div>
+    zone.innerHTML = `<div class="bandeau avert"><span>${icone('alerte')}</span><div>
       <b>${r.ok ? 'Rapport envoyé en partie' : 'Ton rapport n’est pas parti'}</b>
       <p>${echapper(raison.charAt(0).toUpperCase() + raison.slice(1))}. Il est enregistré sur ce PC : ouvre
       le dossier et envoie ses fichiers sur Discord à la personne qui s'occupe de StreamKit.</p>
@@ -3044,6 +3047,7 @@ $('#entree-activite').addEventListener('click', () => {
   chargerActivite();
 });
 
+poserIcones();
 brancherRail();
 brancherDetail();
 brancherActivite();
