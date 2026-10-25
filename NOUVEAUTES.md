@@ -11,6 +11,30 @@ que ça change pour lui — jamais le nom d'un fichier ni d'une fonction.
 `npm run publier` refuse de partir si la version publiée n'a pas sa section
 ici, et un test le vérifie aussi à chaque `npm test`.
 
+## 1.1.1
+
+### Nouveautés
+
+- **Un StreamKit plus lisible.** Les emojis du menu et des écrans laissent
+  place à de vraies icônes, nettes sur tous les PC. Chaque univers a sa
+  couleur (Twitch violet, Rocket League bleu, LoL or) : tu repères ton jeu
+  d'un coup d'œil dans le menu et dans la Vue d'ensemble.
+- **Vue d'ensemble plus courte à lire.** Le bandeau du haut cite seulement
+  ce qui est à régler ; le détail reste dans le panneau Alertes.
+- **Corriger un score à la main, c'est rangé à part.** Dans le Compteur de
+  session (Rocket League) et le Sub Goal, les boutons + / − ont leur propre
+  ligne, séparée des actions sur le jeu ou le module.
+
+### Corrections
+
+- Le menu et la Vue d'ensemble disent la même chose : même nombre de
+  modules actifs par univers, et un module en souci a la même couleur des
+  deux côtés.
+- Les textes grisés et les plus petits textes sont plus faciles à lire, et
+  les connexions ne coupent plus leur message en plein milieu.
+- Au clavier (touche Tab), on voit enfin où l'on se trouve. Et si les
+  animations sont coupées dans Windows, StreamKit les coupe aussi.
+
 ## 1.1.0
 
 ### Nouveautés
