@@ -430,11 +430,20 @@ function tailleOverlay(t) {
   return '<div class="taille">Taille dans OBS : <b>1920 × 1080</b> — celle de ta scène</div>';
 }
 
+// Etat d'un module dans le rail : le meme que la Vue d'ensemble des que la
+// sante est lue (un droit Twitch manquant met Sondages en rouge des deux cotes),
+// sinon d'apres le seul etat du module.
+const POINT_RAIL = { ok: 'ok', attente: 'attente', attention: 'attente', ko: 'ko', off: '' };
+function classePoint(m) {
+  if (etat.sante) return POINT_RAIL[etatModule(m, etat.sante).etat] ?? '';
+  if (!m.actif) return '';
+  if (m.etat === 'demarre') return 'ok';
+  if (m.etat === 'incomplet') return 'attente';
+  return 'ko';
+}
+
 function pointDeModule(m) {
-  if (!m.actif) return '<span class="point"></span>';
-  if (m.etat === 'demarre') return '<span class="point ok"></span>';
-  if (m.etat === 'incomplet') return '<span class="point attente"></span>';
-  return '<span class="point ko"></span>';
+  return `<span class="point ${classePoint(m)}"></span>`;
 }
 
 // Catégories repliées, mémorisées d'une session à l'autre. C'est une commodité
@@ -496,14 +505,16 @@ function dessinerRail() {
   $('#entree-personnalisation').classList.toggle('actif', etat.selection === PERSONNALISATION);
   const groupes = grouperParCategorie();
 
-  $('#liste-modules').innerHTML = groupes
+  const html = groupes
     .map(({ categorie, modules }) => {
       const replie = replis.has(categorie.id);
-      const demarres = modules.filter((m) => m.etat === 'demarre').length;
+      // Le compte des modules ACTIVES, comme la Vue d'ensemble : compter ceux qui
+      // tournent affichait 1/5 ici et 2/5 la-bas pour la meme categorie.
+      const actifs = modules.filter((m) => m.actif);
       // La pastille de la catégorie reprend le pire état de ses modules : replié
       // ou non, un module en erreur doit rester visible.
-      const enErreur = modules.some((m) => m.actif && (m.etat === 'erreur' || m.etat === 'incomplet'));
-      const point = enErreur ? 'ko' : demarres ? 'ok' : '';
+      const points = actifs.map(classePoint);
+      const point = ['ko', 'attente', 'ok'].find((p) => points.includes(p)) ?? '';
 
       return `
         <div class="groupe ${replie ? 'replie' : ''}">
@@ -512,7 +523,7 @@ function dessinerRail() {
             <span class="icone">${categorie.icone}</span>
             <span class="nom">${echapper(categorie.label)}</span>
             <span class="point ${point}"></span>
-            <span class="compte">${demarres}/${modules.length}</span>
+            <span class="compte">${actifs.length}/${modules.length}</span>
           </button>
           <div class="modules-groupe">
             ${modules
@@ -542,7 +553,14 @@ function dessinerRail() {
         </div>`;
     })
     .join('');
+  // Redessine a chaque lecture de la sante : on ne touche le DOM que si quelque
+  // chose a change, sinon le focus clavier sauterait toutes les quelques secondes.
+  if (html !== dernierRail) {
+    $('#liste-modules').innerHTML = html;
+    dernierRail = html;
+  }
 }
+let dernierRail = '';
 
 // Un seul écouteur pour tout le rail, posé une fois au démarrage (audit U8) :
 // le rail est redessiné sans cesse, et rebrancher chaque bouton à chaque dessin
@@ -806,7 +824,8 @@ function dessinerHero(h) {
 function dessinerConnexion(l) {
   const e = l.etat === 'inactif' ? 'off' : l.etat;
   return `
-    <button class="ck-cx ${e}" data-ck-connexion="${echapper(l.id)}" title="${echapper(l.aide || '')}">
+    <button class="ck-cx ${e}" data-ck-connexion="${echapper(l.id)}"
+      title="${echapper([l.detail, l.aide].filter(Boolean).join('\n'))}">
       <span class="ic">${echapper(l.icone || '🔌')}</span>
       <span class="n">${echapper(l.nom)}</span>
       <span class="d ${PASTILLE[e]}"></span>
@@ -1708,6 +1727,8 @@ async function chargerSante() {
       ? 'attente'
       : 'ok';
   $('#point-accueil').className = 'point ' + (etat.sante ? pire : '');
+  // Les points des modules du rail suivent la sante (voir classePoint).
+  dessinerRail();
   if (etat.selection === ACCUEIL) dessinerAccueil();
 }
 

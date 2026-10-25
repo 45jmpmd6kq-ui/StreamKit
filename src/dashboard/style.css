@@ -9,7 +9,7 @@
   --bordure-vive: #35354a;
   --texte: #e9e9f2;
   --texte-doux: #9797ab;
-  --texte-faible: #66667a;
+  --texte-faible: #82829a; /* 5,2:1 sur --fond : #66667a etait a 3,4:1, sous le minimum de 4,5:1 */
   --accent: #9146ff;
   --accent-doux: #9146ff22;
   --succes: #22c55e;
@@ -53,6 +53,31 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+/* Au clavier (Tab), on doit voir où l'on est : l'anneau par défaut de Chromium
+   est un fin trait bleu, invisible sur ce fond. Rien au clic souris. Les champs
+   ont leur propre halo (plus bas). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* Réglage Windows « Afficher les animations » coupé : on le respecte. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ---------- Barre du haut ---------- */
@@ -181,7 +206,7 @@ a.btn {
 }
 
 .rail h2 {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--texte-faible);
@@ -357,14 +382,22 @@ a.btn {
   grid-column: 2 / 4;
   font-size: 12px;
   color: var(--texte-doux);
+  /* Deux lignes plutot que « application Twitch non co… » : la phrase entiere
+     se lit sans survol. Au-dela, l'info-bulle la donne. */
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
 }
 .cockpit .ck-cx.ko { border-color: color-mix(in srgb, var(--erreur) 45%, transparent); }
 .ck-cx.ko .s { color: var(--erreur); }
 .ck-cx.attention .s { color: var(--avert); }
-.ck-cx.off { opacity: 0.55; }
+/* Une connexion pas configuree s'efface par la couleur, pas par l'opacite :
+   a 0,55 le texte tombait sous le contraste lisible. */
+.ck-cx.off .n,
+.ck-cx.off .s { color: var(--texte-faible); }
+.ck-cx.off .ic { opacity: 0.6; }
 
 /* Corps : univers + colonne laterale */
 .ck-corps {
@@ -463,7 +496,7 @@ a.btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 11.5px;
+  font-size: 12px;
   padding: 0.1rem 0.5rem;
   border-radius: 6px;
   background: var(--panneau-clair);
@@ -563,12 +596,12 @@ a.btn {
 .cockpit button.ck-obs:hover { color: var(--texte); }
 .ck-obs .nom small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--avert);
 }
 .ck-obs .fois {
   flex: none;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--texte-faible);
   font-variant-numeric: tabular-nums;
 }
@@ -588,7 +621,7 @@ a.btn {
   flex: none;
   min-width: 44px;
   text-align: center;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.03em;
   padding: 0.05rem 0.4rem;
@@ -646,7 +679,7 @@ a.btn {
 .act-date small {
   display: block;
   font-weight: 400;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--texte-faible);
   text-transform: none;
 }
@@ -872,12 +905,12 @@ a.btn {
 }
 .mt-val {
   fill: var(--texte-doux);
-  font-size: 11px;
+  font-size: 12px;
   text-anchor: middle;
 }
 .mt-x {
   fill: var(--texte-faible);
-  font-size: 11px;
+  font-size: 12px;
   text-anchor: middle;
 }
 .mt-vide {
@@ -916,7 +949,7 @@ a.btn {
    L'ambre signale une vue à part : elle n'existe que chez le développeur. */
 .badge-toi {
   margin-left: auto;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
   color: #f5c26b;
   border: 1px solid color-mix(in srgb, var(--avert) 35%, transparent);
@@ -925,7 +958,7 @@ a.btn {
 }
 .badge-toi.grand {
   margin-left: 0.6rem;
-  font-size: 11px;
+  font-size: 12px;
   background: color-mix(in srgb, var(--avert) 10%, transparent);
   padding: 0.05rem 0.6rem;
 }
@@ -955,7 +988,7 @@ a.btn {
   padding-bottom: 0.2rem;
 }
 .md-col small {
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--texte-faible);
   max-width: 100%;
   overflow: hidden;
@@ -989,7 +1022,7 @@ a.btn {
 }
 .md-v {
   flex: none;
-  font-size: 11px;
+  font-size: 12px;
   padding: 0 0.4rem;
   border-radius: 5px;
   border: 1px solid var(--bordure);
@@ -1004,7 +1037,7 @@ a.btn {
   border-radius: 6px;
   display: grid;
   place-items: center;
-  font-size: 11.5px;
+  font-size: 12px;
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
@@ -1129,7 +1162,7 @@ a.btn {
   flex: 1;
 }
 .carte .entete .provenance {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--texte-faible);
 }
 /* « carte-detail » et surtout pas « detail » : .detail est deja le panneau
@@ -1470,7 +1503,7 @@ a.btn {
   margin-bottom: 1.75rem;
 }
 .section > h3 {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--texte-faible);
@@ -1531,7 +1564,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-doux);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 textarea {
   min-height: 88px;
@@ -1696,7 +1729,7 @@ dialog::backdrop {
   background: #1a7f4b;
 }
 .maj-surtitre {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   letter-spacing: 0.11em;
   opacity: 0.85;
 }
@@ -1717,7 +1750,7 @@ dialog::backdrop {
   margin-bottom: 1.1rem;
 }
 .maj-bloc h3 {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--texte-faible);
@@ -1870,7 +1903,7 @@ dialog::backdrop {
   overflow: hidden;
   display: grid;
   place-items: center;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--texte-doux);
   text-align: center;
   padding: 0 4px;
@@ -2040,7 +2073,7 @@ kbd {
 }
 .theme-badge {
   display: none;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
@@ -2179,7 +2212,7 @@ kbd {
   overflow-y: auto;
 }
 .guide-s-titre {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--texte-faible);
@@ -2239,7 +2272,7 @@ kbd {
   margin-left: 0.4rem;
   padding: 0.05rem 0.45rem;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #c9a6ff;
@@ -2253,6 +2286,9 @@ kbd {
 }
 .entree .badge-a-venir {
   margin-left: auto;
+  flex: none;
+  padding: 0 0.4rem;
+  letter-spacing: 0;
 }
 .champ.a-venir .a-venir-saisie {
   filter: blur(2px);
