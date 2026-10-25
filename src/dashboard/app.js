@@ -724,14 +724,15 @@ function dessinerAccueil() {
   const phrase = !actifs.length
     ? 'Active un module avec son interrupteur pour commencer.'
     : alertes.length
-      ? alertes.length +
+      ? // Les noms seulement : le detail est dans le panneau Alertes juste en
+        // dessous, le repeter ici doublait la lecture.
+        alertes.length +
         ' point' +
         (alertes.length > 1 ? 's' : '') +
-        ' à régler — ' +
-        alertes
-          .slice(0, 2)
-          .map((a) => a.titre + ' : ' + a.texte)
-          .join(' · ')
+        ' à régler : ' +
+        [...new Set(alertes.map((a) => a.titre))].slice(0, 3).join(', ') +
+        (new Set(alertes.map((a) => a.titre)).size > 3 ? '…' : '') +
+        '. Le détail est dans Alertes.'
       : 'Tout est branché. Bon stream.';
 
   redessinerDetail(
@@ -2082,6 +2083,8 @@ document.addEventListener('change', (e) => {
 
 // --- Détail d'un module -----------------------------------------------------
 
+const boutonAction = (a) => `<button class="btn petit" data-action="${a.nom}">${echapper(a.label)}</button>`;
+
 function dessinerDetail() {
   if (etat.selection === ACCUEIL) return dessinerAccueil();
   if (etat.selection === CONNECTEURS) return dessinerConnecteurs();
@@ -2184,10 +2187,23 @@ function dessinerDetail() {
       <h3>Actions</h3>
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
         ${m.actions
-          .map((a) => `<button class="btn petit" data-action="${a.nom}">${echapper(a.label)}</button>`)
+          .filter((a) => !a.groupe)
+          .map(boutonAction)
           .join('')}
         <button class="btn petit" id="btn-redemarrer">Redémarrer le module</button>
       </div>
+      ${[...new Set(m.actions.map((a) => a.groupe).filter(Boolean))]
+        .map(
+          (g) => `
+            <div class="groupe-actions">
+              <span class="groupe-actions-titre">${echapper(g)}</span>
+              ${m.actions
+                .filter((a) => a.groupe === g)
+                .map(boutonAction)
+                .join('')}
+            </div>`
+        )
+        .join('')}
       <div class="etat-sauvegarde" id="retour-action" style="margin-top:.6rem"></div>
     </div>`);
 

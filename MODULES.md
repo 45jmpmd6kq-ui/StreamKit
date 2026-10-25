@@ -360,6 +360,10 @@ Ce n'est pas cosmétique. La roue expose une action `enregistrer` que sa page de
 sélection appelle avec la liste des voitures cochées. Si elle était un bouton,
 un clic l'appellerait **sans données** et viderait la sélection du streamer.
 
+Un libellé est un texte, ou `{ label, groupe }` : les boutons d'un même groupe
+sont rangés ensemble sous ce titre, à part des autres (ex. « Corriger le score »
+du compteur Rocket League).
+
 ## Les pages : quand le formulaire généré ne suffit pas
 
 Certains modules ont besoin d'une interface que le schéma ne peut pas produire :

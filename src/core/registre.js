@@ -303,7 +303,11 @@ export function vue(id) {
     // l'appellerait sans donnees et VIDERAIT la selection du streamer.
     actions: Object.entries(m.manifeste.libellesActions ?? {})
       .filter(([nom]) => typeof m.manifeste.actions?.[nom] === 'function')
-      .map(([nom, label]) => ({ nom, label })),
+      // Un libelle est un texte, ou { label, groupe } : les boutons d'un meme
+      // groupe (corriger un score…) se rangent ensemble sous ce titre.
+      .map(([nom, l]) =>
+        typeof l === 'string' ? { nom, label: l } : { nom, label: l.label, groupe: l.groupe }
+      ),
     champs: m.champs,
     reglages: schema.masquerSecrets(m.champs, reglages),
     // Un overlay `masque` reste servi (une ancienne adresse deja collee dans OBS

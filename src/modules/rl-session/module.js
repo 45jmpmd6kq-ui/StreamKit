@@ -160,10 +160,10 @@ export default {
   libellesActions: {
     activerApi: 'Activer l’API dans Rocket League',
     reinitialiserSession: 'Réinitialiser la session',
-    ajouterVictoire: '➕ Victoire',
-    retirerVictoire: '➖ Victoire',
-    ajouterDefaite: '➕ Défaite',
-    retirerDefaite: '➖ Défaite',
+    ajouterVictoire: { label: '➕ Victoire', groupe: 'Corriger le score' },
+    retirerVictoire: { label: '➖ Victoire', groupe: 'Corriger le score' },
+    ajouterDefaite: { label: '➕ Défaite', groupe: 'Corriger le score' },
+    retirerDefaite: { label: '➖ Défaite', groupe: 'Corriger le score' },
   },
 
   actions: {

@@ -68,6 +68,23 @@ textarea:focus-visible {
   outline: none;
 }
 
+/* Actions d'un module rangées sous un titre (« Corriger le score ») : à part
+   des actions qui touchent au jeu ou au module. */
+.groupe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--bordure);
+}
+.groupe-actions-titre {
+  color: var(--texte-doux);
+  font-size: 0.85rem;
+  margin-right: 0.25rem;
+}
+
 /* Réglage Windows « Afficher les animations » coupé : on le respecte. */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -132,8 +132,8 @@ export default {
 
   libellesActions: {
     simuler: 'Simuler un subgift',
-    ajouter: '➕ 1 sub offert',
-    retirer: '➖ 1 sub offert',
+    ajouter: { label: '➕ 1 sub offert', groupe: 'Corriger le compteur' },
+    retirer: { label: '➖ 1 sub offert', groupe: 'Corriger le compteur' },
     remettreAZero: 'Remettre à zéro',
   },
 
