@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Icônes et style — pistes A, B, C</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ===== Planche ===== */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #08080b; color: #e9e9f2; font: 14px/1.5 "Segoe UI", system-ui, sans-serif; padding: 24px 16px 48px; }
+  .planche { max-width: 1300px; margin: 0 auto; }
+  .intro h1 { font-size: 24px; margin: 0 0 4px; }
+  .intro p { color: #9797ab; margin: 0; max-width: 900px; }
+  .onglets { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 10px; }
+  .onglets button { background: #14141b; color: #e9e9f2; border: 1px solid #272733; border-radius: 999px; padding: 7px 16px; font: inherit; cursor: pointer; }
+  .onglets button[aria-selected="true"] { background: #9146ff; border-color: #9146ff; color: #fff; }
+  .explication { color: #b9b9ca; background: #111117; border: 1px solid #22222c; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; }
+  .explication b { color: #fff; }
+  .explication ul { margin: 6px 0 0; padding-left: 18px; }
+  .vues { display: grid; gap: 20px; }
+  .legende-vue { color: #82829a; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin: 0 0 6px; }
+
+  /* ===== Application (jetons par piste) ===== */
+  .app {
+    --fond: #0d0d12; --panneau: #14141b; --panneau-clair: #1b1b24; --bordure: #272733; --bordure-vive: #35354a;
+    --texte: #e9e9f2; --texte-doux: #9797ab; --texte-faible: #82829a;
+    --accent: #9146ff; --accent-doux: #9146ff22; --primaire: #9146ff;
+    --succes: #22c55e; --avert: #f59e0b; --erreur: #f43f5e;
+    --rayon: 10px; --police-titre: inherit; --police-chiffre: inherit;
+    --ic-taille: 18px;
+    background: var(--fond); color: var(--texte); border: 1px solid #22222c; border-radius: 12px; overflow: hidden;
+    display: grid; grid-template-rows: 52px auto; height: 700px;
+  }
+  .app.b {
+    --fond: #05070d; --panneau: #0b1020; --panneau-clair: #111a2e; --bordure: #1e293b; --bordure-vive: #334155;
+    --texte: #f1f5f9; --texte-doux: #94a3b8; --texte-faible: #7c8aa0;
+    --accent: #22c55e; --accent-doux: #22c55e1f; --primaire: #22c55e;
+    --rayon: 4px; --police-titre: Orbitron, "Segoe UI", sans-serif; --police-chiffre: "JetBrains Mono", Consolas, monospace;
+  }
+  .app svg.i { width: var(--ic-taille); height: var(--ic-taille); stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .app .emo { width: var(--ic-taille); text-align: center; flex: none; }
+
+  .barre { display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--panneau); border-bottom: 1px solid var(--bordure); }
+  .marque { font-weight: 700; font-family: var(--police-titre); letter-spacing: .02em; }
+  .b .marque { text-transform: uppercase; letter-spacing: .12em; font-size: 13px; }
+  .marque small { color: var(--texte-faible); font-weight: 400; margin-left: 6px; font-family: var(--police-chiffre); }
+  .pastille { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--bordure); border-radius: 999px; padding: 4px 12px; color: var(--texte-doux); font-size: 13px; }
+  .pousse { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; background: var(--panneau-clair); border: 1px solid var(--bordure-vive); border-radius: 8px; padding: 6px 12px; color: var(--texte); font: inherit; font-size: 13px; cursor: pointer; }
+  .b .btn { border-radius: var(--rayon); }
+  .btn.discret { background: transparent; border-color: transparent; padding: 6px; }
+  .btn.primaire { background: var(--primaire); border-color: var(--primaire); color: #fff; font-weight: 600; }
+  .b .btn.primaire { color: #04130a; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+
+  .corps { display: grid; grid-template-columns: 250px 1fr; min-height: 0; }
+  .rail { background: var(--panneau); border-right: 1px solid var(--bordure); padding: 10px; overflow: hidden; }
+  .entree { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--texte); font-weight: 600; font-size: 13.5px; border: 1px solid transparent; }
+  .entree .ic { color: var(--texte-doux); display: inline-flex; }
+  .entree.actif { background: var(--accent-doux); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  .entree.actif .ic { color: var(--accent); }
+  .b .entree.actif { box-shadow: inset 3px 0 0 var(--accent); border-color: transparent; border-radius: 2px; }
+  .point { width: 7px; height: 7px; border-radius: 50%; background: var(--bordure-vive); flex: none; }
+  .point.ok { background: var(--succes); } .point.av { background: var(--avert); } .point.ko { background: var(--erreur); }
+  .b .point { border-radius: 1px; }
+  .rail h2 { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--texte-faible); margin: 14px 10px 6px; font-family: var(--police-titre); }
+  .groupe-t { display: flex; align-items: center; gap: 10px; padding: 6px 10px; font-weight: 700; font-size: 13px; }
+  .groupe-t .compte { margin-left: auto; color: var(--texte-doux); font-size: 12px; font-family: var(--police-chiffre); display: inline-flex; gap: 6px; align-items: center; }
+  .sous { padding-left: 18px; font-weight: 500; }
+  .c .groupe-t .ic { color: var(--univers); }
+  .c .sous .ic { color: color-mix(in srgb, var(--univers) 70%, var(--texte-doux)); }
+
+  .detail { padding: 22px 26px; overflow: hidden; display: grid; gap: 16px; align-content: start; }
+  .hero { display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center; background: linear-gradient(120deg, color-mix(in srgb, var(--erreur) 10%, var(--panneau)), var(--panneau)); border: 1px solid var(--bordure); border-radius: 14px; padding: 18px 24px; }
+  .b .hero { border-radius: var(--rayon); background: var(--panneau); border-color: color-mix(in srgb, var(--erreur) 35%, var(--bordure)); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+  .hero h1 { margin: 0 0 4px; font-size: 22px; font-family: var(--police-titre); }
+  .b .hero h1 { font-size: 18px; text-transform: uppercase; letter-spacing: .06em; }
+  .hero p { margin: 0; color: var(--texte-doux); font-size: 13px; }
+  .anneau text { font: 700 17px var(--police-chiffre, inherit); fill: var(--texte); }
+  .stats { display: flex; gap: 8px; }
+  .stat { background: var(--panneau-clair); border: 1px solid var(--bordure); border-radius: 10px; padding: 8px 14px; min-width: 96px; }
+  .b .stat { border-radius: var(--rayon); }
+  .stat b { display: block; font-size: 20px; font-family: var(--police-chiffre); }
+  .stat span { color: var(--texte-doux); font-size: 12px; }
+  .stat.alerte { border-color: color-mix(in srgb, var(--erreur) 50%, transparent); } .stat.alerte b { color: var(--erreur); }
+
+  .titre-s { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--texte-faible); font-family: var(--police-titre); }
+  .conns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .cx { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 12px; align-items: center; background: var(--panneau); border: 1px solid var(--bordure); border-radius: 12px; padding: 10px 14px; }
+  .b .cx { border-radius: var(--rayon); }
+  .cx .tuile { grid-row: span 2; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--panneau-clair); color: var(--texte-doux); }
+  .b .cx .tuile { border-radius: 3px; }
+  .c .cx .tuile { background: color-mix(in srgb, var(--univers) 18%, var(--panneau)); color: var(--univers); }
+  .cx .n { font-weight: 600; } .cx .s { grid-column: 2 / 4; color: var(--texte-doux); font-size: 12px; }
+
+  .bas { display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: start; }
+  .univers { background: var(--panneau); border: 1px solid var(--bordure); border-radius: 12px; overflow: hidden; }
+  .b .univers { border-radius: var(--rayon); }
+  .c .univers { border-left: 3px solid var(--univers); }
+  .uh { display: flex; align-items: center; gap: 10px; padding: 11px 16px; font-weight: 700; border-bottom: 1px solid var(--bordure); background: linear-gradient(90deg, color-mix(in srgb, var(--univers) 22%, transparent), transparent 70%); }
+  .b .uh { background: var(--panneau-clair); font-family: var(--police-titre); text-transform: uppercase; letter-spacing: .08em; font-size: 12.5px; }
+  .uh .ic { display: inline-flex; color: var(--texte); }
+  .c .uh .ic { color: var(--univers); }
+  .uh .ratio { margin-left: auto; font-family: var(--police-chiffre); color: var(--texte-doux); font-size: 12px; font-weight: 500; }
+  .mod { display: grid; grid-template-columns: auto auto 1fr auto; gap: 0 10px; align-items: center; padding: 9px 16px; border-bottom: 1px solid var(--bordure); }
+  .mod:last-child { border-bottom: 0; }
+  .mod .ic { color: var(--texte-doux); display: inline-flex; }
+  .c .mod .ic { color: color-mix(in srgb, var(--univers) 70%, var(--texte-doux)); }
+  .mod .n { font-weight: 600; } .mod .e { grid-column: 3 / 4; font-size: 12px; color: var(--texte-faible); }
+  .mod.av .e { color: var(--avert); } .mod.ko .e { color: var(--erreur); }
+  .mod .sw { grid-row: span 2; grid-column: 4; width: 34px; height: 18px; border-radius: 999px; background: var(--bordure-vive); position: relative; }
+  .mod .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: #cfcfe0; }
+  .mod .sw.on { background: var(--succes); } .mod .sw.on::after { left: 19px; background: #fff; }
+  .b .mod .sw, .b .mod .sw::after { border-radius: 2px; }
+  .mod .point { grid-row: span 2; }
+  .mod .ic { grid-row: span 2; }
+
+  .alertes { background: var(--panneau); border: 1px solid var(--bordure); border-radius: 12px; padding: 12px 16px; }
+  .b .alertes { border-radius: var(--rayon); }
+  .alertes h3 { margin: 0 0 8px; font-size: 14px; display: flex; font-family: var(--police-titre); }
+  .b .alertes h3 { text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+  .alertes h3 span { margin-left: auto; color: var(--erreur); font-family: var(--police-chiffre); }
+  .al { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 8px 0; border-top: 1px solid var(--bordure); }
+  .al .ic { grid-row: span 2; color: var(--erreur); display: inline-flex; padding-top: 2px; }
+  .al.av .ic { color: var(--avert); }
+  .al b { font-size: 13px; } .al span { font-size: 12px; color: var(--texte-doux); }
+
+  /* Page module (actions) */
+  .page-mod { display: grid; gap: 14px; }
+  .page-mod h1 { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 21px; font-family: var(--police-titre); }
+  .b .page-mod h1 { text-transform: uppercase; letter-spacing: .06em; font-size: 17px; }
+  .page-mod h1 .ic { color: var(--accent); display: inline-flex; --ic-taille: 24px; }
+  .c .page-mod h1 .ic { color: var(--univers); }
+  .ligne-btn { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ligne-btn.groupe { border-top: 1px dashed var(--bordure); padding-top: 10px; }
+  .ligne-btn .t { color: var(--texte-doux); font-size: 13px; margin-right: 4px; }
+  .btn .ic { display: inline-flex; color: var(--accent); }
+  .overlay { display: flex; align-items: center; gap: 12px; background: var(--panneau); border: 1px solid var(--bordure); border-radius: 12px; padding: 12px 14px; }
+  .b .overlay { border-radius: var(--rayon); }
+  .overlay code { color: var(--texte-faible); font-family: var(--police-chiffre, Consolas), Consolas, monospace; font-size: 12px; }
+  .overlay .tuile { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--panneau-clair); color: var(--texte-doux); }
+</style>
+</head>
+<body>
+<div class="planche">
+  <div class="intro">
+    <h1>StreamKit — icônes et style</h1>
+    <p>Le même écran dans quatre habillages : la version actuelle (emojis), puis les pistes A, B et C. Rien n'est codé dans l'application ; seul l'habillage change, la mise en page reste celle de la 1.1.</p>
+  </div>
+  <div class="onglets" role="tablist">
+    <button role="tab" data-piste="actuel">Actuel (emojis)</button>
+    <button role="tab" data-piste="a">A · Sobre</button>
+    <button role="tab" data-piste="b">B · HUD gaming</button>
+    <button role="tab" data-piste="c">C · Mixte</button>
+  </div>
+  <div class="explication" id="explication"></div>
+  <div class="vues">
+    <div><div class="legende-vue">Vue d'ensemble</div><div id="vue-accueil"></div></div>
+    <div><div class="legende-vue">Page d'un module</div><div id="vue-module"></div></div>
+  </div>
+</div>
+
+<!-- Icônes : tracés Lucide (licence ISC), 24 × 24, trait de 2. -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-jauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+  <symbol id="i-historique" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="i-graphe" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+  <symbol id="i-prise" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+  <symbol id="i-pinceau" viewBox="0 0 24 24"><path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></symbol>
+  <symbol id="i-livre" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="i-bug" viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></symbol>
+  <symbol id="i-reglages" viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+  <symbol id="i-ciseaux" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></symbol>
+  <symbol id="i-musique" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-cible" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-megaphone" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
+  <symbol id="i-sondage" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+  <symbol id="i-cadeau" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></symbol>
+  <symbol id="i-eclair" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+  <symbol id="i-drapeau" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+  <symbol id="i-voiture" viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></symbol>
+  <symbol id="i-antenne" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></symbol>
+  <symbol id="i-fusee" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+  <symbol id="i-epees" viewBox="0 0 24 24"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="M14.5 6.5 18 3h3v3l-3.5 3.5"/><path d="m5 14 4 4"/><path d="m7 17-3 3"/><path d="m3 19 2 2"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="m16 13 5.22 3.48a.5.5 0 0 0 .78-.42V7.87a.5.5 0 0 0-.75-.43L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+  <symbol id="i-alerte" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-moins" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-copier" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+</svg>
+
+<script>
+const PISTES = {
+  actuel: {
+    titre: 'Actuel — emojis',
+    texte: 'Ce qui est livré en 1.1 : des emojis Windows servent d’icônes. Leur dessin, leurs couleurs et leur taille changent d’une version de Windows à l’autre, et ils ne vont pas ensemble (🟣 rond plein à côté de ✂️ détaillé).',
+  },
+  a: {
+    titre: 'A — Sobre',
+    texte: '<b>Icônes au trait (Lucide), d’une seule couleur</b>, à la place des emojis. Palette, polices et mise en page inchangées. L’icône prend le violet quand l’entrée est sélectionnée.<ul><li>+ le plus sûr : rien d’autre ne bouge, aspect « outil fini » immédiat</li><li>− les univers se distinguent moins d’un coup d’œil (tout est gris)</li></ul>',
+  },
+  b: {
+    titre: 'B — HUD gaming',
+    texte: '<b>Fond bleu nuit, vert pour « tout va bien » et pour le bouton principal</b>, titres en Orbitron capitales, chiffres en JetBrains Mono, coins coupés, sélection marquée d’un trait à gauche. Mêmes icônes au trait que A.<ul><li>+ très « jeu vidéo », se distingue de tout autre outil</li><li>− le violet Twitch disparaît ; le vert sert à la fois à « OK » et au bouton, et les polices devront être embarquées dans l’appli</li></ul>',
+  },
+  c: {
+    titre: 'C — Mixte',
+    texte: '<b>A, plus la couleur de chaque univers</b> : Twitch violet, Rocket League bleu, LoL or. Elle colore les icônes du menu, le bord gauche des cartes d’univers et la tuile des connexions. Le violet reste l’accent de l’application.<ul><li>+ on repère son jeu instantanément, sans emoji</li><li>− un peu plus de couleur à l’écran ; chaque nouvel univers doit avoir une couleur lisible sur fond sombre</li></ul>',
+  },
+};
+
+const U = { twitch: '#9146ff', rl: '#3d8bff', lol: '#c8aa6e' };
+// [svg, emoji]
+const I = {
+  accueil: ['jauge', '📡'], activite: ['historique', '🕒'], metriques: ['graphe', '📊'], connecteurs: ['prise', '🔌'],
+  perso: ['pinceau', '🎨'], guide: ['livre', '📖'], bug: ['bug', '🐞'], reglages: ['reglages', '⚙️'],
+  twitch: ['antenne', '🟣'], rl: ['fusee', '🚀'], lol: ['epees', '⚔️'], obs: ['camera', '🎥'], spotify: ['musique', '🎵'],
+  clips: ['ciseaux', '✂️'], musique: ['musique', '🎵'], predictions: ['cible', '🔮'], pub: ['megaphone', '📺'],
+  sondages: ['sondage', '📊'], subgoal: ['cadeau', '🎁'], moments: ['eclair', '⚡'], session: ['drapeau', '🏁'], car: ['voiture', '🎡'],
+  alerte: ['alerte', '●'], plus: ['plus', '➕'], moins: ['moins', '➖'], copier: ['copier', ''],
+};
+
+let piste = 'c';
+const ic = (k) => {
+  const [svg, emo] = I[k];
+  if (piste === 'actuel') return emo ? `<span class="emo">${emo}</span>` : '';
+  return `<svg class="i"><use href="#i-${svg}"/></svg>`;
+};
+const classeApp = () => 'app ' + (piste === 'actuel' ? '' : piste === 'b' ? 'b' : piste === 'c' ? 'c' : 'a');
+
+function barre() {
+  return `<header class="barre">
+    <div class="marque">StreamKit<small>1.1.1</small></div>
+    <span class="pastille"><span class="point ko"></span>application Twitch non configurée</span>
+    <div class="pousse"></div>
+    <button class="btn">${ic('guide')} Guide d’utilisation</button>
+    <button class="btn">${ic('bug')} Signaler un bug</button>
+    <button class="btn discret" aria-label="Réglages">${ic('reglages')}</button>
+  </header>`;
+}
+
+function rail(sel) {
+  const e = (k, nom, point, actif) =>
+    `<div class="entree ${actif ? 'actif' : ''}"><span class="point ${point}"></span><span class="ic">${ic(k)}</span>${nom}</div>`;
+  const g = (k, nom, compte, point, mods) => `
+    <div style="--univers:${U[k]}">
+      <div class="groupe-t"><span class="ic">${ic(k)}</span>${nom}<span class="compte"><span class="point ${point}"></span>${compte}</span></div>
+      ${mods.map(([mk, mn, mp, ma]) => `<div class="entree sous ${ma ? 'actif' : ''}"><span class="point ${mp}"></span><span class="ic">${ic(mk)}</span>${mn}</div>`).join('')}
+    </div>`;
+  return `<nav class="rail">
+    ${e('accueil', 'Vue d’ensemble', 'ko', sel === 'accueil')}
+    ${e('activite', 'Activité récente', '')}
+    ${e('metriques', 'Métriques', '')}
+    ${e('connecteurs', 'Connecteurs', 'av')}
+    ${e('perso', 'Personnalisation', '')}
+    <h2>Modules</h2>
+    ${g('twitch', 'Twitch', '2/6', 'ko', [['clips', 'Clips', ''], ['musique', 'Bot Musique', 'av'], ['sondages', 'Sondages', 'ko'], ['subgoal', 'Sub Goal', '']])}
+    ${g('rl', 'Rocket League', '2/3', 'av', [['moments', 'Moments forts', 'av'], ['session', 'Compteur de session', 'av', sel === 'module'], ['car', 'Random Car', '']])}
+    ${g('lol', 'League of Legends', '1/2', 'ok', [])}
+  </nav>`;
+}
+
+function accueil() {
+  const cx = (k, nom, s, univ) => `<div class="cx" style="--univers:${univ}"><span class="tuile">${ic(k)}</span><span class="n">${nom}</span><span class="point ${s[0]}"></span><span class="s">${s[1]}</span></div>`;
+  const mod = (k, nom, etat, txt, on) => `<div class="mod ${etat}"><span class="point ${etat === '' ? '' : etat}"></span><span class="ic">${ic(k)}</span><span class="n">${nom}</span><span class="sw ${on ? 'on' : ''}"></span><span class="e">${txt}</span></div>`;
+  return `<div class="${classeApp()}">${barre()}<main class="corps">${rail('accueil')}
+    <section class="detail">
+      <div class="hero">
+        <svg class="anneau" width="80" height="80" viewBox="0 0 86 86"><circle cx="43" cy="43" r="36" fill="none" stroke="var(--bordure)" stroke-width="9"/><circle cx="43" cy="43" r="36" fill="none" stroke="var(--erreur)" stroke-width="9" stroke-linecap="${piste === 'b' ? 'butt' : 'round'}" stroke-dasharray="170 226" transform="rotate(-90 43 43)"/><text x="43" y="49" text-anchor="middle">75%</text></svg>
+        <div><h1>Pas prêt pour le live</h1><p>2 points à régler : Sondages, Bot Musique. Le détail est dans Alertes.</p></div>
+        <div class="stats">
+          <div class="stat"><b>5<small style="color:var(--texte-faible);font-size:13px"> / 13</small></b><span>modules actifs</span></div>
+          <div class="stat"><b>1<small style="color:var(--texte-faible);font-size:13px"> / 1</small></b><span>connexions OK</span></div>
+          <div class="stat alerte"><b>2</b><span>alertes</span></div>
+        </div>
+      </div>
+      <div class="titre-s">Connexions</div>
+      <div class="conns">
+        ${cx('twitch', 'Twitch', ['', 'application Twitch non configurée'], U.twitch)}
+        ${cx('obs', 'OBS', ['ok', '2 sources connectées'], '#8b93a7')}
+        ${cx('spotify', 'Spotify', ['', 'non configuré'], '#1db954')}
+      </div>
+      <div class="titre-s">Modules par univers</div>
+      <div class="bas">
+        <div class="univers" style="--univers:${U.twitch}">
+          <div class="uh"><span class="ic">${ic('twitch')}</span>Twitch<span class="ratio">2/6</span></div>
+          ${mod('clips', 'Clips', '', 'Désactivé', false)}
+          ${mod('musique', 'Bot Musique', 'av', 'À compléter : Spotify', true)}
+          ${mod('sondages', 'Sondages', 'ko', 'droit de lecture des sondages manquant', true)}
+          ${mod('subgoal', 'Sub Goal', '', 'Désactivé', false)}
+        </div>
+        <div class="alertes">
+          <h3>Alertes<span>2</span></h3>
+          <div class="al"><span class="ic">${ic('alerte')}</span><b>Sondages</b><span>droit de lecture des sondages manquant</span></div>
+          <div class="al av"><span class="ic">${ic('alerte')}</span><b>Bot Musique</b><span>À compléter : Spotify</span></div>
+        </div>
+      </div>
+    </section></main></div>`;
+}
+
+function module_() {
+  return `<div class="${classeApp()}" style="height:520px">${barre()}<main class="corps">${rail('module')}
+    <section class="detail" style="--univers:${U.rl}">
+      <div class="page-mod">
+        <h1><span class="ic">${ic('session')}</span>Compteur de session</h1>
+        <div class="titre-s">Overlays OBS</div>
+        <div class="overlay"><span class="tuile">${ic('obs')}</span><div style="flex:1"><b>Compteur de session</b><br><code>http://127.0.0.1:47455/overlay/rl-session/session</code></div><button class="btn">${ic('copier')} Copier</button><button class="btn">Aperçu</button></div>
+        <div class="titre-s">Actions</div>
+        <div class="ligne-btn"><button class="btn">Activer l’API dans Rocket League</button><button class="btn">Réinitialiser la session</button><button class="btn">Redémarrer le module</button></div>
+        <div class="ligne-btn groupe"><span class="t">Corriger le score</span>
+          <button class="btn"><span class="ic">${ic('plus')}</span>Victoire</button><button class="btn"><span class="ic">${ic('moins')}</span>Victoire</button>
+          <button class="btn"><span class="ic">${ic('plus')}</span>Défaite</button><button class="btn"><span class="ic">${ic('moins')}</span>Défaite</button></div>
+        <div><button class="btn primaire">Enregistrer</button></div>
+      </div>
+    </section></main></div>`;
+}
+
+function dessiner() {
+  document.querySelectorAll('.onglets button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.piste === piste)));
+  document.getElementById('explication').innerHTML = PISTES[piste].texte;
+  document.getElementById('vue-accueil').innerHTML = accueil();
+  document.getElementById('vue-module').innerHTML = module_();
+}
+document.querySelector('.onglets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-piste]');
+  if (b) { piste = b.dataset.piste; dessiner(); }
+});
+const h = location.hash.slice(1);
+if (PISTES[h]) piste = h;
+dessiner();
+</script>
+</body>
+</html>
